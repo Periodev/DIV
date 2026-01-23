@@ -48,11 +48,13 @@ class BranchState:
     def __init__(self):
         self.entities: List[Entity] = []
         self.terrain: Dict[Position, TerrainType] = {}
+        self.grid_size: int = 0
 
     def copy(self) -> 'BranchState':
         """Deep copy"""
         new_state = BranchState()
         new_state.terrain = self.terrain.copy()
+        new_state.grid_size = self.grid_size
         new_state.entities = [
             Entity(
                 uid=e.uid,
@@ -99,6 +101,7 @@ class Timeline:
         """
         result = BranchState()
         result.terrain = main.terrain.copy()
+        result.grid_size = main.grid_size
 
         # Collect all uids
         all_uids = {e.uid for e in main.entities} | {e.uid for e in sub.entities}
@@ -170,6 +173,7 @@ def init_branch_from_source(source: LevelSource) -> BranchState:
     """Create initial BranchState from LevelSource"""
     state = BranchState()
     state.terrain = source.terrain.copy()
+    state.grid_size = source.grid_size
 
     # Instantiate all entity definitions
     for uid in sorted(source.entity_definitions.keys()):
