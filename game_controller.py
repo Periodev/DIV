@@ -60,8 +60,14 @@ class GameController:
 
         merged = Timeline.converge(self.main_branch, self.sub_branch, self.current_focus)
 
-        # Check collapse
+        # Settle: held boxes must converge immediately
+        Timeline.settle_carried(merged)
+
+        # Check collapse / fall
         if Physics.check_collapse(merged):
+            self.collapsed = True
+            return False
+        if Physics.check_fall(merged):
             self.collapsed = True
             return False
 

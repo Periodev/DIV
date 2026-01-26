@@ -148,20 +148,26 @@ class Timeline:
 
     @staticmethod
     def converge_one(state: BranchState, target_uid: int) -> Entity:
-        # find all shadows with same UID
+        """Collapse all instances of a uid into one"""
         instances = [e for e in state.entities if e.uid == target_uid]
-
         if not instances:
             return None
-
-        # pick first one
         target = instances[0]
-
-        # remove all shadows, then append only one
         state.entities = [e for e in state.entities if e.uid != target_uid]
         state.entities.append(target)
-        
         return target
+
+    @staticmethod
+    def settle_carried(state: BranchState):
+        """After merge, converge all shadow instances of held entities"""
+        held_uids = {e.uid for e in state.entities if e.carrier == 0}
+        if not held_uids:
+            return
+        for uid in held_uids:
+            target = Timeline.converge_one(state, uid)
+            target.carrier = 0
+            target.collision = 0
+            target.pos = state.player.pos
 
 # ===== Physics =====
 class Physics:
