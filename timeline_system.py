@@ -143,7 +143,6 @@ class Timeline:
         player = result.entities[0]  # Assumes uid=0 is already in the list
         player.pos = focused.player.pos
         player.direction = focused.player.direction
-          
 
         return result
 

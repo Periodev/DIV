@@ -36,7 +36,7 @@ class Renderer:
         self.arrow_font = pygame.font.Font(None, 28)
 
     def draw_terrain(self, start_x: int, start_y: int, state: BranchState,
-                     goal_active: bool = False):
+                     goal_active: bool = False, has_branched: bool = False):
         """Draw terrain layer"""
         for x in range(GRID_SIZE):
             for y in range(GRID_SIZE):
@@ -66,7 +66,8 @@ class Renderer:
                 elif terrain == TerrainType.BRANCH:
                     # Small branch point indicator
                     center = rect.center
-                    pygame.draw.circle(self.screen, GREEN, center, CELL_SIZE // 6)
+                    color = GRAY if (has_branched) else GREEN
+                    pygame.draw.circle(self.screen, color, center, CELL_SIZE // 6)
                 elif terrain == TerrainType.GOAL:
                     if goal_active:
                         flash = int((pygame.time.get_ticks() / 300) % 2)
@@ -125,9 +126,9 @@ class Renderer:
 
         if has_held:
             rect = pygame.Rect(
-                start_x + px * CELL_SIZE + 8,
-                start_y + py * CELL_SIZE + 8,
-                CELL_SIZE - 16, CELL_SIZE - 16
+                start_x + px * CELL_SIZE + 3,
+                start_y + py * CELL_SIZE + 3,
+                CELL_SIZE - 6, CELL_SIZE - 6
             )
             pygame.draw.rect(self.screen, color, rect)
             pygame.draw.rect(self.screen, BLACK, rect, 2)
@@ -158,7 +159,7 @@ class Renderer:
 
     def draw_branch(self, state: BranchState, start_x: int, start_y: int,
                     title: str, is_focused: bool, border_color: Tuple,
-                    goal_active: bool = False):
+                    goal_active: bool = False, has_branched: bool = False):
         """Draw a complete branch view"""
         # Title
         title_color = BLACK if is_focused else DARK_GRAY
@@ -179,7 +180,7 @@ class Renderer:
                          (start_x, start_y, GRID_WIDTH, GRID_HEIGHT), border_width)
 
         # Terrain
-        self.draw_terrain(start_x, start_y, state, goal_active)
+        self.draw_terrain(start_x, start_y, state, goal_active, has_branched)
 
         # Entities (non-player, not held)
         for e in state.entities:
@@ -188,7 +189,7 @@ class Renderer:
 
         # Player
         has_held = any(e.carrier == 0 for e in state.entities)
-        player_color = PURPLE if has_held else BLUE
+        player_color = RED if has_held else BLUE
         if not is_focused:
             player_color = tuple(min(255, c + 80) for c in player_color)
         self.draw_player(start_x, start_y, state.player, player_color, has_held)

@@ -81,21 +81,21 @@ def run_game(floor_map: str, object_map: str):
             any(e.pos == pos for e in preview.entities)
             for pos, t in preview.terrain.items() if t.name == 'SWITCH'
         )
-
-        # Merge Preview
-        renderer.draw_branch(preview, PADDING, PADDING + 20,
-                             "Merge Preview", False, (150, 50, 150), goal_active)
-
         # Main Branch
         renderer.draw_branch(controller.main_branch,
                              PADDING * 2 + GRID_WIDTH, PADDING + 20,
-                             "DIV 0", controller.current_focus == 0, (0, 100, 200), goal_active)
+                             "DIV 0", controller.current_focus == 0, (0, 100, 200), goal_active, controller.has_branched)
+
+        # Merge Preview
+        renderer.draw_branch(preview, PADDING, PADDING + 20,
+                             "Merge Preview", False, (150, 50, 150), goal_active, controller.has_branched)
+
 
         # Sub Branch
         if controller.sub_branch:
             renderer.draw_branch(controller.sub_branch,
                                  PADDING * 3 + GRID_WIDTH * 2, PADDING + 20,
-                                 "DIV 1", controller.current_focus == 1, (50, 150, 200), goal_active)
+                                 "DIV 1", controller.current_focus == 1, (50, 150, 200), goal_active, controller.has_branched)
 
         # Overlay
         if controller.collapsed:
