@@ -111,23 +111,23 @@ def run_game(floor_map: str, object_map: str):
 #=====================
 # Floor Map
 floor_map = '''
-#..G.#
-#HHHH#
-#HHHH#
-#HHHH#
-#....#
-#..VS#
+######
+G.##..
+SHHH..
+##H.##
+##V.##
+######
 '''
 
 # Object Map
 object_map = '''
 ......
+.....B
 ......
+...B..
+...P..
 ......
-......
-......
-.BB.P.
-''' 
+'''
 
 if __name__ == "__main__":
     run_game(floor_map, object_map)

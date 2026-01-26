@@ -209,6 +209,9 @@ class Physics:
         box.carrier = -1  # contained by terrain
         # box.collision stays 1 (physically fills the negative space)
 
+    @staticmethod
+    def grounded(entity: 'Entity'):
+        return entity.carrier is None
 
 # ===== Initialization Utility =====
 def init_branch_from_source(source: LevelSource) -> BranchState:

@@ -32,7 +32,7 @@ class GameLogic:
         if collision > 0:
             # Check if any blocking entity is a shadow (can't push shadows)
             pushable = [e for e in state.entities
-                        if e.pos == new_pos and e.collision > 0 and e.carrier is None]
+                        if e.pos == new_pos and e.collision > 0 and Physics.grounded(e)]
             for e in pushable:
                 if state.is_shadow(e.uid):
                     return False
@@ -57,7 +57,7 @@ class GameLogic:
 
         # Push boxes (only free entities, not terrain-contained)
         entities_at_new = [e for e in state.entities
-                           if e.pos == new_pos and e.collision > 0 and e.carrier is None]
+                           if e.pos == new_pos and e.collision > 0 and Physics.grounded(e)]
         if entities_at_new:
             push_pos = (new_pos[0] + dx, new_pos[1] + dy)
             for e in entities_at_new:
@@ -86,7 +86,7 @@ class GameLogic:
         target = next((e for e in state.entities 
                             if e.pos == front_pos 
                             and e.type == EntityType.BOX 
-                            and e.carrier is None), None)
+                            and Physics.grounded(e)), None)
         if target is None:
             return False
 

@@ -1,7 +1,7 @@
 # renderer.py - Pygame Rendering System
 
 import pygame
-from timeline_system import BranchState, TerrainType, EntityType
+from timeline_system import BranchState, Physics, TerrainType, EntityType
 from typing import Tuple
 
 # Constants
@@ -184,7 +184,7 @@ class Renderer:
 
         # Entities (non-player, not held)
         for e in state.entities:
-            if e.uid != 0 and e.carrier is None and e.type == EntityType.BOX:
+            if e.uid != 0 and Physics.grounded(e) and e.type == EntityType.BOX:
                 self.draw_entity(start_x, start_y, e, RED)
 
         # Player
