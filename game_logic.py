@@ -1,6 +1,6 @@
 # game_logic.py - Game Rules and Actions
 
-from timeline_system import BranchState, Physics, Entity, TerrainType, EntityType
+from timeline_system import BranchState, Physics, Entity, TerrainType, EntityType, Timeline
 from typing import Literal, Optional
 
 
@@ -82,21 +82,20 @@ class GameLogic:
         dx, dy = state.player.direction
         front_pos = (px + dx, py + dy)
 
-        # Find pickable objects in front (only BOX; HOLE entities are never pickable)
-        targets = [e for e in state.entities
-                   if e.pos == front_pos and e.type == EntityType.BOX and e.carrier is None]
-
-        if not targets:
+        # Find pickable objects in front (only BOX)
+        target = next((e for e in state.entities 
+                            if e.pos == front_pos 
+                            and e.type == EntityType.BOX 
+                            and e.carrier is None), None)
+        if target is None:
             return False
 
-        # Pick up all instances of the same uid (shadow convergence)
-        target_uids = {e.uid for e in targets}
-        for e in state.entities:
-            if e.uid in target_uids:
-                e.carrier = 0
-                e.collision = 0
-                e.pos = state.player.pos
+        target = Timeline.converge_one(state, target.uid)
 
+        target.carrier = 0
+        target.collision = 0
+        target.pos = state.player.pos
+ 
         return True
 
     @staticmethod

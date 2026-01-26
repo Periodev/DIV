@@ -143,8 +143,26 @@ class Timeline:
         player = result.entities[0]  # Assumes uid=0 is already in the list
         player.pos = focused.player.pos
         player.direction = focused.player.direction
+          
 
         return result
+
+    @staticmethod
+    def converge_one(state: BranchState, target_uid: int) -> Entity:
+        # find all shadows with same UID
+        instances = [e for e in state.entities if e.uid == target_uid]
+
+        if not instances:
+            return None
+
+        # pick first one
+        target = instances[0]
+
+        # remove all shadows, then append only one
+        state.entities = [e for e in state.entities if e.uid != target_uid]
+        state.entities.append(target)
+        
+        return target
 
 # ===== Physics =====
 class Physics:
@@ -193,7 +211,6 @@ def init_branch_from_source(source: LevelSource) -> BranchState:
     state = BranchState()
     state.terrain = source.terrain.copy()
     state.grid_size = source.grid_size
-
     # Instantiate all entity definitions
     for uid in sorted(source.entity_definitions.keys()):
         etype, pos = source.entity_definitions[uid]

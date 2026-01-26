@@ -99,7 +99,7 @@ def run_game(floor_map: str, object_map: str):
 
         # Overlay
         if controller.collapsed:
-            renderer.draw_overlay("FLOOR COLLAPSED!", (150, 0, 0))
+            renderer.draw_overlay("FALL DOWN!", (150, 0, 0))
         elif controller.victory:
             renderer.draw_overlay("LEVEL COMPLETE!", (0, 0, 0))
 
@@ -108,25 +108,26 @@ def run_game(floor_map: str, object_map: str):
     pygame.quit()
     sys.exit()
 
-
-if __name__ == "__main__":
-    floor_map = '''
-#.SG.#
-#....#
+#=====================
+# Floor Map
+floor_map = '''
+#..G.#
+#HHHH#
+#HHHH#
 #HHHH#
 #....#
-#....#
-#..V.#
+#..VS#
 '''
 
 # Object Map
-    object_map = '''
+object_map = '''
 ......
 ......
 ......
 ......
-.BBP..
 ......
-'''
+.BB.P.
+''' 
 
+if __name__ == "__main__":
     run_game(floor_map, object_map)
