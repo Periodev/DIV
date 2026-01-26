@@ -12,15 +12,6 @@ class GameLogic:
         dx, dy = direction
         new_pos = (px + dx, py + dy)
 
-        # Out of bounds
-        x, y = new_pos
-        if not (0 <= x < state.grid_size and 0 <= y < state.grid_size):
-            return False
-
-        # Wall
-        if state.terrain.get(new_pos) == TerrainType.WALL:
-            return False
-
         # Collision check
         collision = Physics.collision_at(new_pos, state)
         print(f"[MOVE] collision={collision}")
@@ -39,10 +30,7 @@ class GameLogic:
 
             # Attempt push
             push_pos = (new_pos[0] + dx, new_pos[1] + dy)
-            if not (0 <= push_pos[0] < state.grid_size and 0 <= push_pos[1] < state.grid_size):
-                return False
-            if state.terrain.get(push_pos) == TerrainType.WALL:
-                return False
+
             if Physics.collision_at(push_pos, state) > 0:
                 return False
 
@@ -110,12 +98,6 @@ class GameLogic:
         if not held:
             return False
 
-        # Check target position
-        fx, fy = front_pos
-        if not (0 <= fx < state.grid_size and 0 <= fy < state.grid_size):
-            return False
-        if state.terrain.get(front_pos) == TerrainType.WALL:
-            return False
         if Physics.collision_at(front_pos, state) > 0:
             return False
 

@@ -174,7 +174,16 @@ class Physics:
     @staticmethod
     def collision_at(pos: Position, state: BranchState) -> int:
         """Total collision volume at position (terrain base + entity sum)"""
-        terrain_base = -1 if state.terrain.get(pos) == TerrainType.HOLE else 0
+
+        if (state.terrain.get(pos) == TerrainType.HOLE):
+            terrain_base = -1
+        elif (state.terrain.get(pos) == TerrainType.WALL):
+            terrain_base = 255
+        elif not Physics.in_bound(pos, state):
+            terrain_base = 255
+        else:
+            terrain_base = 0
+
         return terrain_base + sum(e.collision for e in state.entities if e.pos == pos)
 
     @staticmethod
@@ -212,6 +221,10 @@ class Physics:
     @staticmethod
     def grounded(entity: 'Entity'):
         return entity.carrier is None
+
+    @staticmethod
+    def in_bound(pos: Position, state: BranchState):
+        return (0 <= pos[0] < state.grid_size and 0 <= pos[1] < state.grid_size)
 
 # ===== Initialization Utility =====
 def init_branch_from_source(source: LevelSource) -> BranchState:

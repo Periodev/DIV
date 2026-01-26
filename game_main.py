@@ -109,23 +109,21 @@ def run_game(floor_map: str, object_map: str):
     sys.exit()
 
 #=====================
-# Floor Map
 floor_map = '''
 ######
-G.##..
-SHHH..
-##H.##
-##V.##
+......
+S....S
+...V..
+..G...
 ######
 '''
 
-# Object Map
 object_map = '''
 ......
-.....B
-......
-...B..
 ...P..
+..B...
+......
+......
 ......
 '''
 
