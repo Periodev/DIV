@@ -23,6 +23,8 @@ class GameLogic:
 
         # Collision check
         collision = Physics.collision_at(new_pos, state)
+        print(f"[MOVE] collision={collision}")
+
         if collision > 0:
             # Attempt push
             push_pos = (new_pos[0] + dx, new_pos[1] + dy)

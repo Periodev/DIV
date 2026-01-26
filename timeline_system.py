@@ -113,6 +113,9 @@ class Timeline:
 
             # Add all (positions union)
             for e in main_instances:
+                if e.uid == 0:
+                    continue  # not count player
+
                 result.entities.append(Entity(
                     uid=e.uid,
                     type=e.type,

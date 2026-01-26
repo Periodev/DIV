@@ -160,7 +160,7 @@ class Renderer:
                 start_x - 8, start_y - 8,
                 GRID_WIDTH + 16, GRID_HEIGHT + 16
             )
-            pygame.draw.rect(self.screen, ORANGE, highlight_rect, 5)
+            pygame.draw.rect(self.screen, BLUE, highlight_rect, 5)
 
         # Border
         border_width = 3 if is_focused else 2
