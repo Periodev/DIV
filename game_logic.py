@@ -25,7 +25,18 @@ class GameLogic:
         collision = Physics.collision_at(new_pos, state)
         print(f"[MOVE] collision={collision}")
 
+        # Unfilled HOLE blocks player
+        if collision < 0:
+            return False
+
         if collision > 0:
+            # Check if any blocking entity is a shadow (can't push shadows)
+            pushable = [e for e in state.entities
+                        if e.pos == new_pos and e.collision > 0 and e.carrier is None]
+            for e in pushable:
+                if state.is_shadow(e.uid):
+                    return False
+
             # Attempt push
             push_pos = (new_pos[0] + dx, new_pos[1] + dy)
             if not (0 <= push_pos[0] < state.grid_size and 0 <= push_pos[1] < state.grid_size):
@@ -44,12 +55,16 @@ class GameLogic:
         dx, dy = direction
         new_pos = (px + dx, py + dy)
 
-        # Push boxes
-        entities_at_new = [e for e in state.entities if e.pos == new_pos and e.collision > 0]
+        # Push boxes (only free entities, not terrain-contained)
+        entities_at_new = [e for e in state.entities
+                           if e.pos == new_pos and e.collision > 0 and e.carrier is None]
         if entities_at_new:
             push_pos = (new_pos[0] + dx, new_pos[1] + dy)
             for e in entities_at_new:
                 e.pos = push_pos
+            # Check if pushed into unfilled HOLE → trigger fill
+            for e in entities_at_new:
+                Physics.trigger_fill(state, e, push_pos)
 
         # Move player
         state.player.pos = new_pos
@@ -67,14 +82,14 @@ class GameLogic:
         dx, dy = state.player.direction
         front_pos = (px + dx, py + dy)
 
-        # Find pickable objects in front
+        # Find pickable objects in front (only BOX; HOLE entities are never pickable)
         targets = [e for e in state.entities
-                   if e.pos == front_pos and e.uid != 0 and e.carrier is None]
+                   if e.pos == front_pos and e.type == EntityType.BOX and e.carrier is None]
 
         if not targets:
             return False
 
-        # Pick up all instances of the same uid
+        # Pick up all instances of the same uid (shadow convergence)
         target_uids = {e.uid for e in targets}
         for e in state.entities:
             if e.uid in target_uids:
@@ -97,6 +112,9 @@ class GameLogic:
             return False
 
         # Check target position
+        fx, fy = front_pos
+        if not (0 <= fx < state.grid_size and 0 <= fy < state.grid_size):
+            return False
         if state.terrain.get(front_pos) == TerrainType.WALL:
             return False
         if Physics.collision_at(front_pos, state) > 0:
@@ -107,5 +125,9 @@ class GameLogic:
             e.carrier = None
             e.collision = 1
             e.pos = front_pos
+
+        # Check if dropped into unfilled HOLE → trigger fill
+        for e in held:
+            Physics.trigger_fill(state, e, front_pos)
 
         return True

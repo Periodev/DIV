@@ -9,7 +9,6 @@ Position = Tuple[int, int]
 class EntityType(Enum):
     PLAYER = "player"
     BOX = "box"
-    HOLE = "hole"
 
 class TerrainType(Enum):
     FLOOR = "."
@@ -151,8 +150,9 @@ class Timeline:
 class Physics:
     @staticmethod
     def collision_at(pos: Position, state: BranchState) -> int:
-        """Total collision volume at position"""
-        return sum(e.collision for e in state.entities if e.pos == pos)
+        """Total collision volume at position (terrain base + entity sum)"""
+        terrain_base = -1 if state.terrain.get(pos) == TerrainType.HOLE else 0
+        return terrain_base + sum(e.collision for e in state.entities if e.pos == pos)
 
     @staticmethod
     def weight_at(pos: Position, state: BranchState) -> int:
@@ -170,6 +170,22 @@ class Physics:
                 if Physics.weight_at(pos, state) > 2:
                     return True
         return False
+
+    @staticmethod
+    def check_fall(state: BranchState) -> bool:
+        """Ground can't support player: net collision < player's own contribution"""
+        return Physics.collision_at(state.player.pos, state) < state.player.collision
+
+    @staticmethod
+    def trigger_fill(state: BranchState, box: 'Entity', pos: Position):
+        """Fill an unfilled HOLE at pos with the given box"""
+        if state.terrain.get(pos) != TerrainType.HOLE:
+            return
+        if any(e.pos == pos and e.carrier == -1 for e in state.entities):
+            return  # already filled
+        box.carrier = -1  # contained by terrain
+        # box.collision stays 1 (physically fills the negative space)
+
 
 # ===== Initialization Utility =====
 def init_branch_from_source(source: LevelSource) -> BranchState:

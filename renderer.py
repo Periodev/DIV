@@ -78,9 +78,20 @@ class Renderer:
                     text = self.font.render('G', True, BLACK)
                     self.screen.blit(text, text.get_rect(center=rect.center))
                 elif terrain == TerrainType.HOLE:
-                    pygame.draw.rect(self.screen, (60, 40, 20), rect)
-                    text = self.font.render('H', True, (150, 100, 50))
-                    self.screen.blit(text, text.get_rect(center=rect.center))
+                    filled = any(e.pos == pos and e.carrier == -1
+                                 for e in state.entities)
+                    if filled:
+                        # Filled hole: darker ground + sunken box indicator
+                        pygame.draw.rect(self.screen, (80, 60, 30), rect)
+                        inner = pygame.Rect(
+                            rect.x + 12, rect.y + 12,
+                            rect.w - 24, rect.h - 24)
+                        pygame.draw.rect(self.screen, (150, 70, 70), inner)
+                        pygame.draw.rect(self.screen, (100, 50, 50), inner, 1)
+                    else:
+                        pygame.draw.rect(self.screen, (60, 40, 20), rect)
+                        text = self.font.render('H', True, (150, 100, 50))
+                        self.screen.blit(text, text.get_rect(center=rect.center))
                 else:
                     pygame.draw.rect(self.screen, WHITE, rect)
 

@@ -92,6 +92,9 @@ class GameController:
             if Physics.check_collapse(active):
                 self.collapsed = True
                 return False
+            if Physics.check_fall(active):
+                self.collapsed = True
+                return False
 
             return True
         return False
@@ -104,6 +107,9 @@ class GameController:
         if result and Physics.check_collapse(active):
             self.collapsed = True
             return False
+        if result and Physics.check_fall(active):
+            self.collapsed = True
+            return False
 
         return result
 
@@ -113,6 +119,9 @@ class GameController:
         result = GameLogic.try_drop(active)
 
         if result and Physics.check_collapse(active):
+            self.collapsed = True
+            return False
+        if result and Physics.check_fall(active):
             self.collapsed = True
             return False
 
