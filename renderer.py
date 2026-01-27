@@ -103,27 +103,28 @@ class Renderer:
                                  for e in state.entities)
                     if filled:
                         # Filled hole: darker ground + sunken box indicator
-                        pygame.draw.rect(self.screen, (80, 60, 30), rect)
-                        inner = pygame.Rect(
-                            rect.x + 12, rect.y + 12,
-                            rect.w - 24, rect.h - 24)
-                        pygame.draw.rect(self.screen, (150, 70, 70), inner)
-                        pygame.draw.rect(self.screen, (100, 50, 50), inner, 1)
+                        pygame.draw.rect(self.screen, (160, 120, 60), rect)
                     else:
                         pygame.draw.rect(self.screen, (60, 40, 20), rect)
-                        text = self.font.render('H', True, (150, 100, 50))
-                        self.screen.blit(text, text.get_rect(center=rect.center))
+                        #text = self.font.render('H', True, (150, 100, 50))
+                        #self.screen.blit(text, text.get_rect(center=rect.center))
                 else:
                     pygame.draw.rect(self.screen, WHITE, rect)
 
     def draw_entity(self, start_x: int, start_y: int, entity, color: Tuple,
                     state: BranchState):
         """Draw a single entity"""
+
+        if entity.carrier == -1:
+            padding = 6
+        else:
+            padding = 4
+
         x, y = entity.pos
         rect = pygame.Rect(
-            start_x + x * CELL_SIZE + 4,
-            start_y + y * CELL_SIZE + 4,
-            CELL_SIZE - 8, CELL_SIZE - 8
+            start_x + x * CELL_SIZE + padding,
+            start_y + y * CELL_SIZE + padding,
+            CELL_SIZE - padding * 2, CELL_SIZE - padding * 2
         )
 
         # Desaturate color for shadow entities
@@ -382,7 +383,7 @@ class Renderer:
 
         # Entities (non-player, not held)
         for e in state.entities:
-            if e.uid != 0 and Physics.grounded(e) and e.type == EntityType.BOX:
+            if e.uid != 0 and e.type == EntityType.BOX:
                 self.draw_entity(start_x, start_y, e, RED, state)
 
         # Shadow connections (only on the focused branch)

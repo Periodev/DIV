@@ -42,9 +42,9 @@ def run_game(floor_map: str, object_map: str):
                 if controller.collapsed or controller.victory:
                     continue
 
-                if event.key == pygame.K_b:
+                if event.key == pygame.K_v:
                     controller.try_branch()
-                elif event.key == pygame.K_m:
+                elif event.key == pygame.K_c:
                     controller.try_merge()
                 elif event.key == pygame.K_TAB:
                     controller.switch_focus()
@@ -129,7 +129,7 @@ object_map = '''
 ......
 ......
 ......
-.BBBP.
+.B.BP.
 '''
 
 
