@@ -92,7 +92,11 @@ def run_game(floor_map: str, object_map: str):
         # Merge Preview
         renderer.draw_branch(preview, PADDING, PADDING + 20,
                              "Merge Preview", False, (150, 50, 150),
-                             goal_active, controller.has_branched, animation_frame)
+                             goal_active, controller.has_branched, animation_frame,
+                             is_merge_preview=True,
+                             main_branch=controller.main_branch,
+                             sub_branch=controller.sub_branch,
+                             current_focus=controller.current_focus)
 
         # Sub Branch
         if controller.sub_branch:

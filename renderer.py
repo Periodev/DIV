@@ -3,7 +3,7 @@
 import math
 import pygame
 from timeline_system import BranchState, Physics, TerrainType, EntityType
-from typing import Tuple
+from typing import Optional, Tuple
 
 
 def desaturate_color(color: Tuple[int, int, int], amount: float = 0.5) -> Tuple[int, int, int]:
@@ -355,10 +355,79 @@ class Renderer:
             self.draw_lock_corners(start_x, start_y, front_pos, lock_color,
                                    size=16, thickness=5, margin=3)
 
+    def draw_ghost_box(self, start_x: int, start_y: int, pos: Tuple[int, int],
+                       uid: int, base_color: Tuple = RED):
+        """Draw a semi-transparent ghost box."""
+        x, y = pos
+        rect = pygame.Rect(
+            start_x + x * CELL_SIZE + 4,
+            start_y + y * CELL_SIZE + 4,
+            CELL_SIZE - 8, CELL_SIZE - 8
+        )
+
+        ghost_surface = pygame.Surface((rect.width, rect.height))
+        ghost_surface.set_alpha(128)
+        ghost_color = desaturate_color(base_color, 0.7)
+        ghost_surface.fill(ghost_color)
+        self.screen.blit(ghost_surface, (rect.x, rect.y))
+
+        pygame.draw.rect(self.screen, ghost_color, rect, 2)
+
+        text = self.font.render(str(uid), True, GRAY)
+        self.screen.blit(text, text.get_rect(center=rect.center))
+
+    def draw_inherited_hold_hint(self, start_x: int, start_y: int,
+                                  preview_state: BranchState,
+                                  main_branch: BranchState,
+                                  sub_branch: BranchState,
+                                  current_focus: int,
+                                  animation_offset: int):
+        """Show inherited hold hint for the non-focused branch's held items."""
+        focused = sub_branch if current_focus == 1 else main_branch
+        other = main_branch if current_focus == 1 else sub_branch
+
+        other_held = {e.uid for e in other.entities if e.carrier == 0}
+        focused_held = {e.uid for e in focused.entities if e.carrier == 0}
+        inherited = other_held - focused_held
+
+        if not inherited:
+            return
+
+        inherit_line_color = ORANGE
+        slow_offset = animation_offset * 0.25
+
+        for uid in inherited:
+            ghost_pos = other.player.pos
+            self.draw_ghost_box(start_x, start_y, ghost_pos, uid)
+
+            ghost_center = (
+                start_x + ghost_pos[0] * CELL_SIZE + CELL_SIZE // 2,
+                start_y + ghost_pos[1] * CELL_SIZE + CELL_SIZE // 2
+            )
+            player_pos = preview_state.player.pos
+            player_center = (
+                start_x + player_pos[0] * CELL_SIZE + CELL_SIZE // 2,
+                start_y + player_pos[1] * CELL_SIZE + CELL_SIZE // 2
+            )
+
+            self.draw_dashed_line(ghost_center, player_center,
+                                  inherit_line_color, 2, 8, slow_offset)
+
+            pulse = math.sin(animation_offset / 20) * 0.3 + 0.7
+            lock_color = (int(inherit_line_color[0] * pulse),
+                          int(inherit_line_color[1] * pulse),
+                          int(inherit_line_color[2] * pulse))
+            self.draw_lock_corners(start_x, start_y, player_pos, lock_color,
+                                   size=16, thickness=5, margin=3)
+
     def draw_branch(self, state: BranchState, start_x: int, start_y: int,
                     title: str, is_focused: bool, border_color: Tuple,
                     goal_active: bool = False, has_branched: bool = False,
-                    animation_offset: int = 0):
+                    animation_offset: int = 0,
+                    is_merge_preview: bool = False,
+                    main_branch: Optional[BranchState] = None,
+                    sub_branch: Optional[BranchState] = None,
+                    current_focus: int = 0):
         """Draw a complete branch view"""
         # Title
         title_color = BLACK if is_focused else DARK_GRAY
@@ -389,6 +458,12 @@ class Renderer:
         # Shadow connections (only on the focused branch)
         if is_focused:
             self.draw_shadow_connections(start_x, start_y, state, animation_offset)
+
+        # Inherited hold hint (only for merge preview)
+        if is_merge_preview and main_branch and sub_branch:
+            self.draw_inherited_hold_hint(start_x, start_y, state,
+                                          main_branch, sub_branch,
+                                          current_focus, animation_offset)
 
         # Player
         has_held = any(e.carrier == 0 for e in state.entities)
