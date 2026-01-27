@@ -175,16 +175,23 @@ class Physics:
     def collision_at(pos: Position, state: BranchState) -> int:
         """Total collision volume at position (terrain base + entity sum)"""
 
-        if (state.terrain.get(pos) == TerrainType.HOLE):
-            terrain_base = -1
-        elif (state.terrain.get(pos) == TerrainType.WALL):
+        if state.terrain.get(pos) == TerrainType.HOLE:
+            # Fusion: filled hole = floor; filling entities don't count
+            filled = any(e.pos == pos and e.carrier == -1 for e in state.entities)
+            terrain_base = 0 if filled else -1
+            entity_sum = sum(e.collision for e in state.entities
+                             if e.pos == pos and e.carrier != -1)
+        elif state.terrain.get(pos) == TerrainType.WALL:
             terrain_base = 255
+            entity_sum = 0
         elif not Physics.in_bound(pos, state):
             terrain_base = 255
+            entity_sum = 0
         else:
             terrain_base = 0
+            entity_sum = sum(e.collision for e in state.entities if e.pos == pos)
 
-        return terrain_base + sum(e.collision for e in state.entities if e.pos == pos)
+        return terrain_base + entity_sum
 
     @staticmethod
     def weight_at(pos: Position, state: BranchState) -> int:

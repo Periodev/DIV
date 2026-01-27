@@ -112,24 +112,26 @@ def run_game(floor_map: str, object_map: str):
     pygame.quit()
     sys.exit()
 
-#=====================
+# ===== 地圖定義 =====
 floor_map = '''
-######
-......
-S....S
-...V..
-..G...
-######
+#..G.#
+#HHHH#
+#HHHH#
+#HHHH#
+#....#
+#..VS#
 '''
 
+# Object Map
 object_map = '''
 ......
-...P..
-..B...
 ......
 ......
 ......
+......
+.BBBP.
 '''
+
 
 if __name__ == "__main__":
     run_game(floor_map, object_map)

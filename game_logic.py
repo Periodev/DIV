@@ -20,6 +20,10 @@ class GameLogic:
         if collision < 0:
             return False
 
+        # boundary
+        if collision >= 255:
+            return False
+
         if collision > 0:
             # Check if any blocking entity is a shadow (can't push shadows)
             pushable = [e for e in state.entities
