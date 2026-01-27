@@ -19,10 +19,12 @@ def run_game(floor_map: str, object_map: str):
     clock = pygame.time.Clock()
     move_cooldown = 0
     MOVE_DELAY = 10
+    animation_frame = 0
 
     running = True
     while running:
         clock.tick(60)
+        animation_frame += 1
 
         if move_cooldown > 0:
             move_cooldown -= 1
@@ -84,18 +86,20 @@ def run_game(floor_map: str, object_map: str):
         # Main Branch
         renderer.draw_branch(controller.main_branch,
                              PADDING * 2 + GRID_WIDTH, PADDING + 20,
-                             "DIV 0", controller.current_focus == 0, (0, 100, 200), goal_active, controller.has_branched)
+                             "DIV 0", controller.current_focus == 0, (0, 100, 200),
+                             goal_active, controller.has_branched, animation_frame)
 
         # Merge Preview
         renderer.draw_branch(preview, PADDING, PADDING + 20,
-                             "Merge Preview", False, (150, 50, 150), goal_active, controller.has_branched)
-
+                             "Merge Preview", False, (150, 50, 150),
+                             goal_active, controller.has_branched, animation_frame)
 
         # Sub Branch
         if controller.sub_branch:
             renderer.draw_branch(controller.sub_branch,
                                  PADDING * 3 + GRID_WIDTH * 2, PADDING + 20,
-                                 "DIV 1", controller.current_focus == 1, (50, 150, 200), goal_active, controller.has_branched)
+                                 "DIV 1", controller.current_focus == 1, (50, 150, 200),
+                                 goal_active, controller.has_branched, animation_frame)
 
         # Overlay
         if controller.collapsed:

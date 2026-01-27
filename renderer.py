@@ -1,8 +1,28 @@
 # renderer.py - Pygame Rendering System
 
+import math
 import pygame
 from timeline_system import BranchState, Physics, TerrainType, EntityType
 from typing import Tuple
+
+
+def desaturate_color(color: Tuple[int, int, int], amount: float = 0.5) -> Tuple[int, int, int]:
+    """
+    Desaturate a color by blending towards gray.
+
+    Args:
+        color: Original RGB color (r, g, b)
+        amount: Desaturation ratio 0.0-1.0 (0=no change, 1=fully gray)
+
+    Returns:
+        Desaturated RGB color
+    """
+    r, g, b = color
+    gray = (r + g + b) / 3
+    new_r = int(r + (gray - r) * amount)
+    new_g = int(g + (gray - g) * amount)
+    new_b = int(b + (gray - b) * amount)
+    return (new_r, new_g, new_b)
 
 # Constants
 GRID_SIZE = 6
@@ -96,7 +116,8 @@ class Renderer:
                 else:
                     pygame.draw.rect(self.screen, WHITE, rect)
 
-    def draw_entity(self, start_x: int, start_y: int, entity, color: Tuple):
+    def draw_entity(self, start_x: int, start_y: int, entity, color: Tuple,
+                    state: BranchState):
         """Draw a single entity"""
         x, y = entity.pos
         rect = pygame.Rect(
@@ -105,7 +126,11 @@ class Renderer:
             CELL_SIZE - 8, CELL_SIZE - 8
         )
 
-        pygame.draw.rect(self.screen, color, rect)
+        # Desaturate color for shadow entities
+        is_shadow = state.is_shadow(entity.uid)
+        display_color = desaturate_color(color, 0.5) if is_shadow else color
+
+        pygame.draw.rect(self.screen, display_color, rect)
         pygame.draw.rect(self.screen, BLACK, rect, 1)
 
         text = self.font.render(str(entity.uid), True, WHITE)
@@ -157,9 +182,182 @@ class Renderer:
                 else:
                     pygame.draw.rect(self.screen, BLACK, rect, 1)
 
+    def draw_dashed_line(self, start: Tuple[int, int], end: Tuple[int, int],
+                         color: Tuple, width: int = 2, dash_length: int = 6,
+                         offset: float = 0):
+        """Draw a flowing dashed line by shifting a repeating dash pattern."""
+        x1, y1 = start
+        x2, y2 = end
+        dist = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+
+        if dist == 0:
+            return
+
+        dx = (x2 - x1) / dist
+        dy = (y2 - y1) / dist
+
+        period = dash_length * 2
+        # Start before the line so partial dashes entering from the start are visible
+        pos = (offset % period)
+
+        while pos < dist:
+            seg_start = max(0.0, pos)
+            seg_end = min(dist, pos + dash_length)
+            if seg_end > seg_start:
+                sx = int(x1 + dx * seg_start)
+                sy = int(y1 + dy * seg_start)
+                ex = int(x1 + dx * seg_end)
+                ey = int(y1 + dy * seg_end)
+                pygame.draw.line(self.screen, color, (sx, sy), (ex, ey), width)
+            pos += period
+
+    def draw_lock_corners(self, start_x: int, start_y: int, pos: Tuple[int, int],
+                          color: Tuple, size: int = 16, thickness: int = 5,
+                          margin: int = 0):
+        """Draw L-shaped corner lock brackets.
+
+        Args:
+            size: L-segment length
+            thickness: Line thickness
+            margin: Outward extension in pixels (positive = extends beyond cell)
+        """
+        x, y = pos
+        rect_x = start_x + x * CELL_SIZE - margin
+        rect_y = start_y + y * CELL_SIZE - margin
+        cell_w = CELL_SIZE + margin * 2
+        cell_h = CELL_SIZE + margin * 2
+
+        # Top-left
+        pygame.draw.line(self.screen, color,
+                         (rect_x, rect_y + size), (rect_x, rect_y), thickness)
+        pygame.draw.line(self.screen, color,
+                         (rect_x, rect_y), (rect_x + size, rect_y), thickness)
+        # Top-right
+        pygame.draw.line(self.screen, color,
+                         (rect_x + cell_w - size, rect_y),
+                         (rect_x + cell_w, rect_y), thickness)
+        pygame.draw.line(self.screen, color,
+                         (rect_x + cell_w, rect_y),
+                         (rect_x + cell_w, rect_y + size), thickness)
+        # Bottom-left
+        pygame.draw.line(self.screen, color,
+                         (rect_x, rect_y + cell_h - size),
+                         (rect_x, rect_y + cell_h), thickness)
+        pygame.draw.line(self.screen, color,
+                         (rect_x, rect_y + cell_h),
+                         (rect_x + size, rect_y + cell_h), thickness)
+        # Bottom-right
+        pygame.draw.line(self.screen, color,
+                         (rect_x + cell_w - size, rect_y + cell_h),
+                         (rect_x + cell_w, rect_y + cell_h), thickness)
+        pygame.draw.line(self.screen, color,
+                         (rect_x + cell_w, rect_y + cell_h),
+                         (rect_x + cell_w, rect_y + cell_h - size), thickness)
+
+    def draw_dashed_frame(self, start_x: int, start_y: int, pos: Tuple[int, int],
+                          color: Tuple, thickness: int = 1):
+        """Draw a static dashed border"""
+        x, y = pos
+        rect_x = start_x + x * CELL_SIZE
+        rect_y = start_y + y * CELL_SIZE
+
+        dash_length = 5
+        gap_length = 5
+
+        for side in ['top', 'bottom', 'left', 'right']:
+            if side == 'top':
+                for i in range(0, CELL_SIZE, dash_length + gap_length):
+                    pygame.draw.line(self.screen, color,
+                                     (rect_x + i, rect_y),
+                                     (rect_x + min(i + dash_length, CELL_SIZE), rect_y),
+                                     thickness)
+            elif side == 'bottom':
+                for i in range(0, CELL_SIZE, dash_length + gap_length):
+                    pygame.draw.line(self.screen, color,
+                                     (rect_x + i, rect_y + CELL_SIZE),
+                                     (rect_x + min(i + dash_length, CELL_SIZE), rect_y + CELL_SIZE),
+                                     thickness)
+            elif side == 'left':
+                for i in range(0, CELL_SIZE, dash_length + gap_length):
+                    pygame.draw.line(self.screen, color,
+                                     (rect_x, rect_y + i),
+                                     (rect_x, rect_y + min(i + dash_length, CELL_SIZE)),
+                                     thickness)
+            elif side == 'right':
+                for i in range(0, CELL_SIZE, dash_length + gap_length):
+                    pygame.draw.line(self.screen, color,
+                                     (rect_x + CELL_SIZE, rect_y + i),
+                                     (rect_x + CELL_SIZE, rect_y + min(i + dash_length, CELL_SIZE)),
+                                     thickness)
+
+    def draw_shadow_connections(self, start_x: int, start_y: int, state: BranchState,
+                                animation_offset: int):
+        """
+        Draw shadow connection effects.
+
+        When the player faces a shadow block:
+        - Flowing dashed lines from other shadow positions to the front block
+        - L-shaped pulsing lock brackets on the front block
+        - Static dashed frames on other shadow positions
+        """
+        player = state.player
+        px, py = player.pos
+        dx, dy = player.direction
+        front_pos = (px + dx, py + dy)
+
+        # Check if there are entities at the front position
+        entities_at_front = [e for e in state.entities
+                             if e.pos == front_pos and Physics.grounded(e)]
+        if not entities_at_front:
+            return
+
+        front_uids = {e.uid for e in entities_at_front}
+
+        for uid in front_uids:
+            if not state.is_shadow(uid):
+                continue
+
+            all_instances = state.get_entities_by_uid(uid)
+            positions = {e.pos for e in all_instances}
+
+            if len(positions) <= 1:
+                continue
+
+            other_positions = positions - {front_pos}
+
+            front_center = (
+                start_x + front_pos[0] * CELL_SIZE + CELL_SIZE // 2,
+                start_y + front_pos[1] * CELL_SIZE + CELL_SIZE // 2
+            )
+
+            line_color = CYAN
+
+            # Draw flowing dashed lines from other positions to front (slow flow)
+            slow_offset = animation_offset * 0.25
+            for pos in other_positions:
+                other_center = (
+                    start_x + pos[0] * CELL_SIZE + CELL_SIZE // 2,
+                    start_y + pos[1] * CELL_SIZE + CELL_SIZE // 2
+                )
+                self.draw_dashed_line(other_center, front_center,
+                                      line_color, 2, 8, slow_offset)
+
+            # Draw dashed frames on other shadow positions
+            for pos in other_positions:
+                self.draw_dashed_frame(start_x, start_y, pos, line_color, 1)
+
+            # Draw pulsing L-shaped lock brackets on front block
+            pulse = math.sin(animation_offset / 20) * 0.3 + 0.7
+            lock_color = (int(line_color[0] * pulse),
+                          int(line_color[1] * pulse),
+                          int(line_color[2] * pulse))
+            self.draw_lock_corners(start_x, start_y, front_pos, lock_color,
+                                   size=16, thickness=5, margin=3)
+
     def draw_branch(self, state: BranchState, start_x: int, start_y: int,
                     title: str, is_focused: bool, border_color: Tuple,
-                    goal_active: bool = False, has_branched: bool = False):
+                    goal_active: bool = False, has_branched: bool = False,
+                    animation_offset: int = 0):
         """Draw a complete branch view"""
         # Title
         title_color = BLACK if is_focused else DARK_GRAY
@@ -185,7 +383,11 @@ class Renderer:
         # Entities (non-player, not held)
         for e in state.entities:
             if e.uid != 0 and Physics.grounded(e) and e.type == EntityType.BOX:
-                self.draw_entity(start_x, start_y, e, RED)
+                self.draw_entity(start_x, start_y, e, RED, state)
+
+        # Shadow connections (only on the focused branch)
+        if is_focused:
+            self.draw_shadow_connections(start_x, start_y, state, animation_offset)
 
         # Player
         has_held = any(e.carrier == 0 for e in state.entities)
