@@ -60,13 +60,13 @@ def run_game(floor_map: str, object_map: str):
             keys = pygame.key.get_pressed()
             direction = None
 
-            if keys[pygame.K_UP]:
+            if keys[pygame.K_UP] or keys[pygame.K_w]:
                 direction = (0, -1)
-            elif keys[pygame.K_DOWN]:
+            elif keys[pygame.K_DOWN] or keys[pygame.K_s]:
                 direction = (0, 1)
-            elif keys[pygame.K_LEFT]:
+            elif keys[pygame.K_LEFT] or keys[pygame.K_a]:
                 direction = (-1, 0)
-            elif keys[pygame.K_RIGHT]:
+            elif keys[pygame.K_RIGHT] or keys[pygame.K_d]:
                 direction = (1, 0)
 
             if direction:

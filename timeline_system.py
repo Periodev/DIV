@@ -152,7 +152,9 @@ class Timeline:
         instances = [e for e in state.entities if e.uid == target_uid]
         if not instances:
             return None
-        target = instances[0]
+        
+        held = next((e for e in instances if e.carrier == 0), None)
+        target = held if held else instances[0]
         state.entities = [e for e in state.entities if e.uid != target_uid]
         state.entities.append(target)
         return target

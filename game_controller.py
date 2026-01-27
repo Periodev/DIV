@@ -38,7 +38,12 @@ class GameController:
         """Get merge preview"""
         if not self.has_branched:
             return self.main_branch
-        return Timeline.converge(self.main_branch, self.sub_branch, self.current_focus)
+
+        merged = Timeline.converge(self.main_branch, self.sub_branch, self.current_focus)
+        preview = merged.copy()
+        Timeline.settle_carried(preview)
+        return preview
+        #return Timeline.converge(self.main_branch, self.sub_branch, self.current_focus)
 
     def try_branch(self) -> bool:
         """Attempt to create a branch"""
