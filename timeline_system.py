@@ -20,6 +20,11 @@ class TerrainType(Enum):
     GOAL = "G"
     HOLE = "H"
 
+class PhysicsResult(Enum):
+    OK = 0
+    COLLAPSE = 1
+    FALL = 2
+
 # ===== Static Configuration =====
 @dataclass
 class LevelSource:
@@ -241,6 +246,29 @@ class Physics:
     @staticmethod
     def in_bound(pos: Position, state: BranchState):
         return (0 <= pos[0] < state.grid_size and 0 <= pos[1] < state.grid_size)
+
+    @staticmethod
+    def step(state: BranchState) -> 'PhysicsResult':
+        """Run physics until stable, return failure mode if any."""
+        # 1. Settle holes (loop until no change for chain reactions)
+        while True:
+            changed = False
+            for e in state.entities:
+                if e.type == EntityType.BOX and Physics.grounded(e):
+                    if state.terrain.get(e.pos) == TerrainType.HOLE:
+                        if not any(x.pos == e.pos and x.carrier == -1 for x in state.entities):
+                            e.carrier = -1
+                            changed = True
+            if not changed:
+                break
+
+        # 2. Check failure conditions
+        if Physics.check_collapse(state):
+            return PhysicsResult.COLLAPSE
+        if Physics.check_fall(state):
+            return PhysicsResult.FALL
+
+        return PhysicsResult.OK
 
 # ===== Initialization Utility =====
 def init_branch_from_source(source: LevelSource) -> BranchState:

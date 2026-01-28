@@ -54,9 +54,6 @@ class GameLogic:
             push_pos = (new_pos[0] + dx, new_pos[1] + dy)
             for e in entities_at_new:
                 e.pos = push_pos
-            # Check if pushed into unfilled HOLE → trigger fill
-            for e in entities_at_new:
-                Physics.trigger_fill(state, e, push_pos)
 
         # Move player
         state.player.pos = new_pos
@@ -88,9 +85,6 @@ class GameLogic:
         target.collision = 0
         target.pos = state.player.pos
 
-        # Hole may have reopened — settle any box now sitting on unfilled holes
-        Physics.settle_holes(state)
-
         return True
 
     @staticmethod
@@ -113,9 +107,5 @@ class GameLogic:
             e.carrier = None
             e.collision = 1
             e.pos = front_pos
-
-        # Check if dropped into unfilled HOLE → trigger fill
-        for e in held:
-            Physics.trigger_fill(state, e, front_pos)
 
         return True

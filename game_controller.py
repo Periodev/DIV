@@ -1,6 +1,6 @@
 # game_controller.py - Game Controller
 
-from timeline_system import BranchState, Timeline, Physics, TerrainType, init_branch_from_source, LevelSource
+from timeline_system import BranchState, Timeline, Physics, PhysicsResult, TerrainType, init_branch_from_source, LevelSource
 from game_logic import GameLogic
 from typing import Optional
 
@@ -68,11 +68,8 @@ class GameController:
         # Settle: held boxes must converge immediately
         Timeline.settle_carried(merged)
 
-        # Check collapse / fall
-        if Physics.check_collapse(merged):
-            self.collapsed = True
-            return False
-        if Physics.check_fall(merged):
+        # Physics step
+        if Physics.step(merged) != PhysicsResult.OK:
             self.collapsed = True
             return False
 
@@ -100,10 +97,7 @@ class GameController:
         if GameLogic.can_move(active, direction):
             GameLogic.execute_move(active, direction)
 
-            if Physics.check_collapse(active):
-                self.collapsed = True
-                return False
-            if Physics.check_fall(active):
+            if Physics.step(active) != PhysicsResult.OK:
                 self.collapsed = True
                 return False
 
@@ -115,10 +109,7 @@ class GameController:
         active = self.get_active_branch()
         result = GameLogic.try_pickup(active)
 
-        if result and Physics.check_collapse(active):
-            self.collapsed = True
-            return False
-        if result and Physics.check_fall(active):
+        if result and Physics.step(active) != PhysicsResult.OK:
             self.collapsed = True
             return False
 
@@ -129,10 +120,7 @@ class GameController:
         active = self.get_active_branch()
         result = GameLogic.try_drop(active)
 
-        if result and Physics.check_collapse(active):
-            self.collapsed = True
-            return False
-        if result and Physics.check_fall(active):
+        if result and Physics.step(active) != PhysicsResult.OK:
             self.collapsed = True
             return False
 
