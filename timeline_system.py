@@ -100,6 +100,20 @@ class Timeline:
         return branch.copy()
 
     @staticmethod
+    def _copy_entity(e: Entity) -> Entity:
+        """Create a copy of an entity."""
+        return Entity(
+            uid=e.uid, type=e.type, pos=e.pos,
+            collision=e.collision, weight=e.weight,
+            z=e.z, holder=e.holder, direction=e.direction
+        )
+
+    @staticmethod
+    def _entity_priority(e: Entity) -> tuple:
+        """Priority for dedup: held > grounded > in-hole."""
+        return (e.holder is not None, e.z)
+
+    @staticmethod
     def converge(main: BranchState, sub: BranchState, bid: int) -> BranchState:
         """
         Merge two branches.
@@ -109,64 +123,24 @@ class Timeline:
         result.terrain = main.terrain.copy()
         result.grid_size = main.grid_size
 
-        # Collect all uids
-        all_uids = {e.uid for e in main.entities} | {e.uid for e in sub.entities}
+        # Collect all non-player entities from both branches
+        all_entities = [e for e in main.entities if e.uid != 0] + \
+                       [e for e in sub.entities if e.uid != 0]
 
-        # Union: add all instances of every uid
-        for uid in all_uids:
-            main_instances = [e for e in main.entities if e.uid == uid]
-            sub_instances = [e for e in sub.entities if e.uid == uid]
+        # Group by (uid, pos)
+        by_uid_pos: Dict[Tuple[int, Position], List[Entity]] = {}
+        for e in all_entities:
+            key = (e.uid, e.pos)
+            by_uid_pos.setdefault(key, []).append(e)
 
-            # Add all (positions union)
-            for e in main_instances:
-                if e.uid == 0:
-                    continue  # not count player
+        # Pick best instance per (uid, pos) group
+        for instances in by_uid_pos.values():
+            best = max(instances, key=Timeline._entity_priority)
+            result.entities.append(Timeline._copy_entity(best))
 
-                result.entities.append(Entity(
-                    uid=e.uid,
-                    type=e.type,
-                    pos=e.pos,
-                    collision=e.collision,
-                    weight=e.weight,
-                    z=e.z,
-                    holder=e.holder,
-                    direction=e.direction
-                ))
-
-            for e in sub_instances:
-                # Check for duplicate at same position
-                existing = next((r for r in result.entities
-                                if r.uid == e.uid and r.pos == e.pos), None)
-                if existing is None:
-                    result.entities.append(Entity(
-                        uid=e.uid,
-                        type=e.type,
-                        pos=e.pos,
-                        collision=e.collision,
-                        weight=e.weight,
-                        z=e.z,
-                        holder=e.holder,
-                        direction=e.direction
-                    ))
-                elif e.holder is not None and existing.holder is None:
-                    # Held entity takes priority over grounded at same position
-                    result.entities.remove(existing)
-                    result.entities.append(Entity(
-                        uid=e.uid,
-                        type=e.type,
-                        pos=e.pos,
-                        collision=e.collision,
-                        weight=e.weight,
-                        z=e.z,
-                        holder=e.holder,
-                        direction=e.direction
-                    ))
-
-        # Player state comes from the focused branch
+        # Add player from focused branch at position 0
         focused = main if bid == 0 else sub
-        player = result.entities[0]  # Assumes uid=0 is already in the list
-        player.pos = focused.player.pos
-        player.direction = focused.player.direction
+        result.entities.insert(0, Timeline._copy_entity(focused.player))
 
         return result
 

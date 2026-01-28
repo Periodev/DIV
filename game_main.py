@@ -118,22 +118,22 @@ def run_game(floor_map: str, object_map: str):
 
 # ===== 地圖定義 =====
 floor_map = '''
-#..G.#
-#HHHH#
-#HHHH#
-#HHHH#
-#....#
-#..VS#
+######
+G.##..
+SHHH..
+##H.##
+##V.##
+######
 '''
 
 # Object Map
 object_map = '''
 ......
+.....B
 ......
 ......
+..BP..
 ......
-......
-.B.BP.
 '''
 
 
