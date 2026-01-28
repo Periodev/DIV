@@ -39,11 +39,11 @@ class GameController:
         if not self.has_branched:
             return self.main_branch
 
-        merged = Timeline.converge(self.main_branch, self.sub_branch, self.current_focus)
+        focused, other = (self.main_branch, self.sub_branch) if self.current_focus == 0 else (self.sub_branch, self.main_branch)
+        merged = Timeline.converge(focused, other)
         preview = merged.copy()
         Timeline.settle_carried(preview)
         return preview
-        #return Timeline.converge(self.main_branch, self.sub_branch, self.current_focus)
 
     def try_branch(self) -> bool:
         """Attempt to create a branch"""
@@ -63,7 +63,8 @@ class GameController:
         if not self.has_branched:
             return False
 
-        merged = Timeline.converge(self.main_branch, self.sub_branch, self.current_focus)
+        focused, other = (self.main_branch, self.sub_branch) if self.current_focus == 0 else (self.sub_branch, self.main_branch)
+        merged = Timeline.converge(focused, other)
 
         # Settle: held boxes must converge immediately
         Timeline.settle_carried(merged)

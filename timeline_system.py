@@ -114,10 +114,12 @@ class Timeline:
         return (e.holder is not None, e.z)
 
     @staticmethod
-    def converge(main: BranchState, sub: BranchState, bid: int) -> BranchState:
+    def converge(main: BranchState, sub: BranchState) -> BranchState:
         """
         Merge two branches.
-        bid: 0=main focused, 1=sub focused
+        main: the focused branch (player taken from here)
+        sub: the non-focused branch
+        Caller must determine focus and pass in correct order.
         """
         result = BranchState()
         result.terrain = main.terrain.copy()
@@ -138,9 +140,8 @@ class Timeline:
             best = max(instances, key=Timeline._entity_priority)
             result.entities.append(Timeline._copy_entity(best))
 
-        # Add player from focused branch at position 0
-        focused = main if bid == 0 else sub
-        result.entities.insert(0, Timeline._copy_entity(focused.player))
+        # Add player from main (focused) branch at position 0
+        result.entities.insert(0, Timeline._copy_entity(main.player))
 
         return result
 
