@@ -321,7 +321,7 @@ class Renderer:
         - Static dashed frames on other shadow positions
         """
         # Skip if player is holding something (can't interact with shadow)
-        if any(e.holder == 0 for e in state.entities):
+        if state.get_held_items():
             return
 
         player = state.player
@@ -409,8 +409,8 @@ class Renderer:
         focused = sub_branch if current_focus == 1 else main_branch
         other = main_branch if current_focus == 1 else sub_branch
 
-        other_held = {e.uid for e in other.entities if e.holder == 0}
-        focused_held = {e.uid for e in focused.entities if e.holder == 0}
+        other_held = set(other.get_held_items())
+        focused_held = set(focused.get_held_items())
         # Only inherit if focused is not holding anything; otherwise other's items drop
         inherited = other_held if not focused_held else set()
 
@@ -490,8 +490,8 @@ class Renderer:
                                           current_focus, animation_offset)
 
         # Player
-        held_entity = next((e for e in state.entities if e.holder == 0), None)
-        held_uid = held_entity.uid if held_entity else None
+        held_items = state.get_held_items()
+        held_uid = held_items[0] if held_items else None
         player_color = RED if held_uid else BLUE
         if not is_focused:
             player_color = tuple(min(255, c + 80) for c in player_color)

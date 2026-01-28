@@ -49,7 +49,7 @@ def run_game(floor_map: str, object_map: str):
                 elif event.key == pygame.K_TAB:
                     controller.switch_focus()
                 elif event.key == pygame.K_SPACE:
-                    held = any(e.holder == 0 for e in controller.get_active_branch().entities)
+                    held = controller.get_active_branch().get_held_items()
                     if held:
                         controller.handle_drop()
                     else:
@@ -120,7 +120,7 @@ def run_game(floor_map: str, object_map: str):
 floor_map = '''
 ######
 G.##..
-SHHH..
+S.HH..
 ##H.##
 ##V.##
 ######
@@ -131,11 +131,10 @@ object_map = '''
 ......
 .....B
 ......
-......
-..BP..
+...B..
+...P..
 ......
 '''
-
 
 if __name__ == "__main__":
     run_game(floor_map, object_map)

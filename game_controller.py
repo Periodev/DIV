@@ -1,6 +1,6 @@
 # game_controller.py - Game Controller
 
-from timeline_system import BranchState, Timeline, Physics, PhysicsResult, TerrainType, init_branch_from_source, LevelSource
+from timeline_system import BranchState, Timeline, Physics, PhysicsResult, TerrainType, EntityType, init_branch_from_source, LevelSource
 from game_logic import GameLogic
 from typing import Optional
 
@@ -86,15 +86,39 @@ class GameController:
             self.current_focus = 1 - self.current_focus
 
     def handle_move(self, direction: tuple) -> bool:
-        """Handle movement input"""
+        """Handle movement input.
+
+        Object-adaptive turning:
+        - When facing a box: first press turns to face it, second press moves/pushes
+        - When holding item: same two-step behavior (turn, then move)
+        - Otherwise: single press turns and moves (fluid exploration)
+
+        This design slows the player down when interacting with important objects
+        (boxes), preventing accidental pushes while keeping movement fluid in open areas.
+        """
         active = self.get_active_branch()
+        px, py = active.player.pos
+        dx, dy = direction
+        target_pos = (px + dx, py + dy)
 
-        # Turn direction
-        if active.player.direction != direction:
+        # Check if there's a grounded box at target position (including shadows)
+        has_box_ahead = any(
+            e.type == EntityType.BOX and e.pos == target_pos and Physics.grounded(e)
+            for e in active.entities
+        )
+
+        is_holding = bool(active.get_held_items())
+
+        # Two-step turning: when holding OR when facing a box
+        if is_holding or has_box_ahead:
+            if active.player.direction != direction:
+                active.player.direction = direction
+                return True
+        else:
+            # Open area: set direction immediately, then try to move
             active.player.direction = direction
-            return True
 
-        # Move
+        # Attempt move
         if GameLogic.can_move(active, direction):
             GameLogic.execute_move(active, direction)
 

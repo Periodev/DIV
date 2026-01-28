@@ -92,6 +92,11 @@ class BranchState:
         positions = {e.pos for e in instances}
         return len(positions) > 1
 
+    def get_held_items(self) -> List[int]:
+        """Get uids of all items held by player (holder == 0).
+        Returns empty list if player is empty-handed."""
+        return [e.uid for e in self.entities if e.holder == 0]
+
 # ===== Timeline (Pure Functions) =====
 class Timeline:
     @staticmethod
@@ -126,8 +131,8 @@ class Timeline:
         result.grid_size = main.grid_size
 
         # Find uids that must drop: sub holding something AND main also holding something
-        main_held_uids = {e.uid for e in main.entities if e.holder == 0}
-        sub_held_uids = {e.uid for e in sub.entities if e.holder == 0}
+        main_held_uids = set(main.get_held_items())
+        sub_held_uids = set(sub.get_held_items())
         # Only drop sub's held items if main is also holding (can't hold two different items)
         drop_uids = (sub_held_uids - main_held_uids) if main_held_uids else set()
 
@@ -176,7 +181,7 @@ class Timeline:
     @staticmethod
     def settle_carried(state: BranchState):
         """After merge, converge all shadow instances of held entities"""
-        held_uids = {e.uid for e in state.entities if e.holder == 0}
+        held_uids = set(state.get_held_items())
         if not held_uids:
             return
         for uid in held_uids:
