@@ -99,7 +99,7 @@ class Renderer:
                     text = self.font.render('G', True, BLACK)
                     self.screen.blit(text, text.get_rect(center=rect.center))
                 elif terrain == TerrainType.HOLE:
-                    filled = any(e.pos == pos and e.carrier == -1
+                    filled = any(e.pos == pos and e.z == -1
                                  for e in state.entities)
                     if filled:
                         # Filled hole: darker ground + sunken box indicator
@@ -115,7 +115,7 @@ class Renderer:
                     state: BranchState):
         """Draw a single entity"""
 
-        if entity.carrier == -1:
+        if entity.z == -1:
             padding = 6
         else:
             padding = 4
@@ -386,8 +386,8 @@ class Renderer:
         focused = sub_branch if current_focus == 1 else main_branch
         other = main_branch if current_focus == 1 else sub_branch
 
-        other_held = {e.uid for e in other.entities if e.carrier == 0}
-        focused_held = {e.uid for e in focused.entities if e.carrier == 0}
+        other_held = {e.uid for e in other.entities if e.holder == 0}
+        focused_held = {e.uid for e in focused.entities if e.holder == 0}
         inherited = other_held - focused_held
 
         if not inherited:
@@ -466,7 +466,7 @@ class Renderer:
                                           current_focus, animation_offset)
 
         # Player
-        has_held = any(e.carrier == 0 for e in state.entities)
+        has_held = any(e.holder == 0 for e in state.entities)
         player_color = RED if has_held else BLUE
         if not is_focused:
             player_color = tuple(min(255, c + 80) for c in player_color)

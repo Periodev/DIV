@@ -44,7 +44,8 @@ class Entity:
     pos: Position
     collision: int = 1  # collision volume
     weight: int = 1
-    carrier: Optional[int] = None  # carrier uid
+    z: int = 0  # height layer: -1=underground, 0=ground, 1=held
+    holder: Optional[int] = None  # uid of holder (None=not held)
     direction: Position = (0, 1)  # player-exclusive
 
 # ===== Branch State =====
@@ -66,7 +67,8 @@ class BranchState:
                 pos=e.pos,
                 collision=e.collision,
                 weight=e.weight,
-                carrier=e.carrier,
+                z=e.z,
+                holder=e.holder,
                 direction=e.direction
             )
             for e in self.entities
@@ -126,20 +128,37 @@ class Timeline:
                     pos=e.pos,
                     collision=e.collision,
                     weight=e.weight,
-                    carrier=e.carrier,
+                    z=e.z,
+                    holder=e.holder,
                     direction=e.direction
                 ))
 
             for e in sub_instances:
-                # Avoid duplicate at same position
-                if not any(r.uid == e.uid and r.pos == e.pos for r in result.entities):
+                # Check for duplicate at same position
+                existing = next((r for r in result.entities
+                                if r.uid == e.uid and r.pos == e.pos), None)
+                if existing is None:
                     result.entities.append(Entity(
                         uid=e.uid,
                         type=e.type,
                         pos=e.pos,
                         collision=e.collision,
                         weight=e.weight,
-                        carrier=e.carrier,
+                        z=e.z,
+                        holder=e.holder,
+                        direction=e.direction
+                    ))
+                elif e.holder is not None and existing.holder is None:
+                    # Held entity takes priority over grounded at same position
+                    result.entities.remove(existing)
+                    result.entities.append(Entity(
+                        uid=e.uid,
+                        type=e.type,
+                        pos=e.pos,
+                        collision=e.collision,
+                        weight=e.weight,
+                        z=e.z,
+                        holder=e.holder,
                         direction=e.direction
                     ))
 
@@ -157,8 +176,8 @@ class Timeline:
         instances = [e for e in state.entities if e.uid == target_uid]
         if not instances:
             return None
-        
-        held = next((e for e in instances if e.carrier == 0), None)
+
+        held = next((e for e in instances if e.holder == 0), None)
         target = held if held else instances[0]
         state.entities = [e for e in state.entities if e.uid != target_uid]
         state.entities.append(target)
@@ -167,12 +186,13 @@ class Timeline:
     @staticmethod
     def settle_carried(state: BranchState):
         """After merge, converge all shadow instances of held entities"""
-        held_uids = {e.uid for e in state.entities if e.carrier == 0}
+        held_uids = {e.uid for e in state.entities if e.holder == 0}
         if not held_uids:
             return
         for uid in held_uids:
             target = Timeline.converge_one(state, uid)
-            target.carrier = 0
+            target.z = 1
+            target.holder = 0
             target.collision = 0
             target.pos = state.player.pos
 
@@ -184,10 +204,10 @@ class Physics:
 
         if state.terrain.get(pos) == TerrainType.HOLE:
             # Fusion: filled hole = floor; filling entities don't count
-            filled = any(e.pos == pos and e.carrier == -1 for e in state.entities)
+            filled = any(e.pos == pos and e.z == -1 for e in state.entities)
             terrain_base = 0 if filled else -1
             entity_sum = sum(e.collision for e in state.entities
-                             if e.pos == pos and e.carrier != -1)
+                             if e.pos == pos and e.z >= 0)
         elif state.terrain.get(pos) == TerrainType.WALL:
             terrain_base = 255
             entity_sum = 0
@@ -227,10 +247,9 @@ class Physics:
         """Fill an unfilled HOLE at pos with the given box"""
         if state.terrain.get(pos) != TerrainType.HOLE:
             return
-        if any(e.pos == pos and e.carrier == -1 for e in state.entities):
+        if any(e.pos == pos and e.z == -1 for e in state.entities):
             return  # already filled
-        box.carrier = -1  # contained by terrain
-        # box.collision stays 1 (physically fills the negative space)
+        box.z = -1  # underground layer
 
     @staticmethod
     def settle_holes(state: 'BranchState'):
@@ -241,7 +260,7 @@ class Physics:
 
     @staticmethod
     def grounded(entity: 'Entity'):
-        return entity.carrier is None
+        return entity.z == 0
 
     @staticmethod
     def in_bound(pos: Position, state: BranchState):
@@ -256,8 +275,8 @@ class Physics:
             for e in state.entities:
                 if e.type == EntityType.BOX and Physics.grounded(e):
                     if state.terrain.get(e.pos) == TerrainType.HOLE:
-                        if not any(x.pos == e.pos and x.carrier == -1 for x in state.entities):
-                            e.carrier = -1
+                        if not any(x.pos == e.pos and x.z == -1 for x in state.entities):
+                            e.z = -1
                             changed = True
             if not changed:
                 break

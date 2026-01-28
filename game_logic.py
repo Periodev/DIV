@@ -61,7 +61,7 @@ class GameLogic:
 
         # Update carried object positions
         for e in state.entities:
-            if e.carrier == 0:
+            if e.holder == 0:
                 e.pos = new_pos
 
     @staticmethod
@@ -81,7 +81,8 @@ class GameLogic:
 
         target = Timeline.converge_one(state, target.uid)
 
-        target.carrier = 0
+        target.z = 1
+        target.holder = 0
         target.collision = 0
         target.pos = state.player.pos
 
@@ -95,7 +96,7 @@ class GameLogic:
         front_pos = (px + dx, py + dy)
 
         # Check if holding any object
-        held = [e for e in state.entities if e.carrier == 0]
+        held = [e for e in state.entities if e.holder == 0]
         if not held:
             return False
 
@@ -104,7 +105,8 @@ class GameLogic:
 
         # Drop
         for e in held:
-            e.carrier = None
+            e.z = 0
+            e.holder = None
             e.collision = 1
             e.pos = front_pos
 

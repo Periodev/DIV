@@ -49,7 +49,7 @@ def run_game(floor_map: str, object_map: str):
                 elif event.key == pygame.K_TAB:
                     controller.switch_focus()
                 elif event.key == pygame.K_SPACE:
-                    held = any(e.carrier == 0 for e in controller.get_active_branch().entities)
+                    held = any(e.holder == 0 for e in controller.get_active_branch().entities)
                     if held:
                         controller.handle_drop()
                     else:
