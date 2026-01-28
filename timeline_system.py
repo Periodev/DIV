@@ -228,6 +228,13 @@ class Physics:
         # box.collision stays 1 (physically fills the negative space)
 
     @staticmethod
+    def settle_holes(state: 'BranchState'):
+        """Check all grounded boxes — if sitting on an unfilled hole, fill it."""
+        for e in state.entities:
+            if e.type == EntityType.BOX and Physics.grounded(e):
+                Physics.trigger_fill(state, e, e.pos)
+
+    @staticmethod
     def grounded(entity: 'Entity'):
         return entity.carrier is None
 

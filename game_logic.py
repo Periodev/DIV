@@ -87,7 +87,10 @@ class GameLogic:
         target.carrier = 0
         target.collision = 0
         target.pos = state.player.pos
- 
+
+        # Hole may have reopened — settle any box now sitting on unfilled holes
+        Physics.settle_holes(state)
+
         return True
 
     @staticmethod
