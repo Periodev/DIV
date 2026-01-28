@@ -116,7 +116,7 @@ class Renderer:
         """Draw a single entity"""
 
         if entity.z == -1:
-            padding = 6
+            padding = 7
         else:
             padding = 4
 
@@ -137,20 +137,33 @@ class Renderer:
         text = self.font.render(str(entity.uid), True, WHITE)
         self.screen.blit(text, text.get_rect(center=rect.center))
 
+    def draw_arrow(self, cx: int, cy: int, dx: int, dy: int, size: int, color: Tuple):
+        """Draw a triangular arrow pointing in direction (dx, dy)."""
+        half = size // 2
+        if dy == -1:  # Up
+            points = [(cx, cy - size), (cx - half, cy - half), (cx + half, cy - half)]
+        elif dy == 1:  # Down
+            points = [(cx, cy + size), (cx - half, cy + half), (cx + half, cy + half)]
+        elif dx == -1:  # Left
+            points = [(cx - size, cy), (cx - half, cy - half), (cx - half, cy + half)]
+        else:  # Right
+            points = [(cx + size, cy), (cx + half, cy - half), (cx + half, cy + half)]
+        pygame.draw.polygon(self.screen, color, points)
+
     def draw_player(self, start_x: int, start_y: int, player, color: Tuple,
-                    has_held: bool):
-        """Draw the player"""
+                    held_uid: int = None):
+        """Draw the player. If held_uid is set, show direction around the uid."""
         px, py = player.pos
-        center = (
-            start_x + px * CELL_SIZE + CELL_SIZE // 2,
-            start_y + py * CELL_SIZE + CELL_SIZE // 2
-        )
+        center_x = start_x + px * CELL_SIZE + CELL_SIZE // 2
+        center_y = start_y + py * CELL_SIZE + CELL_SIZE // 2
 
         dx, dy = player.direction
-        arrows = {(0, -1): '^', (0, 1): 'v', (-1, 0): '<', (1, 0): '>'}
-        arrow = arrows.get((dx, dy), '^')
+        
+        offset = 5
+        arrow_cx = center_x + dx * offset
+        arrow_cy = center_y + dy * offset
 
-        if has_held:
+        if held_uid is not None:
             rect = pygame.Rect(
                 start_x + px * CELL_SIZE + 3,
                 start_y + py * CELL_SIZE + 3,
@@ -158,11 +171,17 @@ class Renderer:
             )
             pygame.draw.rect(self.screen, color, rect)
             pygame.draw.rect(self.screen, BLACK, rect, 2)
-        else:
-            pygame.draw.circle(self.screen, color, center, CELL_SIZE // 4)
 
-        text = self.arrow_font.render(arrow, True, WHITE)
-        self.screen.blit(text, text.get_rect(center=center))
+            # Draw uid at center, arrow at edge
+            uid_text = self.font.render(str(held_uid), True, WHITE)
+            uid_text_rect = uid_text.get_rect(center=(center_x, center_y))
+            self.screen.blit(uid_text, uid_text_rect)
+
+            arrow_size = 14
+            self.draw_arrow(arrow_cx, arrow_cy, dx, dy, arrow_size, BLACK)
+        else:
+            pygame.draw.circle(self.screen, color, (center_x, center_y), CELL_SIZE // 5)
+            self.draw_arrow(arrow_cx, arrow_cy, dx, dy, 14, BLACK)
 
     def draw_grid_lines(self, start_x: int, start_y: int, state: BranchState):
         """Draw grid lines"""
@@ -471,11 +490,12 @@ class Renderer:
                                           current_focus, animation_offset)
 
         # Player
-        has_held = any(e.holder == 0 for e in state.entities)
-        player_color = RED if has_held else BLUE
+        held_entity = next((e for e in state.entities if e.holder == 0), None)
+        held_uid = held_entity.uid if held_entity else None
+        player_color = RED if held_uid else BLUE
         if not is_focused:
             player_color = tuple(min(255, c + 80) for c in player_color)
-        self.draw_player(start_x, start_y, state.player, player_color, has_held)
+        self.draw_player(start_x, start_y, state.player, player_color, held_uid)
 
         # Grid lines
         self.draw_grid_lines(start_x, start_y, state)
