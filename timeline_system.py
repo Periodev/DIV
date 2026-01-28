@@ -125,6 +125,12 @@ class Timeline:
         result.terrain = main.terrain.copy()
         result.grid_size = main.grid_size
 
+        # Find uids that must drop: sub holding something AND main also holding something
+        main_held_uids = {e.uid for e in main.entities if e.holder == 0}
+        sub_held_uids = {e.uid for e in sub.entities if e.holder == 0}
+        # Only drop sub's held items if main is also holding (can't hold two different items)
+        drop_uids = (sub_held_uids - main_held_uids) if main_held_uids else set()
+
         # Collect all non-player entities from both branches
         all_entities = [e for e in main.entities if e.uid != 0] + \
                        [e for e in sub.entities if e.uid != 0]
@@ -138,7 +144,16 @@ class Timeline:
         # Pick best instance per (uid, pos) group
         for instances in by_uid_pos.values():
             best = max(instances, key=Timeline._entity_priority)
-            result.entities.append(Timeline._copy_entity(best))
+            copied = Timeline._copy_entity(best)
+
+            # Sub's held entities drop at sub player's position (only if main also holding)
+            if copied.uid in drop_uids and copied.holder == 0:
+                copied.holder = None
+                copied.z = 0
+                copied.collision = 1
+                copied.pos = sub.player.pos
+
+            result.entities.append(copied)
 
         # Add player from main (focused) branch at position 0
         result.entities.insert(0, Timeline._copy_entity(main.player))

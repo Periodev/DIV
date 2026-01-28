@@ -301,6 +301,10 @@ class Renderer:
         - L-shaped pulsing lock brackets on the front block
         - Static dashed frames on other shadow positions
         """
+        # Skip if player is holding something (can't interact with shadow)
+        if any(e.holder == 0 for e in state.entities):
+            return
+
         player = state.player
         px, py = player.pos
         dx, dy = player.direction
@@ -388,7 +392,8 @@ class Renderer:
 
         other_held = {e.uid for e in other.entities if e.holder == 0}
         focused_held = {e.uid for e in focused.entities if e.holder == 0}
-        inherited = other_held - focused_held
+        # Only inherit if focused is not holding anything; otherwise other's items drop
+        inherited = other_held if not focused_held else set()
 
         if not inherited:
             return
