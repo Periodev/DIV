@@ -246,6 +246,12 @@ class GameController:
         if active.is_shadow(target.uid):
             # Shadow: converge to front position, don't pickup
             Timeline.converge_one(active, target.uid, front_pos)
+
+            # Physics check after converge (e.g., player falls if standing on removed box)
+            if Physics.step(active) != PhysicsResult.OK:
+                self.collapsed = True
+                return False
+
             self.input_log.append('X')
             self._save_snapshot()
             return True
