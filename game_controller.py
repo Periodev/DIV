@@ -217,6 +217,42 @@ class GameController:
             self._save_snapshot()
         return result
 
+    def handle_adaptive_action(self) -> bool:
+        """Adaptive X action:
+        - If holding: drop (same as Space)
+        - If facing shadow in active branch: converge only (stay on ground)
+        - If facing solid: pickup
+        """
+        active = self.get_active_branch()
+
+        # If holding, drop
+        if active.get_held_items():
+            return self.handle_drop()
+
+        # Check what's in front
+        px, py = active.player.pos
+        dx, dy = active.player.direction
+        front_pos = (px + dx, py + dy)
+
+        # Find grounded box at front position
+        target = next((e for e in active.entities
+                       if e.pos == front_pos
+                       and e.type == EntityType.BOX
+                       and Physics.grounded(e)), None)
+
+        if target is None:
+            return False
+
+        if active.is_shadow(target.uid):
+            # Shadow: converge to front position, don't pickup
+            Timeline.converge_one(active, target.uid, front_pos)
+            self.input_log.append('X')
+            self._save_snapshot()
+            return True
+        else:
+            # Solid: normal pickup
+            return self.handle_pickup()
+
     def check_victory(self) -> bool:
         """Check victory conditions"""
         if self.has_branched:

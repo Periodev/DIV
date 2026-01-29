@@ -166,14 +166,27 @@ class Timeline:
         return result
 
     @staticmethod
-    def converge_one(state: BranchState, target_uid: int) -> Entity:
-        """Collapse all instances of a uid into one"""
+    def converge_one(state: BranchState, target_uid: int, target_pos: Position = None) -> Entity:
+        """Collapse all instances of a uid into one.
+
+        Priority: held > target_pos > first instance
+        """
         instances = [e for e in state.entities if e.uid == target_uid]
         if not instances:
             return None
 
+        # Priority 1: held instance
         held = next((e for e in instances if e.holder == 0), None)
-        target = held if held else instances[0]
+        if held:
+            target = held
+        # Priority 2: instance at target_pos
+        elif target_pos:
+            at_pos = next((e for e in instances if e.pos == target_pos), None)
+            target = at_pos if at_pos else instances[0]
+        # Priority 3: first instance
+        else:
+            target = instances[0]
+
         state.entities = [e for e in state.entities if e.uid != target_uid]
         state.entities.append(target)
         return target

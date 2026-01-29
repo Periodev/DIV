@@ -52,12 +52,8 @@ def run_game(floor_map: str, object_map: str):
                     controller.try_merge()
                 elif event.key == pygame.K_TAB:
                     controller.switch_focus()
-                elif event.key == pygame.K_SPACE:
-                    held = controller.get_active_branch().get_held_items()
-                    if held:
-                        controller.handle_drop()
-                    else:
-                        controller.handle_pickup()
+                elif event.key == pygame.K_x or event.key == pygame.K_SPACE:
+                    controller.handle_adaptive_action()
 
         # Continuous movement
         if not controller.collapsed and not controller.victory and move_cooldown == 0:
@@ -136,21 +132,22 @@ def run_game(floor_map: str, object_map: str):
 
 # ===== 地圖定義 =====
 floor_map = '''
-######
-V#.###
-wwwwG#
-##S###
-######
-######
+#S.G.#
+#....#
+#HHHH#
+#HHHH#
+#....#
+#..VS#
 '''
 
+# Object Map
 object_map = '''
 ......
 ......
-PB....
 ......
 ......
-......
+..BP..
+..B...
 '''
 
 if __name__ == "__main__":
