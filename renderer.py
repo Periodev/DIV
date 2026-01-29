@@ -50,10 +50,12 @@ LIGHT_ORANGE = (255, 200, 150)
 
 # Hint panel colors
 HINT_BG = (40, 40, 40)
-HINT_GREEN = (76, 175, 80)
-HINT_BLUE = (0, 100, 200)
-HINT_CYAN = (0, 188, 212)
-HINT_TEXT = (200, 255, 200)
+HINT_GREEN = (100, 200, 100)
+HINT_BLUE = (60, 100, 255)
+HINT_CYAN = (0, 220, 220)
+HINT_TEXT_GREEN = (150, 255, 150)
+HINT_TEXT_BLUE = (180, 200, 255)
+HINT_TEXT_GRAY = (200, 200, 200)
 
 
 class Renderer:
@@ -61,18 +63,11 @@ class Renderer:
         self.screen = screen
         self.font = pygame.font.Font(None, 16)
         self.arrow_font = pygame.font.Font(None, 28)
-        self.hint_font = pygame.font.SysFont("Microsoft YaHei", 18)
+        self.hint_font = pygame.font.SysFont("Microsoft YaHei", 22)
 
     def draw_hint_panel(self, x: int, y: int, width: int, height: int, text: str,
-                        border_color: tuple):
-        """Draw a single hint panel.
-
-        Args:
-            x, y: top-left position
-            width, height: panel size
-            text: display text (empty string = don't draw)
-            border_color: border color
-        """
+                        border_color: tuple, text_color: tuple):
+        """Draw a single hint panel."""
         if not text:
             return
 
@@ -85,20 +80,34 @@ class Renderer:
         pygame.draw.rect(self.screen, border_color, (x, y, width, height), 2)
 
         # Text
-        text_surface = self.hint_font.render(text, True, HINT_TEXT)
+        text_surface = self.hint_font.render(text, True, text_color)
+        text_rect = text_surface.get_rect(center=(x + width // 2, y + height // 2))
+        self.screen.blit(text_surface, text_rect)
+
+    def draw_static_hints(self):
+        """Draw static hints in top-left corner."""
+        text = "F5重置  方向鍵移動  Z撤銷"
+        x, y = PADDING, 8
+        width, height = 280, 45
+
+        # Background
+        panel_surface = pygame.Surface((width, height))
+        panel_surface.fill(HINT_BG)
+        self.screen.blit(panel_surface, (x, y))
+
+        # Border
+        pygame.draw.rect(self.screen, HINT_TEXT_GRAY, (x, y, width, height), 2)
+
+        # Text
+        text_surface = self.hint_font.render(text, True, HINT_TEXT_GRAY)
         text_rect = text_surface.get_rect(center=(x + width // 2, y + height // 2))
         self.screen.blit(text_surface, text_rect)
 
     def draw_adaptive_hints(self, interaction_hint: tuple, timeline_hint: str):
-        """Draw dual-window hint system.
-
-        Args:
-            interaction_hint: (text, is_highlight) for X key
-            timeline_hint: text for V/C/TAB keys
-        """
+        """Draw dual-window hint system."""
         y = 8
-        height = 36
-        gap = 20  # Gap between two panels
+        height = 45
+        gap = 20
         interaction_text, is_highlight = interaction_hint
 
         # Panel sizes
@@ -112,14 +121,15 @@ class Renderer:
         interaction_x = start_x
         timeline_x = start_x + interaction_width + gap
 
-        # Draw interaction hint (left, green/cyan border)
-        border_color = HINT_CYAN if is_highlight else HINT_GREEN
+        # Draw interaction hint (blue, cyan when highlight)
+        border_color = HINT_CYAN if is_highlight else HINT_BLUE
+        text_color = HINT_CYAN if is_highlight else HINT_TEXT_BLUE
         self.draw_hint_panel(interaction_x, y, interaction_width, height,
-                            interaction_text, border_color)
+                            interaction_text, border_color, text_color)
 
-        # Draw timeline hint (right, blue border)
+        # Draw timeline hint (green)
         self.draw_hint_panel(timeline_x, y, timeline_width, height,
-                            timeline_hint, HINT_BLUE)
+                            timeline_hint, HINT_GREEN, HINT_TEXT_GREEN)
 
     def draw_terrain(self, start_x: int, start_y: int, state: BranchState,
                      goal_active: bool = False, has_branched: bool = False):
@@ -578,7 +588,7 @@ class Renderer:
         self.screen.blit(big_text,
                          big_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 40)))
 
-        hint = self.font.render("Press F5 to restart", True, WHITE)
+        hint = self.font.render("F5 restart Z undo", True, WHITE)
         self.screen.blit(hint,
                          hint.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 20)))
 

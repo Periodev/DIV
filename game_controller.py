@@ -310,13 +310,13 @@ class GameController:
         """Get timeline hint for V/C/TAB keys.
 
         Returns:
-            'V 分支' / 'C 合併  TAB 切換' / ''
+            'V 分裂' / 'C 合併  Tab 切換視角' / ''
         """
         if self.has_branched:
-            return 'C 合併  TAB 切換'
+            return 'C 合併  Tab 切換視角'
 
         active = self.get_active_branch()
         if active.terrain.get(active.player.pos) == TerrainType.BRANCH:
-            return 'V 分支'
+            return 'V 分裂'
 
         return ''

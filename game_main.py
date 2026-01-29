@@ -84,7 +84,8 @@ def run_game(floor_map: str, object_map: str):
         # Rendering
         screen.fill((255, 255, 255))
 
-        # Adaptive hints
+        # Hints
+        renderer.draw_static_hints()
         renderer.draw_adaptive_hints(
             controller.get_interaction_hint(),
             controller.get_timeline_hint()
@@ -96,7 +97,7 @@ def run_game(floor_map: str, object_map: str):
             for pos, t in preview.terrain.items() if t.name == 'SWITCH'
         )
         # Main Branch
-        grid_y = PADDING + 50  # Space for hint panels
+        grid_y = PADDING + 80  # Space for hint panels
         renderer.draw_branch(controller.main_branch,
                              PADDING * 2 + GRID_WIDTH, grid_y,
                              "DIV 0", controller.current_focus == 0, (0, 100, 200),
@@ -129,6 +130,7 @@ def run_game(floor_map: str, object_map: str):
         # Overlay
         if controller.collapsed:
             renderer.draw_overlay("FALL DOWN!", (150, 0, 0))
+            pass
         elif controller.victory:
             renderer.draw_overlay("LEVEL COMPLETE!", (0, 0, 0))
 
@@ -139,22 +141,21 @@ def run_game(floor_map: str, object_map: str):
 
 # ===== 地圖定義 =====
 floor_map = '''
-#S.G.#
-#....#
-#HHHH#
-#HHHH#
-#....#
-#..VS#
+######
+.w#S##
+wwwVG#
+######
+######
+######
 '''
 
-# Object Map
 object_map = '''
 ......
+P.....
+B.....
 ......
 ......
 ......
-..BP..
-..B...
 '''
 
 if __name__ == "__main__":
