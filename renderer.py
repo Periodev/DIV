@@ -31,7 +31,7 @@ GRID_WIDTH = GRID_SIZE * CELL_SIZE
 GRID_HEIGHT = GRID_SIZE * CELL_SIZE
 PADDING = 20
 WINDOW_WIDTH = GRID_WIDTH * 3 + PADDING * 4
-WINDOW_HEIGHT = GRID_HEIGHT + PADDING * 2 + 80  # Extra space for debug info
+WINDOW_HEIGHT = GRID_HEIGHT + PADDING * 2 + 120  # Extra space for hints and debug info
 
 # Colors
 WHITE = (255, 255, 255)
@@ -48,12 +48,78 @@ CYAN = (50, 150, 200)
 ORANGE = (255, 150, 50)
 LIGHT_ORANGE = (255, 200, 150)
 
+# Hint panel colors
+HINT_BG = (40, 40, 40)
+HINT_GREEN = (76, 175, 80)
+HINT_BLUE = (0, 100, 200)
+HINT_CYAN = (0, 188, 212)
+HINT_TEXT = (200, 255, 200)
+
 
 class Renderer:
     def __init__(self, screen: pygame.Surface):
         self.screen = screen
         self.font = pygame.font.Font(None, 16)
         self.arrow_font = pygame.font.Font(None, 28)
+        self.hint_font = pygame.font.SysFont("Microsoft YaHei", 18)
+
+    def draw_hint_panel(self, x: int, y: int, width: int, height: int, text: str,
+                        border_color: tuple):
+        """Draw a single hint panel.
+
+        Args:
+            x, y: top-left position
+            width, height: panel size
+            text: display text (empty string = don't draw)
+            border_color: border color
+        """
+        if not text:
+            return
+
+        # Background
+        panel_surface = pygame.Surface((width, height))
+        panel_surface.fill(HINT_BG)
+        self.screen.blit(panel_surface, (x, y))
+
+        # Border
+        pygame.draw.rect(self.screen, border_color, (x, y, width, height), 2)
+
+        # Text
+        text_surface = self.hint_font.render(text, True, HINT_TEXT)
+        text_rect = text_surface.get_rect(center=(x + width // 2, y + height // 2))
+        self.screen.blit(text_surface, text_rect)
+
+    def draw_adaptive_hints(self, interaction_hint: tuple, timeline_hint: str):
+        """Draw dual-window hint system.
+
+        Args:
+            interaction_hint: (text, is_highlight) for X key
+            timeline_hint: text for V/C/TAB keys
+        """
+        y = 8
+        height = 36
+        gap = 20  # Gap between two panels
+        interaction_text, is_highlight = interaction_hint
+
+        # Panel sizes
+        interaction_width = 100
+        timeline_width = 220
+
+        # Center both panels together
+        total_width = interaction_width + gap + timeline_width
+        start_x = (WINDOW_WIDTH - total_width) // 2
+
+        interaction_x = start_x
+        timeline_x = start_x + interaction_width + gap
+
+        # Draw interaction hint (left, green/cyan border)
+        border_color = HINT_CYAN if is_highlight else HINT_GREEN
+        self.draw_hint_panel(interaction_x, y, interaction_width, height,
+                            interaction_text, border_color)
+
+        # Draw timeline hint (right, blue border)
+        self.draw_hint_panel(timeline_x, y, timeline_width, height,
+                            timeline_hint, HINT_BLUE)
 
     def draw_terrain(self, start_x: int, start_y: int, state: BranchState,
                      goal_active: bool = False, has_branched: bool = False):

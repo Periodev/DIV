@@ -272,3 +272,51 @@ class GameController:
 
         self.victory = switches_ok and goal_ok
         return self.victory
+
+    def get_interaction_hint(self) -> tuple:
+        """Get interaction hint for X key.
+
+        Returns:
+            (hint_text, is_highlight)
+            hint_text: 'X 拾取' / 'X 放下' / 'X 收束' / ''
+            is_highlight: True for X收束 (needs special display)
+        """
+        active = self.get_active_branch()
+
+        # If holding, show drop hint
+        if active.get_held_items():
+            return ('X 放下', False)
+
+        # Check what's in front
+        px, py = active.player.pos
+        dx, dy = active.player.direction
+        front_pos = (px + dx, py + dy)
+
+        # Find grounded box at front position
+        target = next((e for e in active.entities
+                       if e.pos == front_pos
+                       and e.type == EntityType.BOX
+                       and Physics.grounded(e)), None)
+
+        if target is None:
+            return ('', False)
+
+        if active.is_shadow(target.uid):
+            return ('X 收束', True)  # Highlight for shadow converge
+        else:
+            return ('X 拾取', False)
+
+    def get_timeline_hint(self) -> str:
+        """Get timeline hint for V/C/TAB keys.
+
+        Returns:
+            'V 分支' / 'C 合併  TAB 切換' / ''
+        """
+        if self.has_branched:
+            return 'C 合併  TAB 切換'
+
+        active = self.get_active_branch()
+        if active.terrain.get(active.player.pos) == TerrainType.BRANCH:
+            return 'V 分支'
+
+        return ''

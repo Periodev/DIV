@@ -84,19 +84,26 @@ def run_game(floor_map: str, object_map: str):
         # Rendering
         screen.fill((255, 255, 255))
 
+        # Adaptive hints
+        renderer.draw_adaptive_hints(
+            controller.get_interaction_hint(),
+            controller.get_timeline_hint()
+        )
+
         preview = controller.get_merge_preview()
         goal_active = all(
             any(e.pos == pos for e in preview.entities)
             for pos, t in preview.terrain.items() if t.name == 'SWITCH'
         )
         # Main Branch
+        grid_y = PADDING + 50  # Space for hint panels
         renderer.draw_branch(controller.main_branch,
-                             PADDING * 2 + GRID_WIDTH, PADDING + 20,
+                             PADDING * 2 + GRID_WIDTH, grid_y,
                              "DIV 0", controller.current_focus == 0, (0, 100, 200),
                              goal_active, controller.has_branched, animation_frame)
 
         # Merge Preview
-        renderer.draw_branch(preview, PADDING, PADDING + 20,
+        renderer.draw_branch(preview, PADDING, grid_y,
                              "Merge Preview", False, (150, 50, 150),
                              goal_active, controller.has_branched, animation_frame,
                              is_merge_preview=True,
@@ -107,7 +114,7 @@ def run_game(floor_map: str, object_map: str):
         # Sub Branch
         if controller.sub_branch:
             renderer.draw_branch(controller.sub_branch,
-                                 PADDING * 3 + GRID_WIDTH * 2, PADDING + 20,
+                                 PADDING * 3 + GRID_WIDTH * 2, grid_y,
                                  "DIV 1", controller.current_focus == 1, (50, 150, 200),
                                  goal_active, controller.has_branched, animation_frame)
 
