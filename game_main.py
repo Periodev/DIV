@@ -39,6 +39,10 @@ def run_game(floor_map: str, object_map: str):
                     controller.reset()
                     continue
 
+                if event.key == pygame.K_z:
+                    controller.undo()
+                    continue
+
                 if controller.collapsed or controller.victory:
                     continue
 
@@ -73,7 +77,13 @@ def run_game(floor_map: str, object_map: str):
                 controller.handle_move(direction)
                 move_cooldown = MOVE_DELAY
 
-        controller.check_victory()
+        if not controller.victory and controller.check_victory():
+            # Print solution on victory
+            solution = ''.join(controller.input_log)
+            print(f"\n=== VICTORY ===")
+            print(f"Steps: {len(controller.input_log)}")
+            print(f"Solution: {solution}")
+            print(f"===============\n")
 
         # Rendering
         screen.fill((255, 255, 255))
@@ -105,6 +115,14 @@ def run_game(floor_map: str, object_map: str):
                                  "DIV 1", controller.current_focus == 1, (50, 150, 200),
                                  goal_active, controller.has_branched, animation_frame)
 
+        # Debug info
+        renderer.draw_debug_info(
+            len(controller.history) - 1,
+            controller.current_focus,
+            controller.has_branched,
+            controller.input_log
+        )
+
         # Overlay
         if controller.collapsed:
             renderer.draw_overlay("FALL DOWN!", (150, 0, 0))
@@ -119,20 +137,19 @@ def run_game(floor_map: str, object_map: str):
 # ===== 地圖定義 =====
 floor_map = '''
 ######
-G.##..
-S.HH..
-##H.##
-##V.##
+V#.###
+wwwwG#
+##S###
+######
 ######
 '''
 
-# Object Map
 object_map = '''
 ......
-.....B
 ......
-...B..
-...P..
+PB....
+......
+......
 ......
 '''
 

@@ -31,7 +31,7 @@ GRID_WIDTH = GRID_SIZE * CELL_SIZE
 GRID_HEIGHT = GRID_SIZE * CELL_SIZE
 PADDING = 20
 WINDOW_WIDTH = GRID_WIDTH * 3 + PADDING * 4
-WINDOW_HEIGHT = GRID_HEIGHT + PADDING * 2 + 40
+WINDOW_HEIGHT = GRID_HEIGHT + PADDING * 2 + 80  # Extra space for debug info
 
 # Colors
 WHITE = (255, 255, 255)
@@ -515,3 +515,11 @@ class Renderer:
         hint = self.font.render("Press F5 to restart", True, WHITE)
         self.screen.blit(hint,
                          hint.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 20)))
+
+    def draw_debug_info(self, history_len: int, focus: int, has_branched: bool, input_log: list):
+        """Draw debug information at bottom of screen."""
+        y = WINDOW_HEIGHT - 30
+        keys = ''.join(input_log[-30:])  # Show last 30 keys
+        info = f"Step: {history_len}  |  Keys: {keys}"
+        text = self.font.render(info, True, DARK_GRAY)
+        self.screen.blit(text, (PADDING, y))

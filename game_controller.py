@@ -1,8 +1,18 @@
 # game_controller.py - Game Controller
 
+from dataclasses import dataclass
+from typing import Optional, List
 from timeline_system import BranchState, Timeline, Physics, PhysicsResult, TerrainType, EntityType, init_branch_from_source, LevelSource
 from game_logic import GameLogic
-from typing import Optional
+
+
+@dataclass
+class GameSnapshot:
+    """Snapshot of game state for undo functionality."""
+    main_branch: BranchState
+    sub_branch: Optional[BranchState]
+    current_focus: int
+    has_branched: bool
 
 
 class GameController:
@@ -16,6 +26,9 @@ class GameController:
         self.collapsed = False
         self.victory = False
 
+        self.history: List[GameSnapshot] = []
+        self.input_log: List[str] = []  # Key sequence for replay/validation
+
         self.reset()
 
     def reset(self):
@@ -27,6 +40,38 @@ class GameController:
         self.has_branched = False
         self.collapsed = False
         self.victory = False
+        self.history.clear()
+        self.input_log.clear()
+        self._save_snapshot()  # Save initial state
+
+    def _save_snapshot(self):
+        """Save current state to history."""
+        snapshot = GameSnapshot(
+            main_branch=self.main_branch.copy(),
+            sub_branch=self.sub_branch.copy() if self.sub_branch else None,
+            current_focus=self.current_focus,
+            has_branched=self.has_branched
+        )
+        self.history.append(snapshot)
+
+    def undo(self) -> bool:
+        """Restore previous state. Returns True if successful."""
+        if len(self.history) <= 1:
+            return False  # Keep at least initial state
+
+        self.history.pop()  # Remove current state
+        if self.input_log:
+            self.input_log.pop()  # Remove last input
+        snapshot = self.history[-1]  # Get previous state
+
+        self.main_branch = snapshot.main_branch.copy()
+        self.sub_branch = snapshot.sub_branch.copy() if snapshot.sub_branch else None
+        self.current_focus = snapshot.current_focus
+        self.has_branched = snapshot.has_branched
+        self.collapsed = False
+        self.victory = False
+
+        return True
 
     def get_active_branch(self) -> BranchState:
         """Get the currently controlled branch"""
@@ -56,6 +101,8 @@ class GameController:
 
         self.sub_branch = Timeline.diverge(self.main_branch)
         self.has_branched = True
+        self.input_log.append('V')
+        self._save_snapshot()
         return True
 
     def try_merge(self) -> bool:
@@ -78,12 +125,18 @@ class GameController:
         self.sub_branch = None
         self.has_branched = False
         self.current_focus = 0
+        self.input_log.append('C')
+        self._save_snapshot()
         return True
 
-    def switch_focus(self):
-        """Switch controlled branch"""
-        if self.has_branched:
-            self.current_focus = 1 - self.current_focus
+    def switch_focus(self) -> bool:
+        """Switch controlled branch. Returns True if switched."""
+        if not self.has_branched:
+            return False
+        self.current_focus = 1 - self.current_focus
+        self.input_log.append('T')
+        self._save_snapshot()
+        return True
 
     def handle_move(self, direction: tuple) -> bool:
         """Handle movement input.
@@ -109,10 +162,15 @@ class GameController:
 
         is_holding = bool(active.get_held_items())
 
+        # Direction to key mapping
+        dir_key = {(0, -1): 'U', (0, 1): 'D', (-1, 0): 'L', (1, 0): 'R'}[direction]
+
         # Two-step turning: when holding OR when facing a box
         if is_holding or has_box_ahead:
             if active.player.direction != direction:
                 active.player.direction = direction
+                self.input_log.append(dir_key)
+                self._save_snapshot()
                 return True
         else:
             # Open area: set direction immediately, then try to move
@@ -126,6 +184,8 @@ class GameController:
                 self.collapsed = True
                 return False
 
+            self.input_log.append(dir_key)
+            self._save_snapshot()
             return True
         return False
 
@@ -138,6 +198,9 @@ class GameController:
             self.collapsed = True
             return False
 
+        if result:
+            self.input_log.append('P')
+            self._save_snapshot()
         return result
 
     def handle_drop(self) -> bool:
@@ -149,6 +212,9 @@ class GameController:
             self.collapsed = True
             return False
 
+        if result:
+            self.input_log.append('O')
+            self._save_snapshot()
         return result
 
     def check_victory(self) -> bool:
