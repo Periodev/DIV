@@ -26,12 +26,12 @@ def desaturate_color(color: Tuple[int, int, int], amount: float = 0.5) -> Tuple[
 
 # Constants
 GRID_SIZE = 6
-CELL_SIZE = 50
+CELL_SIZE = 75  # 50 * 1.5
 GRID_WIDTH = GRID_SIZE * CELL_SIZE
 GRID_HEIGHT = GRID_SIZE * CELL_SIZE
-PADDING = 20
+PADDING = 30  # 20 * 1.5
 WINDOW_WIDTH = GRID_WIDTH * 3 + PADDING * 4
-WINDOW_HEIGHT = GRID_HEIGHT + PADDING * 2 + 120  # Extra space for hints and debug info
+WINDOW_HEIGHT = GRID_HEIGHT + PADDING * 2 + 180  # Extra space for hints and debug info (120 * 1.5)
 
 # Colors
 WHITE = (255, 255, 255)
@@ -61,9 +61,9 @@ HINT_TEXT_GRAY = (200, 200, 200)
 class Renderer:
     def __init__(self, screen: pygame.Surface):
         self.screen = screen
-        self.font = pygame.font.Font(None, 16)
-        self.arrow_font = pygame.font.Font(None, 28)
-        self.hint_font = pygame.font.SysFont("Microsoft YaHei", 22)
+        self.font = pygame.font.Font(None, 24)  # 16 * 1.5
+        self.arrow_font = pygame.font.Font(None, 42)  # 28 * 1.5
+        self.hint_font = pygame.font.SysFont("Microsoft YaHei", 33)  # 22 * 1.5
 
     def draw_hint_panel(self, x: int, y: int, width: int, height: int, text: str,
                         border_color: tuple, text_color: tuple):
@@ -87,8 +87,8 @@ class Renderer:
     def draw_static_hints(self):
         """Draw static hints in top-left corner."""
         text = "F5重置  方向鍵移動  Z撤銷"
-        x, y = PADDING, 8
-        width, height = 280, 45
+        x, y = PADDING, 12
+        width, height = 420, 68  # 280*1.5, 45*1.5
 
         # Background
         panel_surface = pygame.Surface((width, height))
@@ -105,14 +105,14 @@ class Renderer:
 
     def draw_adaptive_hints(self, interaction_hint: tuple, timeline_hint: str):
         """Draw dual-window hint system."""
-        y = 8
-        height = 45
-        gap = 20
+        y = 12
+        height = 68  # 45 * 1.5
+        gap = 30  # 20 * 1.5
         interaction_text, is_highlight = interaction_hint
 
         # Panel sizes
-        interaction_width = 100
-        timeline_width = 220
+        interaction_width = 150  # 100 * 1.5
+        timeline_width = 330  # 220 * 1.5
 
         # Center both panels together
         total_width = interaction_width + gap + timeline_width
@@ -168,10 +168,10 @@ class Renderer:
                             TerrainType.BRANCH3: 3, TerrainType.BRANCH4: 4}[terrain]
                     # Draw circles from outer to inner
                     base_radius = CELL_SIZE // 6
-                    ring_spacing = 4
+                    ring_spacing = 6  # 4 * 1.5
                     for i in range(uses - 1, 0, -1):
                         radius = base_radius + i * ring_spacing
-                        pygame.draw.circle(self.screen, color, center, radius, 2)
+                        pygame.draw.circle(self.screen, color, center, radius, 3)  # 2 * 1.5
                     # Center dot
                     pygame.draw.circle(self.screen, color, center, base_radius)
                 elif terrain == TerrainType.GOAL:
@@ -179,7 +179,7 @@ class Renderer:
                         flash = int((pygame.time.get_ticks() / 300) % 2)
                         color = (255, 255, 100) if flash else YELLOW
                         pygame.draw.rect(self.screen, color, rect)
-                        pygame.draw.rect(self.screen, GREEN, rect, 4)
+                        pygame.draw.rect(self.screen, GREEN, rect, 6)  # 4 * 1.5
                     else:
                         pygame.draw.rect(self.screen, YELLOW, rect)
                     text = self.font.render('G', True, BLACK)
@@ -202,9 +202,9 @@ class Renderer:
         """Draw a single entity"""
 
         if entity.z == -1:
-            padding = 7
+            padding = 10  # 7 * 1.5 ≈ 10
         else:
-            padding = 4
+            padding = 6  # 4 * 1.5
 
         x, y = entity.pos
         rect = pygame.Rect(
@@ -218,7 +218,7 @@ class Renderer:
         display_color = desaturate_color(color, 0.5) if is_shadow else color
 
         pygame.draw.rect(self.screen, display_color, rect)
-        pygame.draw.rect(self.screen, BLACK, rect, 1)
+        pygame.draw.rect(self.screen, BLACK, rect, 2)  # 1 * 1.5 ≈ 2
 
         text = self.font.render(str(entity.uid), True, WHITE)
         self.screen.blit(text, text.get_rect(center=rect.center))
@@ -244,30 +244,30 @@ class Renderer:
         center_y = start_y + py * CELL_SIZE + CELL_SIZE // 2
 
         dx, dy = player.direction
-        
-        offset = 5
+
+        offset = 8  # 5 * 1.5 ≈ 8
         arrow_cx = center_x + dx * offset
         arrow_cy = center_y + dy * offset
 
         if held_uid is not None:
             rect = pygame.Rect(
-                start_x + px * CELL_SIZE + 3,
-                start_y + py * CELL_SIZE + 3,
-                CELL_SIZE - 6, CELL_SIZE - 6
+                start_x + px * CELL_SIZE + 5,  # 3 * 1.5 ≈ 5
+                start_y + py * CELL_SIZE + 5,
+                CELL_SIZE - 10, CELL_SIZE - 10  # 6 * 1.5 ≈ 10
             )
             pygame.draw.rect(self.screen, color, rect)
-            pygame.draw.rect(self.screen, BLACK, rect, 2)
+            pygame.draw.rect(self.screen, BLACK, rect, 3)  # 2 * 1.5 ≈ 3
 
             # Draw uid at center, arrow at edge
             uid_text = self.font.render(str(held_uid), True, WHITE)
             uid_text_rect = uid_text.get_rect(center=(center_x, center_y))
             self.screen.blit(uid_text, uid_text_rect)
 
-            arrow_size = 14
+            arrow_size = 21  # 14 * 1.5
             self.draw_arrow(arrow_cx, arrow_cy, dx, dy, arrow_size, BLACK)
         else:
             pygame.draw.circle(self.screen, color, (center_x, center_y), CELL_SIZE // 5)
-            self.draw_arrow(arrow_cx, arrow_cy, dx, dy, 14, BLACK)
+            self.draw_arrow(arrow_cx, arrow_cy, dx, dy, 21, BLACK)  # 14 * 1.5
 
     def draw_grid_lines(self, start_x: int, start_y: int, state: BranchState):
         """Draw grid lines"""
@@ -284,12 +284,12 @@ class Renderer:
                 if terrain == TerrainType.SWITCH:
                     activated = any(e.pos == pos for e in state.entities)
                     color = (0, 200, 0) if activated else (150, 0, 0)
-                    pygame.draw.rect(self.screen, color, rect, 3)
+                    pygame.draw.rect(self.screen, color, rect, 5)  # 3 * 1.5 ≈ 5
                 else:
-                    pygame.draw.rect(self.screen, BLACK, rect, 1)
+                    pygame.draw.rect(self.screen, BLACK, rect, 2)  # 1 * 1.5 ≈ 2
 
     def draw_dashed_line(self, start: Tuple[int, int], end: Tuple[int, int],
-                         color: Tuple, width: int = 2, dash_length: int = 6,
+                         color: Tuple, width: int = 3, dash_length: int = 9,
                          offset: float = 0):
         """Draw a flowing dashed line by shifting a repeating dash pattern."""
         x1, y1 = start
@@ -318,7 +318,7 @@ class Renderer:
             pos += period
 
     def draw_lock_corners(self, start_x: int, start_y: int, pos: Tuple[int, int],
-                          color: Tuple, size: int = 16, thickness: int = 5,
+                          color: Tuple, size: int = 24, thickness: int = 8,
                           margin: int = 0):
         """Draw L-shaped corner lock brackets.
 
@@ -361,14 +361,14 @@ class Renderer:
                          (rect_x + cell_w, rect_y + cell_h - size), thickness)
 
     def draw_dashed_frame(self, start_x: int, start_y: int, pos: Tuple[int, int],
-                          color: Tuple, thickness: int = 1):
+                          color: Tuple, thickness: int = 2):
         """Draw a static dashed border"""
         x, y = pos
         rect_x = start_x + x * CELL_SIZE
         rect_y = start_y + y * CELL_SIZE
 
-        dash_length = 5
-        gap_length = 5
+        dash_length = 8  # 5 * 1.5 ≈ 8
+        gap_length = 8
 
         for side in ['top', 'bottom', 'left', 'right']:
             if side == 'top':
@@ -450,11 +450,11 @@ class Renderer:
                     start_y + pos[1] * CELL_SIZE + CELL_SIZE // 2
                 )
                 self.draw_dashed_line(other_center, front_center,
-                                      line_color, 2, 8, slow_offset)
+                                      line_color, 3, 12, slow_offset)  # 2*1.5, 8*1.5
 
             # Draw dashed frames on other shadow positions
             for pos in other_positions:
-                self.draw_dashed_frame(start_x, start_y, pos, line_color, 1)
+                self.draw_dashed_frame(start_x, start_y, pos, line_color, 2)  # 1*1.5≈2
 
             # Draw pulsing L-shaped lock brackets on front block
             pulse = math.sin(animation_offset / 20) * 0.3 + 0.7
@@ -462,16 +462,16 @@ class Renderer:
                           int(line_color[1] * pulse),
                           int(line_color[2] * pulse))
             self.draw_lock_corners(start_x, start_y, front_pos, lock_color,
-                                   size=16, thickness=5, margin=3)
+                                   size=24, thickness=8, margin=5)  # 16*1.5, 5*1.5≈8, 3*1.5≈5
 
     def draw_ghost_box(self, start_x: int, start_y: int, pos: Tuple[int, int],
                        uid: int, base_color: Tuple = RED):
         """Draw a semi-transparent ghost box."""
         x, y = pos
         rect = pygame.Rect(
-            start_x + x * CELL_SIZE + 4,
-            start_y + y * CELL_SIZE + 4,
-            CELL_SIZE - 8, CELL_SIZE - 8
+            start_x + x * CELL_SIZE + 6,  # 4 * 1.5
+            start_y + y * CELL_SIZE + 6,
+            CELL_SIZE - 12, CELL_SIZE - 12  # 8 * 1.5
         )
 
         ghost_surface = pygame.Surface((rect.width, rect.height))
@@ -480,7 +480,7 @@ class Renderer:
         ghost_surface.fill(ghost_color)
         self.screen.blit(ghost_surface, (rect.x, rect.y))
 
-        pygame.draw.rect(self.screen, ghost_color, rect, 2)
+        pygame.draw.rect(self.screen, ghost_color, rect, 3)  # 2 * 1.5
 
         text = self.font.render(str(uid), True, GRAY)
         self.screen.blit(text, text.get_rect(center=rect.center))
@@ -521,14 +521,14 @@ class Renderer:
             )
 
             self.draw_dashed_line(ghost_center, player_center,
-                                  inherit_line_color, 2, 8, slow_offset)
+                                  inherit_line_color, 3, 12, slow_offset)  # 2*1.5, 8*1.5
 
             pulse = math.sin(animation_offset / 20) * 0.3 + 0.7
             lock_color = (int(inherit_line_color[0] * pulse),
                           int(inherit_line_color[1] * pulse),
                           int(inherit_line_color[2] * pulse))
             self.draw_lock_corners(start_x, start_y, player_pos, lock_color,
-                                   size=16, thickness=5, margin=3)
+                                   size=24, thickness=8, margin=5)  # 16*1.5, 5*1.5≈8, 3*1.5≈5
 
     def draw_branch(self, state: BranchState, start_x: int, start_y: int,
                     title: str, is_focused: bool, border_color: Tuple,
@@ -542,18 +542,18 @@ class Renderer:
         # Title
         title_color = BLACK if is_focused else DARK_GRAY
         self.screen.blit(self.font.render(title, True, title_color),
-                         (start_x, start_y - 20))
+                         (start_x, start_y - 30))  # 20 * 1.5
 
         # Focus highlight border
         if is_focused:
             highlight_rect = pygame.Rect(
-                start_x - 8, start_y - 8,
-                GRID_WIDTH + 16, GRID_HEIGHT + 16
+                start_x - 12, start_y - 12,  # 8 * 1.5
+                GRID_WIDTH + 24, GRID_HEIGHT + 24  # 16 * 1.5
             )
-            pygame.draw.rect(self.screen, BLUE, highlight_rect, 5)
+            pygame.draw.rect(self.screen, BLUE, highlight_rect, 8)  # 5 * 1.5 ≈ 8
 
         # Border
-        border_width = 3 if is_focused else 2
+        border_width = 5 if is_focused else 3  # 3*1.5≈5, 2*1.5≈3
         pygame.draw.rect(self.screen, border_color,
                          (start_x, start_y, GRID_WIDTH, GRID_HEIGHT), border_width)
 
@@ -593,18 +593,18 @@ class Renderer:
         overlay.fill(color)
         self.screen.blit(overlay, (0, 0))
 
-        big_font = pygame.font.Font(None, 72)
+        big_font = pygame.font.Font(None, 108)  # 72 * 1.5
         big_text = big_font.render(text, True, YELLOW)
         self.screen.blit(big_text,
-                         big_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 40)))
+                         big_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 60)))  # 40 * 1.5
 
         hint = self.font.render("F5 restart Z undo", True, WHITE)
         self.screen.blit(hint,
-                         hint.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 20)))
+                         hint.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 30)))  # 20 * 1.5
 
     def draw_debug_info(self, history_len: int, focus: int, has_branched: bool, input_log: list):
         """Draw debug information at bottom of screen."""
-        y = WINDOW_HEIGHT - 30
+        y = WINDOW_HEIGHT - 45  # 30 * 1.5
         keys = ''.join(input_log[-30:])  # Show last 30 keys
         info = f"Step: {history_len}  |  Keys: {keys}"
         text = self.font.render(info, True, DARK_GRAY)

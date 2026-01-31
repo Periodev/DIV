@@ -35,7 +35,7 @@ def run_game(floor_map: str, object_map: str):
                 running = False
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_F5:
+                if event.key == pygame.K_F5 or event.key == pygame.K_r:
                     controller.reset()
                     continue
 
@@ -97,7 +97,7 @@ def run_game(floor_map: str, object_map: str):
             for pos, t in preview.terrain.items() if t.name == 'SWITCH'
         )
         # Main Branch
-        grid_y = PADDING + 80  # Space for hint panels
+        grid_y = PADDING + 120  # Space for hint panels (80 * 1.5)
         renderer.draw_branch(controller.main_branch,
                              PADDING * 2 + GRID_WIDTH, grid_y,
                              "DIV 0", controller.current_focus == 0, (0, 100, 200),
@@ -141,21 +141,20 @@ def run_game(floor_map: str, object_map: str):
 
 # ===== 地圖定義 =====
 floor_map = '''
-#.SG.#
-#....#
-#HHHH#
-#....#
-#....#
-#..v.#
+######
+#w##G#
+#vwww#
+####S#
+######
+######
 '''
 
-# Object Map
 object_map = '''
 ......
 ......
+.PB...
 ......
 ......
-..BP..
 ......
 '''
 
