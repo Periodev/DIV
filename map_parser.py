@@ -35,8 +35,14 @@ def parse_dual_layer(floor_map_str, object_map_str) -> LevelSource:
             pos = (x, y)
             if char == '#' or char == ' ':
                 terrain[pos] = TerrainType.WALL
+            elif char == 'v':
+                terrain[pos] = TerrainType.BRANCH1
             elif char == 'V':
-                terrain[pos] = TerrainType.BRANCH
+                terrain[pos] = TerrainType.BRANCH2
+            elif char == 'x':
+                terrain[pos] = TerrainType.BRANCH3
+            elif char == 'X':
+                terrain[pos] = TerrainType.BRANCH4
             elif char == 'G':
                 terrain[pos] = TerrainType.GOAL
             elif char == 'H':

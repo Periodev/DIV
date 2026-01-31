@@ -146,7 +146,7 @@ floor_map = '''
 #HHHH#
 #....#
 #....#
-#..V.#
+#..v.#
 '''
 
 # Object Map
@@ -158,6 +158,7 @@ object_map = '''
 ..BP..
 ......
 '''
+
 
 if __name__ == "__main__":
     run_game(floor_map, object_map)

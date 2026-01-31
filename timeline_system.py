@@ -16,7 +16,10 @@ class TerrainType(Enum):
     SWITCH = "S"
     WEIGHT1 = "w"
     WEIGHT2 = "W"
-    BRANCH = "V"
+    BRANCH1 = "v"  # 1 use remaining
+    BRANCH2 = "V"  # 2 uses remaining
+    BRANCH3 = "x"  # 3 uses remaining
+    BRANCH4 = "X"  # 4 uses remaining
     GOAL = "G"
     HOLE = "H"
 

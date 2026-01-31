@@ -90,14 +90,29 @@ class GameController:
         Timeline.settle_carried(preview)
         return preview
 
+    # Branch point usage: decrement after use
+    BRANCH_DECREMENT = {
+        TerrainType.BRANCH4: TerrainType.BRANCH3,
+        TerrainType.BRANCH3: TerrainType.BRANCH2,
+        TerrainType.BRANCH2: TerrainType.BRANCH1,
+        TerrainType.BRANCH1: TerrainType.FLOOR,
+    }
+
     def try_branch(self) -> bool:
         """Attempt to create a branch"""
         if self.has_branched:
             return False
 
         active = self.get_active_branch()
-        if active.terrain.get(active.player.pos) != TerrainType.BRANCH:
+        terrain = active.terrain.get(active.player.pos)
+
+        # Check if on a branch point (BRANCH1-4)
+        if terrain not in self.BRANCH_DECREMENT:
             return False
+
+        # Decrement branch uses in main_branch (before diverge)
+        new_terrain = self.BRANCH_DECREMENT[terrain]
+        self.main_branch.terrain[active.player.pos] = new_terrain
 
         self.sub_branch = Timeline.diverge(self.main_branch)
         self.has_branched = True
@@ -322,7 +337,8 @@ class GameController:
             return 'C 合併  Tab 切換視角'
 
         active = self.get_active_branch()
-        if active.terrain.get(active.player.pos) == TerrainType.BRANCH:
+        terrain = active.terrain.get(active.player.pos)
+        if terrain in self.BRANCH_DECREMENT:
             return 'V 分裂'
 
         return ''

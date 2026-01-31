@@ -159,11 +159,21 @@ class Renderer:
                     pygame.draw.rect(self.screen, LIGHT_ORANGE, rect)
                     text = self.font.render('2', True, ORANGE)
                     self.screen.blit(text, text.get_rect(center=rect.center))
-                elif terrain == TerrainType.BRANCH:
-                    # Small branch point indicator
+                elif terrain in (TerrainType.BRANCH1, TerrainType.BRANCH2,
+                                 TerrainType.BRANCH3, TerrainType.BRANCH4):
+                    # Concentric circles: BRANCH4=3circles+dot, BRANCH3=2+dot, etc.
                     center = rect.center
-                    color = GRAY if (has_branched) else GREEN
-                    pygame.draw.circle(self.screen, color, center, CELL_SIZE // 6)
+                    color = GRAY if has_branched else GREEN
+                    uses = {TerrainType.BRANCH1: 1, TerrainType.BRANCH2: 2,
+                            TerrainType.BRANCH3: 3, TerrainType.BRANCH4: 4}[terrain]
+                    # Draw circles from outer to inner
+                    base_radius = CELL_SIZE // 6
+                    ring_spacing = 4
+                    for i in range(uses - 1, 0, -1):
+                        radius = base_radius + i * ring_spacing
+                        pygame.draw.circle(self.screen, color, center, radius, 2)
+                    # Center dot
+                    pygame.draw.circle(self.screen, color, center, base_radius)
                 elif terrain == TerrainType.GOAL:
                     if goal_active:
                         flash = int((pygame.time.get_ticks() / 300) % 2)
