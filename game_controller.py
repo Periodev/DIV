@@ -327,9 +327,9 @@ class GameController:
             return ('', (0, 0, 0), None, False)
 
         if active.is_shadow(target.uid):
-            return ('X 收束', (0, 220, 220), front_pos, False)  # Cyan
+            return ('收束', (0, 220, 220), front_pos, False)  # Cyan
         else:
-            return ('X 拾取', (50, 200, 50), front_pos, False)  # Green
+            return ('拾取', (50, 200, 50), front_pos, False)  # Green
 
     def get_timeline_hint(self) -> str:
         """Get timeline hint for V/C/TAB keys.

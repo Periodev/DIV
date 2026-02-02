@@ -171,12 +171,14 @@ class Renderer:
             self.draw_text_with_outline(hint_text, (text_x, line2_y),
                                         self.cell_hint_font, WHITE, BLACK, outline_width=1)
         else:
-            # Normal frame (full cell)
-            self.draw_dashed_frame(start_x, start_y, pos, hint_color, thickness=3)
+            # Text overlay on box (no frame, two lines)
             text_x = cell_x + CELL_SIZE // 2
-            text_y = cell_y + CELL_SIZE - 12
-            self.draw_text_with_outline(hint_text, (text_x, text_y),
-                                        self.hint_font, WHITE, BLACK, outline_width=2)
+            line1_y = cell_y + CELL_SIZE // 2 - 10
+            line2_y = cell_y + CELL_SIZE // 2 + 12
+            self.draw_text_with_outline('[X]', (text_x, line1_y),
+                                        self.cell_hint_font, WHITE, BLACK, outline_width=1)
+            self.draw_text_with_outline(hint_text, (text_x, line2_y),
+                                        self.cell_hint_font, WHITE, BLACK, outline_width=1)
 
     def draw_static_hints(self):
         """Draw static hints in top-left corner."""
@@ -304,7 +306,32 @@ class Renderer:
         display_color = desaturate_color(base_color, 0.5) if is_shadow else base_color
 
         pygame.draw.rect(self.screen, display_color, rect)
-        pygame.draw.rect(self.screen, BLACK, rect, 2)  # 1 * 1.5 ≈ 2
+
+        # Shadow: dashed border, Solid: normal border
+        if is_shadow:
+            dash_len, gap_len = 5, 5
+            # Top
+            for i in range(0, rect.width, dash_len + gap_len):
+                pygame.draw.line(self.screen, BLACK,
+                                (rect.left + i, rect.top),
+                                (rect.left + min(i + dash_len, rect.width), rect.top), 2)
+            # Bottom
+            for i in range(0, rect.width, dash_len + gap_len):
+                pygame.draw.line(self.screen, BLACK,
+                                (rect.left + i, rect.bottom - 1),
+                                (rect.left + min(i + dash_len, rect.width), rect.bottom - 1), 2)
+            # Left
+            for i in range(0, rect.height, dash_len + gap_len):
+                pygame.draw.line(self.screen, BLACK,
+                                (rect.left, rect.top + i),
+                                (rect.left, rect.top + min(i + dash_len, rect.height)), 2)
+            # Right
+            for i in range(0, rect.height, dash_len + gap_len):
+                pygame.draw.line(self.screen, BLACK,
+                                (rect.right - 1, rect.top + i),
+                                (rect.right - 1, rect.top + min(i + dash_len, rect.height)), 2)
+        else:
+            pygame.draw.rect(self.screen, BLACK, rect, 2)
 
         text = self.font.render(str(entity.uid), True, WHITE)
         self.screen.blit(text, text.get_rect(center=rect.center))
@@ -526,7 +553,7 @@ class Renderer:
                 start_y + front_pos[1] * CELL_SIZE + CELL_SIZE // 2
             )
 
-            line_color = CYAN
+            line_color = YELLOW
 
             # Draw flowing dashed lines from other positions to front (slow flow)
             slow_offset = animation_offset * 0.25
@@ -538,17 +565,6 @@ class Renderer:
                 self.draw_dashed_line(other_center, front_center,
                                       line_color, 3, 12, slow_offset)  # 2*1.5, 8*1.5
 
-            # Draw dashed frames on other shadow positions
-            for pos in other_positions:
-                self.draw_dashed_frame(start_x, start_y, pos, line_color, 2)  # 1*1.5≈2
-
-            # Draw pulsing L-shaped lock brackets on front block
-            pulse = math.sin(animation_offset / 20) * 0.3 + 0.7
-            lock_color = (int(line_color[0] * pulse),
-                          int(line_color[1] * pulse),
-                          int(line_color[2] * pulse))
-            self.draw_lock_corners(start_x, start_y, front_pos, lock_color,
-                                   size=24, thickness=8, margin=5)  # 16*1.5, 5*1.5≈8, 3*1.5≈5
 
     def draw_ghost_box(self, start_x: int, start_y: int, pos: Tuple[int, int],
                        uid: int):
