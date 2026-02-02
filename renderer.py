@@ -213,7 +213,8 @@ class Renderer:
                             timeline_hint, HINT_GREEN, HINT_TEXT_GREEN)
 
     def draw_terrain(self, start_x: int, start_y: int, state: BranchState,
-                     goal_active: bool = False, has_branched: bool = False):
+                     goal_active: bool = False, has_branched: bool = False,
+                     highlight_branch_point: bool = False):
         """Draw terrain layer"""
         for x in range(GRID_SIZE):
             for y in range(GRID_SIZE):
@@ -225,6 +226,25 @@ class Renderer:
                 )
 
                 terrain = state.terrain.get(pos, TerrainType.FLOOR)
+
+                # Branch point highlight (player standing on it)
+                if (highlight_branch_point
+                    and pos == state.player.pos
+                    and terrain in (TerrainType.BRANCH1, TerrainType.BRANCH2,
+                                   TerrainType.BRANCH3, TerrainType.BRANCH4)):
+                    pygame.draw.rect(self.screen, (150, 255, 150), rect)  # Light green
+                    # Draw branch point marker
+                    center = rect.center
+                    color = GREEN
+                    uses = {TerrainType.BRANCH1: 1, TerrainType.BRANCH2: 2,
+                            TerrainType.BRANCH3: 3, TerrainType.BRANCH4: 4}[terrain]
+                    base_radius = CELL_SIZE // 6
+                    ring_spacing = 6
+                    for i in range(uses - 1, 0, -1):
+                        radius = base_radius + i * ring_spacing
+                        pygame.draw.circle(self.screen, color, center, radius, 3)
+                    pygame.draw.circle(self.screen, color, center, base_radius)
+                    continue
 
                 if terrain == TerrainType.WALL:
                     pygame.draw.rect(self.screen, BLACK, rect)
@@ -645,7 +665,8 @@ class Renderer:
                     main_branch: Optional[BranchState] = None,
                     sub_branch: Optional[BranchState] = None,
                     current_focus: int = 0,
-                    interaction_hint: tuple = None):
+                    interaction_hint: tuple = None,
+                    timeline_hint: str = ''):
         """Draw a complete branch view"""
         # Title
         title_color = BLACK if is_focused else DARK_GRAY
@@ -665,8 +686,10 @@ class Renderer:
         pygame.draw.rect(self.screen, border_color,
                          (start_x, start_y, GRID_WIDTH, GRID_HEIGHT), border_width)
 
-        # Terrain
-        self.draw_terrain(start_x, start_y, state, goal_active, has_branched)
+        # Terrain (highlight branch point if player standing on it)
+        is_on_branch = timeline_hint.startswith('V') if timeline_hint else False
+        self.draw_terrain(start_x, start_y, state, goal_active, has_branched,
+                         highlight_branch_point=is_on_branch and is_focused)
 
         # Entities (non-player, not held)
         for e in state.entities:

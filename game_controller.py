@@ -332,10 +332,9 @@ class GameController:
             return ('拾取', (50, 200, 50), front_pos, False)  # Green
 
     def get_timeline_hint(self) -> str:
-        """Get timeline hint for V/C/TAB keys.
+        """Get timeline hint for branch point.
 
-        Returns:
-            'V 分裂' / 'C 合併  Tab 切換視角' / ''
+        Returns: 'V' when on branch point (for highlight), '' otherwise
         """
         if self.has_branched:
             return 'C 合併  Tab 切換視角'
