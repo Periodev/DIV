@@ -298,20 +298,24 @@ class GameController:
         """Get interaction hint for X key.
 
         Returns:
-            (hint_text, is_highlight)
+            (hint_text, hint_color, target_pos, is_drop)
             hint_text: 'X 拾取' / 'X 放下' / 'X 收束' / ''
-            is_highlight: True for X收束 (needs special display)
+            hint_color: (r, g, b) frame color
+            target_pos: (x, y) target cell, None if no hint
+            is_drop: True if this is a drop hint (use inset frame)
         """
         active = self.get_active_branch()
-
-        # If holding, show drop hint
-        if active.get_held_items():
-            return ('X 放下', False)
-
-        # Check what's in front
         px, py = active.player.pos
         dx, dy = active.player.direction
         front_pos = (px + dx, py + dy)
+
+        # If holding, show drop hint (only if can drop)
+        if active.get_held_items():
+            can_drop = Physics.collision_at(front_pos, active) == 0
+            if can_drop:
+                return ('放下', (50, 200, 50), front_pos, True)  # Green, inset
+            else:
+                return ('', (0, 0, 0), None, False)  # No hint for blocked
 
         # Find grounded box at front position
         target = next((e for e in active.entities
@@ -320,12 +324,12 @@ class GameController:
                        and Physics.grounded(e)), None)
 
         if target is None:
-            return ('', False)
+            return ('', (0, 0, 0), None, False)
 
         if active.is_shadow(target.uid):
-            return ('X 收束', True)  # Highlight for shadow converge
+            return ('X 收束', (0, 220, 220), front_pos, False)  # Cyan
         else:
-            return ('X 拾取', False)
+            return ('X 拾取', (50, 200, 50), front_pos, False)  # Green
 
     def get_timeline_hint(self) -> str:
         """Get timeline hint for V/C/TAB keys.

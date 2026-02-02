@@ -86,10 +86,11 @@ def run_game(floor_map: str, object_map: str):
 
         # Hints
         renderer.draw_static_hints()
-        renderer.draw_adaptive_hints(
-            controller.get_interaction_hint(),
-            controller.get_timeline_hint()
-        )
+        # Timeline hint (top panel)
+        renderer.draw_adaptive_hints(None, controller.get_timeline_hint())
+
+        # Get interaction hint for in-cell display
+        interaction_hint = controller.get_interaction_hint()
 
         preview = controller.get_merge_preview()
         goal_active = all(
@@ -101,7 +102,8 @@ def run_game(floor_map: str, object_map: str):
         renderer.draw_branch(controller.main_branch,
                              PADDING * 2 + GRID_WIDTH, grid_y,
                              "DIV 0", controller.current_focus == 0, (0, 100, 200),
-                             goal_active, controller.has_branched, animation_frame)
+                             goal_active, controller.has_branched, animation_frame,
+                             interaction_hint=interaction_hint if controller.current_focus == 0 else None)
 
         # Merge Preview
         renderer.draw_branch(preview, PADDING, grid_y,
@@ -117,7 +119,8 @@ def run_game(floor_map: str, object_map: str):
             renderer.draw_branch(controller.sub_branch,
                                  PADDING * 3 + GRID_WIDTH * 2, grid_y,
                                  "DIV 1", controller.current_focus == 1, (50, 150, 200),
-                                 goal_active, controller.has_branched, animation_frame)
+                                 goal_active, controller.has_branched, animation_frame,
+                                 interaction_hint=interaction_hint if controller.current_focus == 1 else None)
 
         # Debug info
         renderer.draw_debug_info(

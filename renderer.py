@@ -71,6 +71,7 @@ class Renderer:
         self.font = pygame.font.Font(None, 24)  # 16 * 1.5
         self.arrow_font = pygame.font.Font(None, 42)  # 28 * 1.5
         self.hint_font = pygame.font.SysFont("Microsoft YaHei", 33)  # 22 * 1.5
+        self.cell_hint_font = pygame.font.SysFont("Microsoft YaHei", 18)  # Small font for cell hints
 
     def draw_hint_panel(self, x: int, y: int, width: int, height: int, text: str,
                         border_color: tuple, text_color: tuple):
@@ -91,6 +92,92 @@ class Renderer:
         text_rect = text_surface.get_rect(center=(x + width // 2, y + height // 2))
         self.screen.blit(text_surface, text_rect)
 
+    def draw_text_with_outline(self, text: str, pos: Tuple[int, int],
+                               font: pygame.font.Font,
+                               text_color: Tuple = WHITE,
+                               outline_color: Tuple = BLACK,
+                               outline_width: int = 2):
+        """Draw text with outline for better readability."""
+        x, y = pos
+
+        # Draw 8-direction outline
+        for dx in [-outline_width, 0, outline_width]:
+            for dy in [-outline_width, 0, outline_width]:
+                if dx == 0 and dy == 0:
+                    continue
+                outline_surface = font.render(text, True, outline_color)
+                outline_rect = outline_surface.get_rect(center=(x + dx, y + dy))
+                self.screen.blit(outline_surface, outline_rect)
+
+        # Draw center text
+        text_surface = font.render(text, True, text_color)
+        text_rect = text_surface.get_rect(center=(x, y))
+        self.screen.blit(text_surface, text_rect)
+
+    def draw_cell_hint(self, start_x: int, start_y: int,
+                       pos: Tuple[int, int],
+                       hint_text: str,
+                       hint_color: Tuple,
+                       inset: bool = False):
+        """Draw dashed frame + hint text on target cell.
+
+        Args:
+            start_x, start_y: Grid origin coordinates
+            pos: Target cell position (x, y)
+            hint_text: Hint text (e.g. 'X Pick')
+            hint_color: Frame color (green=available, red=blocked, cyan=converge)
+            inset: If True, draw smaller frame inside cell (for drop hint)
+        """
+        x, y = pos
+        cell_x = start_x + x * CELL_SIZE
+        cell_y = start_y + y * CELL_SIZE
+
+        if inset:
+            # Inset frame (smaller, inside cell)
+            margin = 8
+            rect = pygame.Rect(
+                cell_x + margin, cell_y + margin,
+                CELL_SIZE - margin * 2, CELL_SIZE - margin * 2
+            )
+            # Draw inset dashed frame manually
+            dash_len, gap_len = 6, 6
+            for side in ['top', 'bottom', 'left', 'right']:
+                if side == 'top':
+                    for i in range(0, rect.width, dash_len + gap_len):
+                        pygame.draw.line(self.screen, hint_color,
+                                        (rect.left + i, rect.top),
+                                        (rect.left + min(i + dash_len, rect.width), rect.top), 2)
+                elif side == 'bottom':
+                    for i in range(0, rect.width, dash_len + gap_len):
+                        pygame.draw.line(self.screen, hint_color,
+                                        (rect.left + i, rect.bottom),
+                                        (rect.left + min(i + dash_len, rect.width), rect.bottom), 2)
+                elif side == 'left':
+                    for i in range(0, rect.height, dash_len + gap_len):
+                        pygame.draw.line(self.screen, hint_color,
+                                        (rect.left, rect.top + i),
+                                        (rect.left, rect.top + min(i + dash_len, rect.height)), 2)
+                elif side == 'right':
+                    for i in range(0, rect.height, dash_len + gap_len):
+                        pygame.draw.line(self.screen, hint_color,
+                                        (rect.right, rect.top + i),
+                                        (rect.right, rect.top + min(i + dash_len, rect.height)), 2)
+            # Two-line text: [X] on top, hint_text below
+            text_x = cell_x + CELL_SIZE // 2
+            line1_y = cell_y + CELL_SIZE // 2 - 8
+            line2_y = cell_y + CELL_SIZE // 2 + 12
+            self.draw_text_with_outline('[X]', (text_x, line1_y),
+                                        self.cell_hint_font, WHITE, BLACK, outline_width=1)
+            self.draw_text_with_outline(hint_text, (text_x, line2_y),
+                                        self.cell_hint_font, WHITE, BLACK, outline_width=1)
+        else:
+            # Normal frame (full cell)
+            self.draw_dashed_frame(start_x, start_y, pos, hint_color, thickness=3)
+            text_x = cell_x + CELL_SIZE // 2
+            text_y = cell_y + CELL_SIZE - 12
+            self.draw_text_with_outline(hint_text, (text_x, text_y),
+                                        self.hint_font, WHITE, BLACK, outline_width=2)
+
     def draw_static_hints(self):
         """Draw static hints in top-left corner."""
         text = "F5重置  方向鍵移動  Z撤銷"
@@ -110,29 +197,14 @@ class Renderer:
         text_rect = text_surface.get_rect(center=(x + width // 2, y + height // 2))
         self.screen.blit(text_surface, text_rect)
 
-    def draw_adaptive_hints(self, interaction_hint: tuple, timeline_hint: str):
-        """Draw dual-window hint system."""
+    def draw_adaptive_hints(self, _unused, timeline_hint: str):
+        """Draw timeline hint panel (interaction hint now shown in-cell)."""
         y = 12
-        height = 68  # 45 * 1.5
-        gap = 30  # 20 * 1.5
-        interaction_text, is_highlight = interaction_hint
+        height = 68
+        timeline_width = 330
 
-        # Panel sizes
-        interaction_width = 150  # 100 * 1.5
-        timeline_width = 330  # 220 * 1.5
-
-        # Center both panels together
-        total_width = interaction_width + gap + timeline_width
-        start_x = (WINDOW_WIDTH - total_width) // 2
-
-        interaction_x = start_x
-        timeline_x = start_x + interaction_width + gap
-
-        # Draw interaction hint (blue, cyan when highlight)
-        border_color = HINT_CYAN if is_highlight else HINT_BLUE
-        text_color = HINT_CYAN if is_highlight else HINT_TEXT_BLUE
-        self.draw_hint_panel(interaction_x, y, interaction_width, height,
-                            interaction_text, border_color, text_color)
+        # Center timeline panel
+        timeline_x = (WINDOW_WIDTH - timeline_width) // 2
 
         # Draw timeline hint (green)
         self.draw_hint_panel(timeline_x, y, timeline_width, height,
@@ -298,9 +370,9 @@ class Renderer:
                 if terrain == TerrainType.SWITCH:
                     activated = any(e.pos == pos for e in state.entities)
                     color = (0, 200, 0) if activated else (150, 0, 0)
-                    pygame.draw.rect(self.screen, color, rect, 5)  # 3 * 1.5 ≈ 5
+                    pygame.draw.rect(self.screen, color, rect, 5)
                 else:
-                    pygame.draw.rect(self.screen, BLACK, rect, 2)  # 1 * 1.5 ≈ 2
+                    pygame.draw.rect(self.screen, GRAY, rect, 1)  # Gray grid lines
 
     def draw_dashed_line(self, start: Tuple[int, int], end: Tuple[int, int],
                          color: Tuple, width: int = 3, dash_length: int = 9,
@@ -555,7 +627,8 @@ class Renderer:
                     is_merge_preview: bool = False,
                     main_branch: Optional[BranchState] = None,
                     sub_branch: Optional[BranchState] = None,
-                    current_focus: int = 0):
+                    current_focus: int = 0,
+                    interaction_hint: tuple = None):
         """Draw a complete branch view"""
         # Title
         title_color = BLACK if is_focused else DARK_GRAY
@@ -605,6 +678,12 @@ class Renderer:
         if not is_focused:
             player_color = tuple(min(255, c + 80) for c in player_color)
         self.draw_player(start_x, start_y, state.player, player_color, held_uid)
+
+        # Cell hint (only focused branch)
+        if is_focused and interaction_hint:
+            hint_text, hint_color, target_pos, is_drop = interaction_hint
+            if target_pos:
+                self.draw_cell_hint(start_x, start_y, target_pos, hint_text, hint_color, inset=is_drop)
 
         # Grid lines
         self.draw_grid_lines(start_x, start_y, state)
