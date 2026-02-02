@@ -354,8 +354,8 @@ class Renderer:
             pygame.draw.rect(self.screen, BLACK, rect, 2)
 
         # Debug usage
-        #text = self.font.render(str(entity.uid), True, WHITE)
-        #self.screen.blit(text, text.get_rect(center=rect.center))
+        text = self.font.render(str(entity.uid), True, WHITE)
+        self.screen.blit(text, text.get_rect(center=rect.center))
 
     def draw_arrow(self, cx: int, cy: int, dx: int, dy: int, size: int, color: Tuple):
         """Draw a triangular arrow pointing in direction (dx, dy)."""
@@ -393,9 +393,9 @@ class Renderer:
             pygame.draw.rect(self.screen, BLACK, rect, 3)  # 2 * 1.5 ≈ 3
 
             # Draw uid at center, arrow at edge
-            #uid_text = self.font.render(str(held_uid), True, WHITE)
-            #uid_text_rect = uid_text.get_rect(center=(center_x, center_y))
-            #self.screen.blit(uid_text, uid_text_rect)
+            uid_text = self.font.render(str(held_uid), True, WHITE)
+            uid_text_rect = uid_text.get_rect(center=(center_x, center_y))
+            self.screen.blit(uid_text, uid_text_rect)
 
             arrow_size = 21  # 14 * 1.5
             self.draw_arrow(arrow_cx, arrow_cy, dx, dy, arrow_size, BLACK)
@@ -669,8 +669,7 @@ class Renderer:
                     timeline_hint: str = ''):
         """Draw a complete branch view"""
         # Title
-        title_color = BLACK if is_focused else DARK_GRAY
-        self.screen.blit(self.font.render(title, True, title_color),
+        self.screen.blit(self.font.render(title, True, BLACK),
                          (start_x, start_y - 30))  # 20 * 1.5
 
         # Focus highlight border
@@ -714,9 +713,7 @@ class Renderer:
             color_index = (held_uid - 1) % len(BOX_COLORS)
             player_color = BOX_COLORS[color_index]
         else:
-            player_color = BLUE
-        if not is_focused:
-            player_color = tuple(min(255, c + 80) for c in player_color)
+            player_color = BLUE if (is_focused or is_merge_preview) else GRAY
         self.draw_player(start_x, start_y, state.player, player_color, held_uid)
 
         # Cell hint (only focused branch)
