@@ -48,6 +48,13 @@ CYAN = (50, 150, 200)
 ORANGE = (255, 150, 50)
 LIGHT_ORANGE = (255, 200, 150)
 
+# Box colors (colorblind-friendly palette)
+BOX_COLORS = [
+    (230, 80, 80),    # Red
+    (70, 130, 180),   # Steel Blue
+    (255, 180, 0),    # Orange
+]
+
 # Hint panel colors
 HINT_BG = (40, 40, 40)
 HINT_GREEN = (100, 200, 100)
@@ -197,14 +204,21 @@ class Renderer:
                 else:
                     pygame.draw.rect(self.screen, WHITE, rect)
 
-    def draw_entity(self, start_x: int, start_y: int, entity, color: Tuple,
+    def draw_entity(self, start_x: int, start_y: int, entity,
                     state: BranchState):
-        """Draw a single entity"""
+        """Draw a single entity (auto-assign color by uid)"""
+
+        # Assign color by uid (uid=1,2,3 -> red/blue/orange cycle)
+        if entity.type == EntityType.BOX:
+            color_index = (entity.uid - 1) % len(BOX_COLORS)
+            base_color = BOX_COLORS[color_index]
+        else:
+            base_color = DARK_GRAY  # fallback
 
         if entity.z == -1:
-            padding = 10  # 7 * 1.5 ≈ 10
+            padding = 10
         else:
-            padding = 6  # 4 * 1.5
+            padding = 6
 
         x, y = entity.pos
         rect = pygame.Rect(
@@ -215,7 +229,7 @@ class Renderer:
 
         # Desaturate color for shadow entities
         is_shadow = state.is_shadow(entity.uid)
-        display_color = desaturate_color(color, 0.5) if is_shadow else color
+        display_color = desaturate_color(base_color, 0.5) if is_shadow else base_color
 
         pygame.draw.rect(self.screen, display_color, rect)
         pygame.draw.rect(self.screen, BLACK, rect, 2)  # 1 * 1.5 ≈ 2
@@ -465,13 +479,17 @@ class Renderer:
                                    size=24, thickness=8, margin=5)  # 16*1.5, 5*1.5≈8, 3*1.5≈5
 
     def draw_ghost_box(self, start_x: int, start_y: int, pos: Tuple[int, int],
-                       uid: int, base_color: Tuple = RED):
-        """Draw a semi-transparent ghost box."""
+                       uid: int):
+        """Draw a semi-transparent ghost box (auto-assign color by uid)."""
+        # Get color by uid
+        color_index = (uid - 1) % len(BOX_COLORS)
+        base_color = BOX_COLORS[color_index]
+
         x, y = pos
         rect = pygame.Rect(
-            start_x + x * CELL_SIZE + 6,  # 4 * 1.5
+            start_x + x * CELL_SIZE + 6,
             start_y + y * CELL_SIZE + 6,
-            CELL_SIZE - 12, CELL_SIZE - 12  # 8 * 1.5
+            CELL_SIZE - 12, CELL_SIZE - 12
         )
 
         ghost_surface = pygame.Surface((rect.width, rect.height))
@@ -480,7 +498,7 @@ class Renderer:
         ghost_surface.fill(ghost_color)
         self.screen.blit(ghost_surface, (rect.x, rect.y))
 
-        pygame.draw.rect(self.screen, ghost_color, rect, 3)  # 2 * 1.5
+        pygame.draw.rect(self.screen, ghost_color, rect, 3)
 
         text = self.font.render(str(uid), True, GRAY)
         self.screen.blit(text, text.get_rect(center=rect.center))
@@ -563,7 +581,7 @@ class Renderer:
         # Entities (non-player, not held)
         for e in state.entities:
             if e.uid != 0 and e.type == EntityType.BOX:
-                self.draw_entity(start_x, start_y, e, RED, state)
+                self.draw_entity(start_x, start_y, e, state)
 
         # Shadow connections (only on the focused branch)
         if is_focused:
@@ -578,7 +596,12 @@ class Renderer:
         # Player
         held_items = state.get_held_items()
         held_uid = held_items[0] if held_items else None
-        player_color = RED if held_uid else BLUE
+        if held_uid:
+            # Use box color based on held uid
+            color_index = (held_uid - 1) % len(BOX_COLORS)
+            player_color = BOX_COLORS[color_index]
+        else:
+            player_color = BLUE
         if not is_focused:
             player_color = tuple(min(255, c + 80) for c in player_color)
         self.draw_player(start_x, start_y, state.player, player_color, held_uid)
