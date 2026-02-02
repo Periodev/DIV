@@ -311,7 +311,7 @@ class GameController:
 
         # If holding, show drop hint (only if can drop)
         if active.get_held_items():
-            can_drop = Physics.collision_at(front_pos, active) == 0
+            can_drop = Physics.collision_at(front_pos, active) <= 0
             if can_drop:
                 return ('放下', (50, 200, 50), front_pos, True)  # Green, inset
             else:

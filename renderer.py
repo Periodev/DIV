@@ -333,8 +333,9 @@ class Renderer:
         else:
             pygame.draw.rect(self.screen, BLACK, rect, 2)
 
-        text = self.font.render(str(entity.uid), True, WHITE)
-        self.screen.blit(text, text.get_rect(center=rect.center))
+        # Debug usage
+        #text = self.font.render(str(entity.uid), True, WHITE)
+        #self.screen.blit(text, text.get_rect(center=rect.center))
 
     def draw_arrow(self, cx: int, cy: int, dx: int, dy: int, size: int, color: Tuple):
         """Draw a triangular arrow pointing in direction (dx, dy)."""
@@ -372,9 +373,9 @@ class Renderer:
             pygame.draw.rect(self.screen, BLACK, rect, 3)  # 2 * 1.5 ≈ 3
 
             # Draw uid at center, arrow at edge
-            uid_text = self.font.render(str(held_uid), True, WHITE)
-            uid_text_rect = uid_text.get_rect(center=(center_x, center_y))
-            self.screen.blit(uid_text, uid_text_rect)
+            #uid_text = self.font.render(str(held_uid), True, WHITE)
+            #uid_text_rect = uid_text.get_rect(center=(center_x, center_y))
+            #self.screen.blit(uid_text, uid_text_rect)
 
             arrow_size = 21  # 14 * 1.5
             self.draw_arrow(arrow_cx, arrow_cy, dx, dy, arrow_size, BLACK)
@@ -553,7 +554,7 @@ class Renderer:
                 start_y + front_pos[1] * CELL_SIZE + CELL_SIZE // 2
             )
 
-            line_color = YELLOW
+            line_color = (50, 220, 50)
 
             # Draw flowing dashed lines from other positions to front (slow flow)
             slow_offset = animation_offset * 0.25
