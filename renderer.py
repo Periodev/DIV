@@ -33,12 +33,18 @@ def desaturate_color(color: Tuple[int, int, int], amount: float = 0.5) -> Tuple[
 
 # Constants
 GRID_SIZE = 6
-CELL_SIZE = 75  # 50 * 1.5
-GRID_WIDTH = GRID_SIZE * CELL_SIZE
-GRID_HEIGHT = GRID_SIZE * CELL_SIZE
-PADDING = 30  # 20 * 1.5
-WINDOW_WIDTH = GRID_WIDTH * 3 + PADDING * 4
-WINDOW_HEIGHT = GRID_HEIGHT + PADDING * 2 + 180  # Extra space for hints and debug info (120 * 1.5)
+CELL_SIZE = 75  # Main grid cell size
+GRID_WIDTH = GRID_SIZE * CELL_SIZE  # 450
+GRID_HEIGHT = GRID_SIZE * CELL_SIZE  # 450
+PADDING = 30
+
+# New layout
+WINDOW_WIDTH = 1400
+WINDOW_HEIGHT = 800
+
+# Preview scaling
+PREVIEW_SCALE = 0.73
+PREVIEW_CELL = int(CELL_SIZE * PREVIEW_SCALE)  # 55px
 
 # Colors
 WHITE = (255, 255, 255)
@@ -436,6 +442,294 @@ class Renderer:
                 else:
                     pygame.draw.rect(self.screen, GRAY, rect, 1)  # Gray grid lines
 
+    # ========== Scaled Drawing Methods (for Preview) ==========
+
+    def draw_terrain_scaled(self, start_x: int, start_y: int, state: BranchState,
+                            cell_size: int, goal_active: bool = False,
+                            has_branched: bool = False, highlight_branch_point: bool = False):
+        """Draw terrain layer with variable cell size."""
+        for x in range(GRID_SIZE):
+            for y in range(GRID_SIZE):
+                pos = (x, y)
+                rect = pygame.Rect(
+                    start_x + x * cell_size,
+                    start_y + y * cell_size,
+                    cell_size, cell_size
+                )
+                terrain = state.terrain.get(pos, TerrainType.FLOOR)
+
+                # Branch point highlight
+                if (highlight_branch_point and pos == state.player.pos
+                    and terrain in (TerrainType.BRANCH1, TerrainType.BRANCH2,
+                                   TerrainType.BRANCH3, TerrainType.BRANCH4)):
+                    pygame.draw.rect(self.screen, (150, 255, 150), rect)
+                    center = rect.center
+                    uses = {TerrainType.BRANCH1: 1, TerrainType.BRANCH2: 2,
+                            TerrainType.BRANCH3: 3, TerrainType.BRANCH4: 4}[terrain]
+                    base_radius = cell_size // 6
+                    ring_spacing = int(6 * cell_size / CELL_SIZE)
+                    for i in range(uses - 1, 0, -1):
+                        radius = base_radius + i * ring_spacing
+                        pygame.draw.circle(self.screen, GREEN, center, radius, max(1, int(3 * cell_size / CELL_SIZE)))
+                    pygame.draw.circle(self.screen, GREEN, center, base_radius)
+                    continue
+
+                if terrain == TerrainType.WALL:
+                    pygame.draw.rect(self.screen, BLACK, rect)
+                elif terrain == TerrainType.SWITCH:
+                    activated = any(e.pos == pos for e in state.entities)
+                    color = (200, 255, 200) if activated else (255, 200, 200)
+                    pygame.draw.rect(self.screen, color, rect)
+                elif terrain == TerrainType.WEIGHT1:
+                    pygame.draw.rect(self.screen, LIGHT_ORANGE, rect)
+                    text = self.font.render('1', True, ORANGE)
+                    self.screen.blit(text, text.get_rect(center=rect.center))
+                elif terrain == TerrainType.WEIGHT2:
+                    pygame.draw.rect(self.screen, LIGHT_ORANGE, rect)
+                    text = self.font.render('2', True, ORANGE)
+                    self.screen.blit(text, text.get_rect(center=rect.center))
+                elif terrain in (TerrainType.BRANCH1, TerrainType.BRANCH2,
+                                 TerrainType.BRANCH3, TerrainType.BRANCH4):
+                    center = rect.center
+                    color = GRAY if has_branched else GREEN
+                    uses = {TerrainType.BRANCH1: 1, TerrainType.BRANCH2: 2,
+                            TerrainType.BRANCH3: 3, TerrainType.BRANCH4: 4}[terrain]
+                    base_radius = cell_size // 6
+                    ring_spacing = int(6 * cell_size / CELL_SIZE)
+                    for i in range(uses - 1, 0, -1):
+                        radius = base_radius + i * ring_spacing
+                        pygame.draw.circle(self.screen, color, center, radius, max(1, int(3 * cell_size / CELL_SIZE)))
+                    pygame.draw.circle(self.screen, color, center, base_radius)
+                elif terrain == TerrainType.GOAL:
+                    if goal_active:
+                        flash = int((pygame.time.get_ticks() / 300) % 2)
+                        color = (255, 255, 100) if flash else YELLOW
+                        pygame.draw.rect(self.screen, color, rect)
+                        pygame.draw.rect(self.screen, GREEN, rect, max(1, int(6 * cell_size / CELL_SIZE)))
+                    else:
+                        pygame.draw.rect(self.screen, YELLOW, rect)
+                    text = self.font.render('Goal', True, BLACK)
+                    self.screen.blit(text, text.get_rect(center=rect.center))
+                elif terrain == TerrainType.HOLE:
+                    filled = any(e.pos == pos and e.z == -1 for e in state.entities)
+                    if filled:
+                        pygame.draw.rect(self.screen, (160, 120, 60), rect)
+                    else:
+                        pygame.draw.rect(self.screen, (60, 40, 20), rect)
+                else:
+                    pygame.draw.rect(self.screen, WHITE, rect)
+
+    def draw_entity_scaled(self, start_x: int, start_y: int, entity,
+                           state: BranchState, cell_size: int):
+        """Draw entity with variable cell size."""
+        if entity.type == EntityType.BOX:
+            color_index = (entity.uid - 1) % len(BOX_COLORS)
+            base_color = BOX_COLORS[color_index]
+        else:
+            base_color = DARK_GRAY
+
+        scale = cell_size / CELL_SIZE
+        padding = int((15 if entity.z == -1 else 9) * scale)
+
+        x, y = entity.pos
+        rect = pygame.Rect(
+            start_x + x * cell_size + padding,
+            start_y + y * cell_size + padding,
+            cell_size - padding * 2, cell_size - padding * 2
+        )
+
+        is_shadow = state.is_shadow(entity.uid)
+        display_color = desaturate_color(base_color, 0.5) if is_shadow else base_color
+        pygame.draw.rect(self.screen, display_color, rect)
+
+        if is_shadow:
+            dash_len = int(5 * scale)
+            gap_len = int(5 * scale)
+            for i in range(0, rect.width, dash_len + gap_len):
+                pygame.draw.line(self.screen, BLACK,
+                                (rect.left + i, rect.top),
+                                (rect.left + min(i + dash_len, rect.width), rect.top), max(1, int(2 * scale)))
+                pygame.draw.line(self.screen, BLACK,
+                                (rect.left + i, rect.bottom - 1),
+                                (rect.left + min(i + dash_len, rect.width), rect.bottom - 1), max(1, int(2 * scale)))
+            for i in range(0, rect.height, dash_len + gap_len):
+                pygame.draw.line(self.screen, BLACK,
+                                (rect.left, rect.top + i),
+                                (rect.left, rect.top + min(i + dash_len, rect.height)), max(1, int(2 * scale)))
+                pygame.draw.line(self.screen, BLACK,
+                                (rect.right - 1, rect.top + i),
+                                (rect.right - 1, rect.top + min(i + dash_len, rect.height)), max(1, int(2 * scale)))
+        else:
+            pygame.draw.rect(self.screen, BLACK, rect, max(1, int(2 * scale)))
+        # Debug usage
+        text = self.font.render(str(entity.uid), True, WHITE)
+        self.screen.blit(text, text.get_rect(center=rect.center))
+
+    def draw_player_scaled(self, start_x: int, start_y: int, player, color: Tuple,
+                           held_uid: int, cell_size: int):
+        """Draw player with variable cell size."""
+        scale = cell_size / CELL_SIZE
+        px, py = player.pos
+        center_x = start_x + px * cell_size + cell_size // 2
+        center_y = start_y + py * cell_size + cell_size // 2
+
+        dx, dy = player.direction
+        offset = int(8 * scale)
+        arrow_cx = center_x + dx * offset
+        arrow_cy = center_y + dy * offset
+
+        if held_uid is not None:
+            pad = int(5 * scale)
+            rect = pygame.Rect(
+                start_x + px * cell_size + pad,
+                start_y + py * cell_size + pad,
+                cell_size - pad * 2, cell_size - pad * 2
+            )
+            pygame.draw.rect(self.screen, color, rect)
+            pygame.draw.rect(self.screen, BLACK, rect, max(1, int(3 * scale)))
+            arrow_size = int(21 * scale)
+            self.draw_arrow(arrow_cx, arrow_cy, dx, dy, arrow_size, BLACK)
+
+            uid_text = self.font.render(str(held_uid), True, WHITE)
+            uid_text_rect = uid_text.get_rect(center=(center_x, center_y))
+            self.screen.blit(uid_text, uid_text_rect)
+
+        else:
+            pygame.draw.circle(self.screen, color, (center_x, center_y), cell_size // 5)
+            self.draw_arrow(arrow_cx, arrow_cy, dx, dy, int(21 * scale), BLACK)
+
+    def draw_grid_lines_scaled(self, start_x: int, start_y: int, state: BranchState, cell_size: int):
+        """Draw grid lines with variable cell size."""
+        scale = cell_size / CELL_SIZE
+        for x in range(GRID_SIZE):
+            for y in range(GRID_SIZE):
+                rect = pygame.Rect(
+                    start_x + x * cell_size,
+                    start_y + y * cell_size,
+                    cell_size, cell_size
+                )
+                pos = (x, y)
+                terrain = state.terrain.get(pos)
+
+                if terrain == TerrainType.SWITCH:
+                    activated = any(e.pos == pos for e in state.entities)
+                    color = (0, 200, 0) if activated else (150, 0, 0)
+                    pygame.draw.rect(self.screen, color, rect, max(1, int(5 * scale)))
+                else:
+                    pygame.draw.rect(self.screen, GRAY, rect, 1)
+
+    def draw_inherited_hold_hint_scaled(self, start_x: int, start_y: int,
+                                        preview_state: BranchState,
+                                        main_branch: BranchState,
+                                        sub_branch: BranchState,
+                                        current_focus: int,
+                                        animation_offset: int,
+                                        cell_size: int):
+        """Show inherited hold hint for scaled preview (full version)."""
+        focused = sub_branch if current_focus == 1 else main_branch
+        other = main_branch if current_focus == 1 else sub_branch
+
+        other_held = set(other.get_held_items())
+        focused_held = set(focused.get_held_items())
+        inherited = other_held if not focused_held else set()
+
+        if not inherited:
+            return
+
+        scale = cell_size / CELL_SIZE
+        inherit_line_color = ORANGE
+        slow_offset = animation_offset * 0.25
+
+        for uid in inherited:
+            ghost_pos = other.player.pos
+            gx, gy = ghost_pos
+
+            # Draw full ghost box (same as draw_ghost_box but scaled)
+            pad = int(6 * scale)
+            ghost_rect = pygame.Rect(
+                start_x + gx * cell_size + pad,
+                start_y + gy * cell_size + pad,
+                cell_size - pad * 2, cell_size - pad * 2
+            )
+            color_index = (uid - 1) % len(BOX_COLORS)
+            base_color = BOX_COLORS[color_index]
+            ghost_color = desaturate_color(base_color, 0.7)
+
+            # Semi-transparent fill
+            ghost_surface = pygame.Surface((ghost_rect.width, ghost_rect.height))
+            ghost_surface.set_alpha(128)
+            ghost_surface.fill(ghost_color)
+            self.screen.blit(ghost_surface, (ghost_rect.x, ghost_rect.y))
+
+            # Border outline
+            pygame.draw.rect(self.screen, ghost_color, ghost_rect, max(1, int(3 * scale)))
+
+            # UID text (scaled font)
+            scaled_font = pygame.font.Font(None, max(12, int(24 * scale)))
+            text = scaled_font.render(str(uid), True, GRAY)
+            self.screen.blit(text, text.get_rect(center=ghost_rect.center))
+
+            # Dashed line from ghost to player
+            ghost_center = (
+                start_x + ghost_pos[0] * cell_size + cell_size // 2,
+                start_y + ghost_pos[1] * cell_size + cell_size // 2
+            )
+            player_pos = preview_state.player.pos
+            player_center = (
+                start_x + player_pos[0] * cell_size + cell_size // 2,
+                start_y + player_pos[1] * cell_size + cell_size // 2
+            )
+            self.draw_dashed_line(ghost_center, player_center,
+                                  inherit_line_color, max(1, int(3 * scale)),
+                                  int(12 * scale), slow_offset)
+
+            # Pulsing lock corners on player position
+            pulse = math.sin(animation_offset / 20) * 0.3 + 0.7
+            lock_color = (int(inherit_line_color[0] * pulse),
+                          int(inherit_line_color[1] * pulse),
+                          int(inherit_line_color[2] * pulse))
+            self.draw_lock_corners_scaled(start_x, start_y, player_pos, lock_color,
+                                          cell_size, size=int(24 * scale),
+                                          thickness=max(1, int(8 * scale)),
+                                          margin=int(5 * scale))
+
+    def draw_lock_corners_scaled(self, start_x: int, start_y: int, pos: Tuple[int, int],
+                                  color: Tuple, cell_size: int,
+                                  size: int = 24, thickness: int = 8, margin: int = 0):
+        """Draw L-shaped corner lock brackets (scaled version)."""
+        x, y = pos
+        rect_x = start_x + x * cell_size - margin
+        rect_y = start_y + y * cell_size - margin
+        cell_w = cell_size + margin * 2
+        cell_h = cell_size + margin * 2
+
+        # Top-left
+        pygame.draw.line(self.screen, color,
+                         (rect_x, rect_y + size), (rect_x, rect_y), thickness)
+        pygame.draw.line(self.screen, color,
+                         (rect_x, rect_y), (rect_x + size, rect_y), thickness)
+        # Top-right
+        pygame.draw.line(self.screen, color,
+                         (rect_x + cell_w - size, rect_y),
+                         (rect_x + cell_w, rect_y), thickness)
+        pygame.draw.line(self.screen, color,
+                         (rect_x + cell_w, rect_y),
+                         (rect_x + cell_w, rect_y + size), thickness)
+        # Bottom-left
+        pygame.draw.line(self.screen, color,
+                         (rect_x, rect_y + cell_h - size),
+                         (rect_x, rect_y + cell_h), thickness)
+        pygame.draw.line(self.screen, color,
+                         (rect_x, rect_y + cell_h),
+                         (rect_x + size, rect_y + cell_h), thickness)
+        # Bottom-right
+        pygame.draw.line(self.screen, color,
+                         (rect_x + cell_w - size, rect_y + cell_h),
+                         (rect_x + cell_w, rect_y + cell_h), thickness)
+        pygame.draw.line(self.screen, color,
+                         (rect_x + cell_w, rect_y + cell_h),
+                         (rect_x + cell_w, rect_y + cell_h - size), thickness)
+
     def draw_dashed_line(self, start: Tuple[int, int], end: Tuple[int, int],
                          color: Tuple, width: int = 3, dash_length: int = 9,
                          offset: float = 0):
@@ -701,61 +995,44 @@ class Renderer:
         """
         Main entry point for rendering a complete frame.
 
-        This method replaces the multiple draw_branch calls in game_main.py
-        with a single call that takes a complete visual specification.
-
-        Args:
-            spec: FrameViewSpec containing all visual information
+        Uses positions and scale from specs for flexible layout.
         """
         # 1. Clear screen
         self.screen.fill((255, 255, 255))
 
-        # 2. Draw static hints
-        self.draw_static_hints()
+        # 2. Draw tutorial box (top-left)
+        if spec.tutorial and spec.tutorial.visible:
+            self.draw_tutorial(spec.tutorial)
 
-        # 3. Draw adaptive hints (timeline hint)
-        timeline_hint = spec.main_branch.timeline_hint or spec.sub_branch.timeline_hint if spec.sub_branch else spec.main_branch.timeline_hint
-        self.draw_adaptive_hints(None, timeline_hint)
-
-        # 4. Calculate grid position
-        grid_y = PADDING + 120  # Space for hint panels
-
-        # 5. Draw main branch (center panel)
-        self.draw_branch(
-            spec.main_branch,
-            start_x=PADDING * 2 + GRID_WIDTH,
-            start_y=grid_y,
-            goal_active=spec.goal_active,
-            has_branched=spec.has_branched,
-            animation_frame=spec.animation_frame
-        )
-
-        # 6. Draw merge preview (left panel)
+        # 3. Draw merge preview (bottom-left, scaled)
         self.draw_branch(
             spec.merge_preview,
-            start_x=PADDING,
-            start_y=grid_y,
             goal_active=spec.goal_active,
             has_branched=spec.has_branched,
             animation_frame=spec.animation_frame,
-            # Pass hidden refs for inherited hold hint
             hidden_main=spec.hidden_main,
             hidden_sub=spec.hidden_sub,
             current_focus=spec.current_focus
         )
 
-        # 7. Draw sub branch (right panel, if exists)
+        # 4. Draw main branch (uses position from spec)
+        self.draw_branch(
+            spec.main_branch,
+            goal_active=spec.goal_active,
+            has_branched=spec.has_branched,
+            animation_frame=spec.animation_frame
+        )
+
+        # 5. Draw sub branch (if exists)
         if spec.sub_branch:
             self.draw_branch(
                 spec.sub_branch,
-                start_x=PADDING * 3 + GRID_WIDTH * 2,
-                start_y=grid_y,
                 goal_active=spec.goal_active,
                 has_branched=spec.has_branched,
                 animation_frame=spec.animation_frame
             )
 
-        # 8. Draw debug info
+        # 6. Draw debug info
         self.draw_debug_info(
             spec.step_count,
             spec.current_focus,
@@ -763,17 +1040,53 @@ class Renderer:
             spec.input_sequence
         )
 
-        # 9. Draw overlay (if collapsed or victory)
+        # 7. Draw overlay (if collapsed or victory)
         if spec.is_collapsed:
             self.draw_overlay("FALL DOWN!", (150, 0, 0))
         elif spec.is_victory:
             self.draw_overlay("LEVEL COMPLETE!", (0, 0, 0))
 
+    def draw_tutorial(self, tutorial: 'TutorialSpec'):
+        """Draw tutorial box with bullet points (top-left)."""
+        x, y = PADDING, 40
+        width = 450
+        padding_inner = 10
+
+        # Calculate height based on items
+        line_height = 32
+        title_height = 30
+        height = title_height + len(tutorial.items) * line_height + padding_inner * 2
+
+        # Background
+        panel_surface = pygame.Surface((width, height), pygame.SRCALPHA)
+        panel_surface.fill((40, 40, 40, 240))
+        self.screen.blit(panel_surface, (x, y))
+
+        # Border
+        pygame.draw.rect(self.screen, (100, 100, 100), (x, y, width, height), 2)
+
+        # Title (smaller font)
+        title_color = (96, 165, 250)  # Light blue
+        title_surface = self.font.render(tutorial.title, True, title_color)
+        self.screen.blit(title_surface, (x + padding_inner, y + padding_inner))
+
+        # Items with bullets
+        item_y = y + padding_inner + title_height
+        bullet_color = (96, 165, 250)
+        text_color = (220, 220, 220)
+
+        for item in tutorial.items:
+            # Bullet
+            bullet_surface = self.hint_font.render("•", True, bullet_color)
+            self.screen.blit(bullet_surface, (x + padding_inner, item_y))
+            # Text
+            text_surface = self.cell_hint_font.render(item, True, text_color)
+            self.screen.blit(text_surface, (x + padding_inner + 20, item_y + 5))
+            item_y += line_height
+
     def draw_branch(
         self,
         spec: 'BranchViewSpec',
-        start_x: int,
-        start_y: int,
         goal_active: bool,
         has_branched: bool,
         animation_frame: int,
@@ -784,53 +1097,53 @@ class Renderer:
         """
         Draw a branch panel from a BranchViewSpec.
 
-        This is the new simplified interface (9 params vs 15).
-        Visual decisions are already made in the spec.
-
-        Args:
-            spec: BranchViewSpec with all visual decisions
-            start_x, start_y: Grid origin
-            goal_active, has_branched: Global state for terrain rendering
-            animation_frame: For animations
-            hidden_main, hidden_sub, current_focus: For inherited hold hint
+        Uses position and scale from spec for flexible layout.
         """
         state = spec.state
+        start_x = spec.pos_x
+        start_y = spec.pos_y
+        cell_size = int(CELL_SIZE * spec.scale)
+        grid_width = cell_size * GRID_SIZE
+        grid_height = cell_size * GRID_SIZE
 
-        # Title
-        self.screen.blit(self.font.render(spec.title, True, BLACK),
-                         (start_x, start_y - 30))
+        # Title (smaller font for scaled panels)
+        title_font = self.font if spec.scale >= 1.0 else pygame.font.Font(None, int(24 * spec.scale))
+        self.screen.blit(title_font.render(spec.title, True, BLACK),
+                         (start_x, start_y - int(25 * spec.scale)))
 
         # Focus highlight border
         if spec.is_focused:
+            margin = int(12 * spec.scale)
             highlight_rect = pygame.Rect(
-                start_x - 12, start_y - 12,
-                GRID_WIDTH + 24, GRID_HEIGHT + 24
+                start_x - margin, start_y - margin,
+                grid_width + margin * 2, grid_height + margin * 2
             )
-            pygame.draw.rect(self.screen, BLUE, highlight_rect, 8)
+            pygame.draw.rect(self.screen, BLUE, highlight_rect, int(8 * spec.scale))
 
         # Border
-        border_width = 5 if spec.is_focused else 3
+        border_width = int((5 if spec.is_focused else 3) * spec.scale)
         pygame.draw.rect(self.screen, spec.border_color,
-                         (start_x, start_y, GRID_WIDTH, GRID_HEIGHT), border_width)
+                         (start_x, start_y, grid_width, grid_height), max(1, border_width))
 
-        # Terrain - uses spec.highlight_branch_point (no game logic here!)
-        self.draw_terrain(start_x, start_y, state, goal_active, has_branched,
-                         highlight_branch_point=spec.highlight_branch_point)
+        # Terrain
+        self.draw_terrain_scaled(start_x, start_y, state, cell_size,
+                                 goal_active, has_branched,
+                                 highlight_branch_point=spec.highlight_branch_point)
 
         # Entities (non-player boxes)
         for e in state.entities:
             if e.uid != 0 and e.type == EntityType.BOX:
-                self.draw_entity(start_x, start_y, e, state)
+                self.draw_entity_scaled(start_x, start_y, e, state, cell_size)
 
-        # Shadow connections (only on focused branch)
-        if spec.is_focused:
+        # Shadow connections (only on focused branch, skip for scaled preview)
+        if spec.is_focused and spec.scale >= 1.0:
             self.draw_shadow_connections(start_x, start_y, state, animation_frame)
 
         # Inherited hold hint (only for merge preview)
         if spec.is_merge_preview and hidden_main and hidden_sub:
-            self.draw_inherited_hold_hint(start_x, start_y, state,
-                                          hidden_main, hidden_sub,
-                                          current_focus, animation_frame)
+            self.draw_inherited_hold_hint_scaled(start_x, start_y, state,
+                                                 hidden_main, hidden_sub,
+                                                 current_focus, animation_frame, cell_size)
 
         # Player
         held_items = state.get_held_items()
@@ -840,13 +1153,13 @@ class Renderer:
             player_color = BOX_COLORS[color_index]
         else:
             player_color = BLUE if (spec.is_focused or spec.is_merge_preview) else GRAY
-        self.draw_player(start_x, start_y, state.player, player_color, held_uid)
+        self.draw_player_scaled(start_x, start_y, state.player, player_color, held_uid, cell_size)
 
-        # Cell hint (only if spec has interaction_hint)
-        if spec.interaction_hint:
+        # Cell hint (only if spec has interaction_hint, skip for scaled)
+        if spec.interaction_hint and spec.scale >= 1.0:
             hint = spec.interaction_hint
             self.draw_cell_hint(start_x, start_y, hint.target_pos,
                                hint.text, hint.color, inset=hint.is_inset)
 
         # Grid lines
-        self.draw_grid_lines(start_x, start_y, state)
+        self.draw_grid_lines_scaled(start_x, start_y, state, cell_size)
