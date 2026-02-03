@@ -4,7 +4,8 @@ import pygame
 import sys
 from map_parser import parse_dual_layer
 from game_controller import GameController
-from renderer import Renderer, WINDOW_WIDTH, WINDOW_HEIGHT, PADDING, GRID_WIDTH
+from renderer import Renderer, WINDOW_WIDTH, WINDOW_HEIGHT
+from presentation_model import ViewModelBuilder
 
 
 def run_game(floor_map: str, object_map: str):
@@ -81,64 +82,9 @@ def run_game(floor_map: str, object_map: str):
             print(f"Solution: {solution}")
             print(f"===============\n")
 
-        # Rendering
-        screen.fill((255, 255, 255))
-
-        # Hints
-        renderer.draw_static_hints()
-        # Timeline hint (top panel)
-        timeline_hint = controller.get_timeline_hint()
-        renderer.draw_adaptive_hints(None, timeline_hint)
-
-        # Get interaction hint for in-cell display
-        interaction_hint = controller.get_interaction_hint()
-
-        preview = controller.get_merge_preview()
-        goal_active = all(
-            any(e.pos == pos for e in preview.entities)
-            for pos, t in preview.terrain.items() if t.name == 'SWITCH'
-        )
-        # Main Branch
-        grid_y = PADDING + 120  # Space for hint panels (80 * 1.5)
-        renderer.draw_branch(controller.main_branch,
-                             PADDING * 2 + GRID_WIDTH, grid_y,
-                             "DIV 0", controller.current_focus == 0, (0, 100, 200),
-                             goal_active, controller.has_branched, animation_frame,
-                             interaction_hint=interaction_hint if controller.current_focus == 0 else None,
-                             timeline_hint=timeline_hint if controller.current_focus == 0 else '')
-
-        # Merge Preview
-        renderer.draw_branch(preview, PADDING, grid_y,
-                             "Merge Preview", False, (150, 50, 150),
-                             goal_active, controller.has_branched, animation_frame,
-                             is_merge_preview=True,
-                             main_branch=controller.main_branch,
-                             sub_branch=controller.sub_branch,
-                             current_focus=controller.current_focus)
-
-        # Sub Branch
-        if controller.sub_branch:
-            renderer.draw_branch(controller.sub_branch,
-                                 PADDING * 3 + GRID_WIDTH * 2, grid_y,
-                                 "DIV 1", controller.current_focus == 1, (50, 150, 200),
-                                 goal_active, controller.has_branched, animation_frame,
-                                 interaction_hint=interaction_hint if controller.current_focus == 1 else None,
-                                 timeline_hint=timeline_hint if controller.current_focus == 1 else '')
-
-        # Debug info
-        renderer.draw_debug_info(
-            len(controller.history) - 1,
-            controller.current_focus,
-            controller.has_branched,
-            controller.input_log
-        )
-
-        # Overlay
-        if controller.collapsed:
-            renderer.draw_overlay("FALL DOWN!", (150, 0, 0))
-            pass
-        elif controller.victory:
-            renderer.draw_overlay("LEVEL COMPLETE!", (0, 0, 0))
+        # Rendering - Layer 2 transforms state to visual spec, Layer 3 draws it
+        frame_spec = ViewModelBuilder.build(controller, animation_frame)
+        renderer.draw_frame(frame_spec)
 
         pygame.display.flip()
 
@@ -148,22 +94,22 @@ def run_game(floor_map: str, object_map: str):
 # ===== 地圖定義 =====
 # Floor Map
 floor_map = '''
-....H.
-##.#.#
-.H..HS
-.#####
-...HHS
-H..HHG
+......
+......
+......
+......
+......
+.....G
 '''
 
 # Object Map
 object_map = '''
 P.....
-..B.B.
-...B..
 ......
-B.B...
-..B...
+......
+......
+......
+......
 '''
 
 

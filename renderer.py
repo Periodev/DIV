@@ -1,10 +1,16 @@
-# renderer.py - Pygame Rendering System
+# renderer.py - Pygame Rendering System (Layer 3)
+#
+# Pure rendering layer. Receives visual specifications from presentation_model
+# and draws pixels. Does NOT make game logic decisions.
 
 import math
 import time
 import pygame
 from timeline_system import BranchState, Physics, TerrainType, EntityType
-from typing import Optional, Tuple
+from typing import Optional, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from presentation_model import FrameViewSpec, BranchViewSpec
 
 
 def desaturate_color(color: Tuple[int, int, int], amount: float = 0.5) -> Tuple[int, int, int]:
@@ -665,74 +671,6 @@ class Renderer:
             self.draw_lock_corners(start_x, start_y, player_pos, lock_color,
                                    size=24, thickness=8, margin=5)  # 16*1.5, 5*1.5≈8, 3*1.5≈5
 
-    def draw_branch(self, state: BranchState, start_x: int, start_y: int,
-                    title: str, is_focused: bool, border_color: Tuple,
-                    goal_active: bool = False, has_branched: bool = False,
-                    animation_offset: int = 0,
-                    is_merge_preview: bool = False,
-                    main_branch: Optional[BranchState] = None,
-                    sub_branch: Optional[BranchState] = None,
-                    current_focus: int = 0,
-                    interaction_hint: tuple = None,
-                    timeline_hint: str = ''):
-        """Draw a complete branch view"""
-        # Title
-        self.screen.blit(self.font.render(title, True, BLACK),
-                         (start_x, start_y - 30))  # 20 * 1.5
-
-        # Focus highlight border
-        if is_focused:
-            highlight_rect = pygame.Rect(
-                start_x - 12, start_y - 12,  # 8 * 1.5
-                GRID_WIDTH + 24, GRID_HEIGHT + 24  # 16 * 1.5
-            )
-            pygame.draw.rect(self.screen, BLUE, highlight_rect, 8)  # 5 * 1.5 ≈ 8
-
-        # Border
-        border_width = 5 if is_focused else 3  # 3*1.5≈5, 2*1.5≈3
-        pygame.draw.rect(self.screen, border_color,
-                         (start_x, start_y, GRID_WIDTH, GRID_HEIGHT), border_width)
-
-        # Terrain (highlight branch point if player standing on it)
-        is_on_branch = timeline_hint.startswith('V') if timeline_hint else False
-        self.draw_terrain(start_x, start_y, state, goal_active, has_branched,
-                         highlight_branch_point=is_on_branch and is_focused)
-
-        # Entities (non-player, not held)
-        for e in state.entities:
-            if e.uid != 0 and e.type == EntityType.BOX:
-                self.draw_entity(start_x, start_y, e, state)
-
-        # Shadow connections (only on the focused branch)
-        if is_focused:
-            self.draw_shadow_connections(start_x, start_y, state, animation_offset)
-
-        # Inherited hold hint (only for merge preview)
-        if is_merge_preview and main_branch and sub_branch:
-            self.draw_inherited_hold_hint(start_x, start_y, state,
-                                          main_branch, sub_branch,
-                                          current_focus, animation_offset)
-
-        # Player
-        held_items = state.get_held_items()
-        held_uid = held_items[0] if held_items else None
-        if held_uid:
-            # Use box color based on held uid
-            color_index = (held_uid - 1) % len(BOX_COLORS)
-            player_color = BOX_COLORS[color_index]
-        else:
-            player_color = BLUE if (is_focused or is_merge_preview) else GRAY
-        self.draw_player(start_x, start_y, state.player, player_color, held_uid)
-
-        # Cell hint (only focused branch)
-        if is_focused and interaction_hint:
-            hint_text, hint_color, target_pos, is_drop = interaction_hint
-            if target_pos:
-                self.draw_cell_hint(start_x, start_y, target_pos, hint_text, hint_color, inset=is_drop)
-
-        # Grid lines
-        self.draw_grid_lines(start_x, start_y, state)
-
     def draw_overlay(self, text: str, color: Tuple):
         """Draw overlay"""
         overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -756,3 +694,159 @@ class Renderer:
         info = f"Step: {history_len}  |  Keys: {keys}"
         text = self.font.render(info, True, DARK_GRAY)
         self.screen.blit(text, (PADDING, y))
+
+    # ========== New Presentation Model Interface ==========
+
+    def draw_frame(self, spec: 'FrameViewSpec'):
+        """
+        Main entry point for rendering a complete frame.
+
+        This method replaces the multiple draw_branch calls in game_main.py
+        with a single call that takes a complete visual specification.
+
+        Args:
+            spec: FrameViewSpec containing all visual information
+        """
+        # 1. Clear screen
+        self.screen.fill((255, 255, 255))
+
+        # 2. Draw static hints
+        self.draw_static_hints()
+
+        # 3. Draw adaptive hints (timeline hint)
+        timeline_hint = spec.main_branch.timeline_hint or spec.sub_branch.timeline_hint if spec.sub_branch else spec.main_branch.timeline_hint
+        self.draw_adaptive_hints(None, timeline_hint)
+
+        # 4. Calculate grid position
+        grid_y = PADDING + 120  # Space for hint panels
+
+        # 5. Draw main branch (center panel)
+        self.draw_branch(
+            spec.main_branch,
+            start_x=PADDING * 2 + GRID_WIDTH,
+            start_y=grid_y,
+            goal_active=spec.goal_active,
+            has_branched=spec.has_branched,
+            animation_frame=spec.animation_frame
+        )
+
+        # 6. Draw merge preview (left panel)
+        self.draw_branch(
+            spec.merge_preview,
+            start_x=PADDING,
+            start_y=grid_y,
+            goal_active=spec.goal_active,
+            has_branched=spec.has_branched,
+            animation_frame=spec.animation_frame,
+            # Pass hidden refs for inherited hold hint
+            hidden_main=spec.hidden_main,
+            hidden_sub=spec.hidden_sub,
+            current_focus=spec.current_focus
+        )
+
+        # 7. Draw sub branch (right panel, if exists)
+        if spec.sub_branch:
+            self.draw_branch(
+                spec.sub_branch,
+                start_x=PADDING * 3 + GRID_WIDTH * 2,
+                start_y=grid_y,
+                goal_active=spec.goal_active,
+                has_branched=spec.has_branched,
+                animation_frame=spec.animation_frame
+            )
+
+        # 8. Draw debug info
+        self.draw_debug_info(
+            spec.step_count,
+            spec.current_focus,
+            spec.has_branched,
+            spec.input_sequence
+        )
+
+        # 9. Draw overlay (if collapsed or victory)
+        if spec.is_collapsed:
+            self.draw_overlay("FALL DOWN!", (150, 0, 0))
+        elif spec.is_victory:
+            self.draw_overlay("LEVEL COMPLETE!", (0, 0, 0))
+
+    def draw_branch(
+        self,
+        spec: 'BranchViewSpec',
+        start_x: int,
+        start_y: int,
+        goal_active: bool,
+        has_branched: bool,
+        animation_frame: int,
+        hidden_main: Optional[BranchState] = None,
+        hidden_sub: Optional[BranchState] = None,
+        current_focus: int = 0
+    ):
+        """
+        Draw a branch panel from a BranchViewSpec.
+
+        This is the new simplified interface (9 params vs 15).
+        Visual decisions are already made in the spec.
+
+        Args:
+            spec: BranchViewSpec with all visual decisions
+            start_x, start_y: Grid origin
+            goal_active, has_branched: Global state for terrain rendering
+            animation_frame: For animations
+            hidden_main, hidden_sub, current_focus: For inherited hold hint
+        """
+        state = spec.state
+
+        # Title
+        self.screen.blit(self.font.render(spec.title, True, BLACK),
+                         (start_x, start_y - 30))
+
+        # Focus highlight border
+        if spec.is_focused:
+            highlight_rect = pygame.Rect(
+                start_x - 12, start_y - 12,
+                GRID_WIDTH + 24, GRID_HEIGHT + 24
+            )
+            pygame.draw.rect(self.screen, BLUE, highlight_rect, 8)
+
+        # Border
+        border_width = 5 if spec.is_focused else 3
+        pygame.draw.rect(self.screen, spec.border_color,
+                         (start_x, start_y, GRID_WIDTH, GRID_HEIGHT), border_width)
+
+        # Terrain - uses spec.highlight_branch_point (no game logic here!)
+        self.draw_terrain(start_x, start_y, state, goal_active, has_branched,
+                         highlight_branch_point=spec.highlight_branch_point)
+
+        # Entities (non-player boxes)
+        for e in state.entities:
+            if e.uid != 0 and e.type == EntityType.BOX:
+                self.draw_entity(start_x, start_y, e, state)
+
+        # Shadow connections (only on focused branch)
+        if spec.is_focused:
+            self.draw_shadow_connections(start_x, start_y, state, animation_frame)
+
+        # Inherited hold hint (only for merge preview)
+        if spec.is_merge_preview and hidden_main and hidden_sub:
+            self.draw_inherited_hold_hint(start_x, start_y, state,
+                                          hidden_main, hidden_sub,
+                                          current_focus, animation_frame)
+
+        # Player
+        held_items = state.get_held_items()
+        held_uid = held_items[0] if held_items else None
+        if held_uid:
+            color_index = (held_uid - 1) % len(BOX_COLORS)
+            player_color = BOX_COLORS[color_index]
+        else:
+            player_color = BLUE if (spec.is_focused or spec.is_merge_preview) else GRAY
+        self.draw_player(start_x, start_y, state.player, player_color, held_uid)
+
+        # Cell hint (only if spec has interaction_hint)
+        if spec.interaction_hint:
+            hint = spec.interaction_hint
+            self.draw_cell_hint(start_x, start_y, hint.target_pos,
+                               hint.text, hint.color, inset=hint.is_inset)
+
+        # Grid lines
+        self.draw_grid_lines(start_x, start_y, state)
