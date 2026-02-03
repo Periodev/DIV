@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>div - Level Editor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+        .container { max-width: 1600px; margin: 0 auto; }
+        h1 { margin-bottom: 20px; color: #60a5fa; font-size: 24px; }
+        
+        .controls {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .control-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        label { min-width: 100px; font-size: 14px; }
+        input[type="number"] {
+            width: 80px;
+            padding: 5px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            color: #e0e0e0;
+            border-radius: 4px;
+        }
+        
+        .tool-palette {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .tool-row {
+            margin-bottom: 8px;
+        }
+        .tool-row:last-child {
+            margin-bottom: 0;
+        }
+        .tool-btn {
+            padding: 8px 16px;
+            margin: 4px;
+            background: #3a3a3a;
+            border: 2px solid #444;
+            color: #e0e0e0;
+            cursor: pointer;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+        }
+        .tool-btn:hover { background: #4a4a4a; }
+        .tool-btn.active { 
+            background: #60a5fa;
+            border-color: #60a5fa;
+            color: #000;
+        }
+        
+        .main-section {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .output-section {
+            flex: 0 0 350px;
+            background: #2a2a2a;
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+        .output-title {
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #60a5fa;
+            font-size: 13px;
+        }
+        textarea {
+            flex: 1;
+            min-height: 320px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            color: #0f0;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            padding: 8px;
+            border-radius: 4px;
+            resize: vertical;
+            line-height: 1.3;
+        }
+        
+        .editor-section {
+            flex: 0 0 auto;
+        }
+        
+        .grid-container {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .grid-title {
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #60a5fa;
+            font-size: 14px;
+        }
+        .grid {
+            display: inline-grid;
+            gap: 2px;
+            background: #444;
+            padding: 2px;
+            border-radius: 4px;
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            position: relative;
+        }
+        .cell:hover { background: #2a2a2a; }
+        
+        /* 地板層顏色 */
+        .cell.floor-empty { background: #ffffff; }
+        .cell.floor-void { background: #0a0a0a; color: #333; }
+        .cell.floor-wall { background: #000; color: #666; }
+        .cell.floor-switch { background: #ffcccc; color: #c00; }
+        .cell.floor-weight1 { background: #ffe4cc; color: #f80; }
+        .cell.floor-weight2 { background: #ffccaa; color: #f60; }
+        .cell.floor-branch1 { background: #e8ffe8; color: #0a0; }
+        .cell.floor-branch2 { background: #ccffcc; color: #0a0; }
+        .cell.floor-branch3 { background: #a0ffa0; color: #080; }
+        .cell.floor-branch4 { background: #80ff80; color: #060; }
+        .cell.floor-goal { background: #ffffcc; color: #aa0; }
+        .cell.floor-hole { background: #282828; color: #666; }
+        
+        /* 物件層顏色 */
+        .cell.obj-player { background: #6699ff; color: #fff; }
+        .cell.obj-box { background: #ff6666; color: #fff; }
+        
+        /* 合併視圖 */
+        .cell.merged {
+            background: linear-gradient(135deg, #1a1a1a 0%, #1a1a1a 50%, #3a3a3a 50%, #3a3a3a 100%);
+        }
+        .cell.merged.floor-switch { 
+            background: linear-gradient(135deg, #ffcccc 0%, #ffcccc 50%, #3a3a3a 50%, #3a3a3a 100%);
+        }
+        .cell.merged.obj-player {
+            background: #6699ff;
+            color: #fff;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            margin: 8px 5px 0 0;
+            background: #60a5fa;
+            border: none;
+            color: #000;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+        .btn:hover { background: #3b82f6; }
+        .btn.secondary {
+            background: #4a4a4a;
+            color: #e0e0e0;
+        }
+        .btn.secondary:hover { background: #5a5a5a; }
+        
+        .view-toggle {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .info-box {
+            background: #3a3a3a;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 div - Level Editor</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Grid Size:</label>
+                <input type="number" id="gridSize" value="6" min="4" max="12">
+                <button class="btn" onclick="resizeGrid()">Resize</button>
+                <span style="margin-left: 20px;">Player:</span>
+                <span id="playerPos" style="color: #60a5fa;">Not set</span>
+            </div>
+            <div class="info-box">
+                ℹ️ <strong>Single-char symbols</strong> • IDs auto-generated • <strong>w</strong>=weight1, <strong>W</strong>=weight2, <strong>H</strong>=hole • <strong>v/V/x/X</strong>=branch×1/2/3/4 • Default: all walls (#)
+            </div>
+        </div>
+        
+        <div class="tool-palette">
+            <div class="tool-row">
+                <strong>Floor:</strong>
+                <button class="tool-btn active" data-layer="floor" data-tool="." onclick="selectTool(this)">. Floor</button>
+                <button class="tool-btn" data-layer="floor" data-tool="#" onclick="selectTool(this)"># Wall</button>
+                <button class="tool-btn" data-layer="floor" data-tool="S" onclick="selectTool(this)">S Switch</button>
+                <button class="tool-btn" data-layer="floor" data-tool="w" onclick="selectTool(this)">w Weight1</button>
+                <button class="tool-btn" data-layer="floor" data-tool="W" onclick="selectTool(this)">W Weight2</button>
+                <button class="tool-btn" data-layer="floor" data-tool="v" onclick="selectTool(this)">v Branch×1</button>
+                <button class="tool-btn" data-layer="floor" data-tool="V" onclick="selectTool(this)">V Branch×2</button>
+                <button class="tool-btn" data-layer="floor" data-tool="x" onclick="selectTool(this)">x Branch×3</button>
+                <button class="tool-btn" data-layer="floor" data-tool="X" onclick="selectTool(this)">X Branch×4</button>
+                <button class="tool-btn" data-layer="floor" data-tool="G" onclick="selectTool(this)">G Goal</button>
+                <button class="tool-btn" data-layer="floor" data-tool="H" onclick="selectTool(this)">H Hole</button>
+            </div>
+            <div class="tool-row">
+                <strong>Object:</strong>
+                <button class="tool-btn" data-layer="object" data-tool="." onclick="selectTool(this)">. Empty</button>
+                <button class="tool-btn" data-layer="object" data-tool="P" onclick="selectTool(this)">P Player</button>
+                <button class="tool-btn" data-layer="object" data-tool="B" onclick="selectTool(this)">B Box</button>
+            </div>
+            <div class="tool-row">
+                <strong>Quick:</strong>
+                <button class="tool-btn" onclick="fillAll('.')">All→Floor</button>
+                <button class="tool-btn" onclick="fillAll('#')">All→Wall</button>
+            </div>
+        </div>
+        
+        <div class="main-section">
+            <!-- 輸出區在左 -->
+            <div class="output-section">
+                <div class="output-title">Output Code</div>
+                <textarea id="output" readonly></textarea>
+                <div>
+                    <button class="btn" onclick="copyOutput()">📋 Copy</button>
+                    <button class="btn secondary" onclick="clearGrid()">🗑️ Clear</button>
+                </div>
+            </div>
+            
+            <!-- 編輯器在右 -->
+            <div class="editor-section">
+                <div class="grid-container">
+                    <div class="view-toggle">
+                        <button class="btn" onclick="setView('merge')">Merge</button>
+                        <button class="btn secondary" onclick="setView('floor')">Floor</button>
+                        <button class="btn secondary" onclick="setView('object')">Object</button>
+                    </div>
+                    <div class="grid-title">View: <span id="viewMode">Merge</span></div>
+                    <div id="grid" class="grid"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let gridSize = 6;
+        let currentTool = '.';
+        let currentLayer = 'floor';
+        let currentView = 'merge';
+        let floorMap = [];
+        let objectMap = [];
+        let playerPos = null;
+        
+        function initGrid() {
+            floorMap = Array(gridSize).fill(null).map(() => Array(gridSize).fill('#'));
+            objectMap = Array(gridSize).fill(null).map(() => Array(gridSize).fill('.'));
+            playerPos = null;
+            document.getElementById('playerPos').textContent = 'Not set';
+            renderGrid();
+            updateOutput();
+        }
+        
+        function resizeGrid() {
+            gridSize = parseInt(document.getElementById('gridSize').value);
+            initGrid();
+        }
+        
+        function selectTool(btn) {
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentTool = btn.dataset.tool;
+            currentLayer = btn.dataset.layer;
+        }
+        
+        function setView(view) {
+            currentView = view;
+            document.getElementById('viewMode').textContent = 
+                view === 'merge' ? 'Merge' : view === 'floor' ? 'Floor' : 'Object';
+            renderGrid();
+        }
+        
+        function renderGrid() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            grid.style.gridTemplateColumns = `repeat(${gridSize}, 40px)`;
+            
+            for (let y = 0; y < gridSize; y++) {
+                for (let x = 0; x < gridSize; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.x = x;
+                    cell.dataset.y = y;
+                    cell.onclick = () => handleCellClick(x, y);
+                    
+                    const floor = floorMap[y][x];
+                    const obj = objectMap[y][x];
+                    
+                    if (currentView === 'merge') {
+                        if (obj !== '.') {
+                            cell.classList.add('merged');
+                            if (obj === 'P') cell.classList.add('obj-player');
+                            if (obj === 'B') cell.classList.add('obj-box');
+                            cell.textContent = obj;
+                        } else {
+                            applyFloorStyle(cell, floor);
+                        }
+                    } else if (currentView === 'floor') {
+                        applyFloorStyle(cell, floor);
+                    } else {
+                        applyObjectStyle(cell, obj);
+                    }
+                    
+                    grid.appendChild(cell);
+                }
+            }
+        }
+        
+        function applyFloorStyle(cell, floor) {
+            if (floor === ' ') {
+                cell.classList.add('floor-void');
+                cell.textContent = '';
+            } else if (floor === '#') {
+                cell.classList.add('floor-wall');
+                cell.textContent = '#';
+            } else if (floor === 'S') {
+                cell.classList.add('floor-switch');
+                cell.textContent = 'S';
+            } else if (floor === 'w') {
+                cell.classList.add('floor-weight1');
+                cell.textContent = 'w';
+            } else if (floor === 'W') {
+                cell.classList.add('floor-weight2');
+                cell.textContent = 'W';
+            } else if (floor === 'v') {
+                cell.classList.add('floor-branch1');
+                cell.textContent = 'v';
+            } else if (floor === 'V') {
+                cell.classList.add('floor-branch2');
+                cell.textContent = 'V';
+            } else if (floor === 'x') {
+                cell.classList.add('floor-branch3');
+                cell.textContent = 'x';
+            } else if (floor === 'X') {
+                cell.classList.add('floor-branch4');
+                cell.textContent = 'X';
+            } else if (floor === 'G') {
+                cell.classList.add('floor-goal');
+                cell.textContent = 'G';
+            } else if (floor === 'H') {
+                cell.classList.add('floor-hole');
+                cell.textContent = 'H';
+            } else {
+                cell.classList.add('floor-empty');
+            }
+        }
+        
+        function applyObjectStyle(cell, obj) {
+            if (obj === 'P') {
+                cell.classList.add('obj-player');
+                cell.textContent = 'P';
+            } else if (obj === 'B') {
+                cell.classList.add('obj-box');
+                cell.textContent = 'B';
+            }
+        }
+        
+        function handleCellClick(x, y) {
+            if (currentLayer === 'floor') {
+                floorMap[y][x] = currentTool;
+            } else {
+                if (currentTool === 'P') {
+                    for (let py = 0; py < gridSize; py++) {
+                        for (let px = 0; px < gridSize; px++) {
+                            if (objectMap[py][px] === 'P') {
+                                objectMap[py][px] = '.';
+                            }
+                        }
+                    }
+                    objectMap[y][x] = 'P';
+                    playerPos = [x, y];
+                    document.getElementById('playerPos').textContent = `(${x}, ${y})`;
+                } else {
+                    objectMap[y][x] = currentTool;
+                }
+            }
+            renderGrid();
+            updateOutput();
+        }
+        
+        function updateOutput() {
+            let output = "# Floor Map\nfloor_map = '''\n";
+            for (let y = 0; y < gridSize; y++) {
+                let line = '';
+                for (let x = 0; x < gridSize; x++) {
+                    line += floorMap[y][x];
+                }
+                output += line + '\n';
+            }
+            output += "'''\n\n# Object Map\nobject_map = '''\n";
+            for (let y = 0; y < gridSize; y++) {
+                let line = '';
+                for (let x = 0; x < gridSize; x++) {
+                    line += objectMap[y][x];
+                }
+                output += line + '\n';
+            }
+            output += "'''";
+            
+            document.getElementById('output').value = output;
+        }
+        
+        function copyOutput() {
+            const output = document.getElementById('output');
+            output.select();
+            document.execCommand('copy');
+            alert('✅ Copied!');
+        }
+        
+        function clearGrid() {
+            if (confirm('Reset to walls?')) {
+                initGrid();
+            }
+        }
+        
+        function fillAll(symbol) {
+            const action = symbol === '.' ? 'floor' : 'wall';
+            if (confirm(`Fill all with ${action}?`)) {
+                for (let y = 0; y < gridSize; y++) {
+                    for (let x = 0; x < gridSize; x++) {
+                        floorMap[y][x] = symbol;
+                    }
+                }
+                renderGrid();
+                updateOutput();
+            }
+        }
+        
+        initGrid();
+    </script>
+</body>
+</html>

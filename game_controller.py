@@ -337,7 +337,8 @@ class GameController:
         Returns: 'V' when on branch point (for highlight), '' otherwise
         """
         if self.has_branched:
-            return 'C 合併  Tab 切換視角'
+            #return 'C 合併  Tab 切換視角'
+            return 'C 合併'
 
         active = self.get_active_branch()
         terrain = active.terrain.get(active.player.pos)

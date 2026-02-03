@@ -1,6 +1,7 @@
 # renderer.py - Pygame Rendering System
 
 import math
+import time
 import pygame
 from timeline_system import BranchState, Physics, TerrainType, EntityType
 from typing import Optional, Tuple
@@ -73,24 +74,31 @@ class Renderer:
         self.hint_font = pygame.font.SysFont("Microsoft YaHei", 33)  # 22 * 1.5
         self.cell_hint_font = pygame.font.SysFont("Microsoft YaHei", 18)  # Small font for cell hints
 
+
     def draw_hint_panel(self, x: int, y: int, width: int, height: int, text: str,
                         border_color: tuple, text_color: tuple):
-        """Draw a single hint panel."""
         if not text:
             return
 
-        # Background
-        panel_surface = pygame.Surface((width, height))
-        panel_surface.fill(HINT_BG)
+        panel_surface = pygame.Surface((width, height), pygame.SRCALPHA)
+        panel_surface.fill((*HINT_BG, 255)) 
         self.screen.blit(panel_surface, (x, y))
 
-        # Border
         pygame.draw.rect(self.screen, border_color, (x, y, width, height), 2)
 
-        # Text
+        t = pygame.time.get_ticks() / 1000  # 轉為秒
+        frequency = 2.513  # 2.5 秒一個循環
+
+        # sin 輸出為 -1 ~ 1，透過 (0.5 + 0.5 * sin) 轉為 0 ~ 1
+        # 範圍設定為 100 ~ 255：確保暗處依然可見，亮處達到全開
+        alpha = int(100 + 155 * (0.5 + 0.5 * math.sin(t * frequency)))
+        
         text_surface = self.hint_font.render(text, True, text_color)
-        text_rect = text_surface.get_rect(center=(x + width // 2, y + height // 2))
-        self.screen.blit(text_surface, text_rect)
+        temp_surf = text_surface.copy()
+        temp_surf.set_alpha(alpha)
+        
+        text_rect = temp_surf.get_rect(center=(x + width // 2, y + height // 2))
+        self.screen.blit(temp_surf, text_rect)
 
     def draw_text_with_outline(self, text: str, pos: Tuple[int, int],
                                font: pygame.font.Font,
@@ -203,7 +211,7 @@ class Renderer:
         """Draw timeline hint panel (interaction hint now shown in-cell)."""
         y = 12
         height = 68
-        timeline_width = 330
+        timeline_width = 170
 
         # Center timeline panel
         timeline_x = (WINDOW_WIDTH - timeline_width) // 2
@@ -283,7 +291,7 @@ class Renderer:
                         pygame.draw.rect(self.screen, GREEN, rect, 6)  # 4 * 1.5
                     else:
                         pygame.draw.rect(self.screen, YELLOW, rect)
-                    text = self.font.render('G', True, BLACK)
+                    text = self.font.render('Goal', True, BLACK)
                     self.screen.blit(text, text.get_rect(center=rect.center))
                 elif terrain == TerrainType.HOLE:
                     filled = any(e.pos == pos and e.z == -1
@@ -310,9 +318,9 @@ class Renderer:
             base_color = DARK_GRAY  # fallback
 
         if entity.z == -1:
-            padding = 10
+            padding = 15
         else:
-            padding = 6
+            padding = 9
 
         x, y = entity.pos
         rect = pygame.Rect(
