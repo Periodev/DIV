@@ -1039,8 +1039,11 @@ class Renderer:
             spec.input_sequence
         )
 
-        # 7. Draw V-key hold progress bar
-        if spec.v_hold_progress > 0:
+        # 7. Draw V-key hold: preview overlay on focused panel + progress bar
+        if spec.v_hold_progress > 0 and spec.has_branched:
+            focused = spec.main_branch if spec.current_focus == 0 else spec.sub_branch
+            if focused:
+                self.draw_merge_overlay(spec, focused)
             self.draw_merge_progress(spec.v_hold_progress)
 
         # 8. Draw overlay (if collapsed or victory)
@@ -1048,6 +1051,47 @@ class Renderer:
             self.draw_overlay("FALL DOWN!", (150, 0, 0))
         elif spec.is_victory:
             self.draw_overlay("LEVEL COMPLETE!", (0, 0, 0))
+
+    def draw_merge_overlay(self, spec: 'FrameViewSpec', focused: 'BranchViewSpec'):
+        """Draw merge preview result overlaid on the focused branch panel."""
+        cell_size = int(CELL_SIZE * focused.scale)
+        grid_px = cell_size * GRID_SIZE
+        margin = int(12 * focused.scale)
+        w = grid_px + margin * 2
+        h = grid_px + margin * 2
+
+        # Build a temporary spec pointing at the preview state, at (0,0) with same scale
+        from presentation_model import BranchViewSpec
+        temp_spec = BranchViewSpec(
+            state=spec.merge_preview.state,
+            title='',
+            is_focused=False,
+            border_color=focused.border_color,
+            interaction_hint=None,
+            timeline_hint='',
+            highlight_branch_point=False,
+            is_merge_preview=False,
+            scale=focused.scale,
+            pos_x=margin,
+            pos_y=margin
+        )
+
+        # Render to offscreen surface
+        offscreen = pygame.Surface((w, h), pygame.SRCALPHA)
+        saved_screen = self.screen
+        self.screen = offscreen
+        self.draw_branch(
+            temp_spec,
+            goal_active=spec.goal_active,
+            has_branched=False,
+            animation_frame=spec.animation_frame
+        )
+        self.screen = saved_screen
+
+        # Alpha blit onto focused panel position
+        alpha = int(255 * spec.v_hold_progress)
+        offscreen.set_alpha(alpha)
+        self.screen.blit(offscreen, (focused.pos_x - margin, focused.pos_y - margin))
 
     def draw_merge_progress(self, progress: float):
         """Draw a small progress bar indicating V-key hold for merge."""
