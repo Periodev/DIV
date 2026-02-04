@@ -26,8 +26,7 @@ class GameLogic:
 
         if collision > 0:
             # Check if any blocking entity is a shadow (can't push shadows)
-            pushable = [e for e in state.entities
-                        if e.pos == new_pos and e.collision > 0 and Physics.grounded(e)]
+            pushable = state.get_blocking_entities_at(new_pos)
             for e in pushable:
                 if state.is_shadow(e.uid):
                     return False
@@ -48,8 +47,7 @@ class GameLogic:
         new_pos = (px + dx, py + dy)
 
         # Push boxes (only free entities, not terrain-contained)
-        entities_at_new = [e for e in state.entities
-                           if e.pos == new_pos and e.collision > 0 and Physics.grounded(e)]
+        entities_at_new = state.get_blocking_entities_at(new_pos)
         if entities_at_new:
             push_pos = (new_pos[0] + dx, new_pos[1] + dy)
             for e in entities_at_new:
@@ -72,10 +70,7 @@ class GameLogic:
         front_pos = (px + dx, py + dy)
 
         # Find pickable objects in front (only BOX)
-        target = next((e for e in state.entities 
-                            if e.pos == front_pos 
-                            and e.type == EntityType.BOX 
-                            and Physics.grounded(e)), None)
+        target = state.find_box_at(front_pos)
         if target is None:
             return False
 

@@ -177,10 +177,7 @@ class GameController:
         target_pos = (px + dx, py + dy)
 
         # Check if there's a grounded box at target position (including shadows)
-        has_box_ahead = any(
-            e.type == EntityType.BOX and e.pos == target_pos and Physics.grounded(e)
-            for e in active.entities
-        )
+        has_box_ahead = active.has_box_at(target_pos)
 
         is_holding = bool(active.get_held_items())
 
@@ -242,11 +239,7 @@ class GameController:
         front_pos = (px + dx, py + dy)
 
         # Find grounded box at front position
-        target = next((e for e in active.entities
-                       if e.pos == front_pos
-                       and e.type == EntityType.BOX
-                       and Physics.grounded(e)), None)
-
+        target = active.find_box_at(front_pos)
         if target is None:
             return False
 
@@ -268,11 +261,7 @@ class GameController:
         preview = self.get_merge_preview()
 
         # All switches activated
-        switches_ok = all(
-            Physics.weight_at(pos, preview) > 0
-            for pos, t in preview.terrain.items()
-            if t == TerrainType.SWITCH
-        )
+        switches_ok = preview.all_switches_activated()
 
         # Player on goal
         goal_ok = preview.terrain.get(preview.player.pos) == TerrainType.GOAL
@@ -304,10 +293,7 @@ class GameController:
                 return ('', (0, 0, 0), None, False)  # No hint for blocked
 
         # Find grounded box at front position
-        target = next((e for e in active.entities
-                       if e.pos == front_pos
-                       and e.type == EntityType.BOX
-                       and Physics.grounded(e)), None)
+        target = active.find_box_at(front_pos)
 
         if target is None:
             return ('', (0, 0, 0), None, False)

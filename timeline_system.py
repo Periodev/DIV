@@ -100,6 +100,46 @@ class BranchState:
         Returns empty list if player is empty-handed."""
         return [e.uid for e in self.entities if e.holder == 0]
 
+    def is_hole_filled(self, pos: Position) -> bool:
+        """Check if a hole at pos is filled (has underground entity)."""
+        return any(e.pos == pos and e.z == -1 for e in self.entities)
+
+    def find_box_at(self, pos: Position) -> Optional['Entity']:
+        """Find a grounded box at pos (pickup/interaction target)."""
+        return next((e for e in self.entities
+                     if e.pos == pos
+                     and e.type == EntityType.BOX
+                     and Physics.grounded(e)), None)
+
+    def get_blocking_entities_at(self, pos: Position) -> List['Entity']:
+        """Get grounded entities with collision at pos (pushable objects)."""
+        return [e for e in self.entities
+                if e.pos == pos
+                and e.collision > 0
+                and Physics.grounded(e)]
+
+    def has_box_at(self, pos: Position) -> bool:
+        """Check if a grounded box exists at pos."""
+        return any(e.type == EntityType.BOX
+                   and e.pos == pos
+                   and Physics.grounded(e)
+                   for e in self.entities)
+
+    def all_switches_activated(self) -> bool:
+        """Check if all switches have weight on them."""
+        return all(Physics.weight_at(pos, self) > 0
+                   for pos, t in self.terrain.items()
+                   if t == TerrainType.SWITCH)
+
+    def sum_ground_collision_at(self, pos: Position) -> int:
+        """Total collision volume of ground-level entities at pos."""
+        return sum(e.collision for e in self.entities
+                   if e.pos == pos and e.z >= 0)
+
+    def sum_weight_at(self, pos: Position) -> int:
+        """Total weight of all entities at pos."""
+        return sum(e.weight for e in self.entities if e.pos == pos)
+
 # ===== Timeline (Pure Functions) =====
 class Timeline:
     @staticmethod
@@ -215,10 +255,9 @@ class Physics:
 
         if state.terrain.get(pos) == TerrainType.HOLE:
             # Fusion: filled hole = floor; filling entities don't count
-            filled = any(e.pos == pos and e.z == -1 for e in state.entities)
+            filled = state.is_hole_filled(pos)
             terrain_base = 0 if filled else -1
-            entity_sum = sum(e.collision for e in state.entities
-                             if e.pos == pos and e.z >= 0)
+            entity_sum = state.sum_ground_collision_at(pos)
         elif state.terrain.get(pos) == TerrainType.WALL:
             terrain_base = 255
             entity_sum = 0
@@ -234,7 +273,7 @@ class Physics:
     @staticmethod
     def weight_at(pos: Position, state: BranchState) -> int:
         """Total weight at position"""
-        return sum(e.weight for e in state.entities if e.pos == pos)
+        return state.sum_weight_at(pos)
 
     @staticmethod
     def check_collapse(state: BranchState) -> bool:
@@ -258,7 +297,7 @@ class Physics:
         """Fill an unfilled HOLE at pos with the given box"""
         if state.terrain.get(pos) != TerrainType.HOLE:
             return
-        if any(e.pos == pos and e.z == -1 for e in state.entities):
+        if state.is_hole_filled(pos):
             return  # already filled
         box.z = -1  # underground layer
 
@@ -286,7 +325,7 @@ class Physics:
             for e in state.entities:
                 if e.type == EntityType.BOX and Physics.grounded(e):
                     if state.terrain.get(e.pos) == TerrainType.HOLE:
-                        if not any(x.pos == e.pos and x.z == -1 for x in state.entities):
+                        if not state.is_hole_filled(e.pos):
                             e.z = -1
                             changed = True
             if not changed:

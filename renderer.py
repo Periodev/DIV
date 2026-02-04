@@ -306,8 +306,7 @@ class Renderer:
                     text = self.font.render('Goal', True, BLACK)
                     self.screen.blit(text, text.get_rect(center=rect.center))
                 elif terrain == TerrainType.HOLE:
-                    filled = any(e.pos == pos and e.z == -1
-                                 for e in state.entities)
+                    filled = state.is_hole_filled(pos)
                     if filled:
                         # Filled hole: darker ground + sunken box indicator
                         pygame.draw.rect(self.screen, (160, 120, 60), rect)
@@ -511,7 +510,7 @@ class Renderer:
                     text = self.font.render('Goal', True, BLACK)
                     self.screen.blit(text, text.get_rect(center=rect.center))
                 elif terrain == TerrainType.HOLE:
-                    filled = any(e.pos == pos and e.z == -1 for e in state.entities)
+                    filled = state.is_hole_filled(pos)
                     if filled:
                         pygame.draw.rect(self.screen, (160, 120, 60), rect)
                     else:
