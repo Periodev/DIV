@@ -8,7 +8,8 @@ from renderer import Renderer, WINDOW_WIDTH, WINDOW_HEIGHT
 from presentation_model import ViewModelBuilder
 
 
-def run_game(floor_map: str, object_map: str):
+def run_game(floor_map: str, object_map: str,
+              tutorial_title: str = None, tutorial_items: list = None):
     pygame.init()
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     pygame.display.set_caption("div - Timeline Puzzle")
@@ -16,6 +17,17 @@ def run_game(floor_map: str, object_map: str):
     source = parse_dual_layer(floor_map, object_map)
     controller = GameController(source)
     renderer = Renderer(screen)
+
+    # Default tutorial if none provided
+    if tutorial_title is None:
+        tutorial_title = "0-3 Pick"
+    if tutorial_items is None:
+        tutorial_items = [
+            "靠近並面對方塊，按X或space可拾取方塊",
+            "手上有方塊時，再按X或space可放下到前方一格",
+            "舉著方塊會變為精確移動模式，只能朝正前方移動",
+            "舉方塊時，可以推動正前方一個方塊",
+        ]
 
     clock = pygame.time.Clock()
     move_cooldown = 0
@@ -74,6 +86,10 @@ def run_game(floor_map: str, object_map: str):
                 controller.handle_move(direction)
                 move_cooldown = MOVE_DELAY
 
+        # Unified physics check (settle holes, detect collapse/fall)
+        if not controller.collapsed and not controller.victory:
+            controller.update_physics()
+
         if not controller.victory and controller.check_victory():
             # Print solution on victory
             solution = ''.join(controller.input_log)
@@ -83,7 +99,7 @@ def run_game(floor_map: str, object_map: str):
             print(f"===============\n")
 
         # Rendering - Layer 2 transforms state to visual spec, Layer 3 draws it
-        frame_spec = ViewModelBuilder.build(controller, animation_frame)
+        frame_spec = ViewModelBuilder.build(controller, animation_frame, tutorial_title, tutorial_items)
         renderer.draw_frame(frame_spec)
 
         pygame.display.flip()
@@ -92,23 +108,22 @@ def run_game(floor_map: str, object_map: str):
     sys.exit()
 
 # ===== 地圖定義 =====
-# Floor Map
 floor_map = '''
-......
-......
-......
-......
-......
-.....G
+##SG##
+##..##
+##HH##
+##wv##
+##..##
+######
 '''
 
 # Object Map
 object_map = '''
-P.....
 ......
 ......
 ......
 ......
+..BP..
 ......
 '''
 

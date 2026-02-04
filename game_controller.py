@@ -79,6 +79,18 @@ class GameController:
             return self.main_branch
         return self.sub_branch
 
+    def update_physics(self):
+        """Unified physics check. Call once per frame in the main loop.
+
+        Settles holes and checks for collapse/fall conditions.
+        The failed state is already saved in history, so the player
+        sees the failure frame before the overlay appears.
+        """
+        active = self.get_active_branch()
+        result = Physics.step(active)
+        if result != PhysicsResult.OK:
+            self.collapsed = True
+
     def get_merge_preview(self) -> BranchState:
         """Get merge preview"""
         if not self.has_branched:
@@ -130,11 +142,6 @@ class GameController:
 
         # Settle: held boxes must converge immediately
         Timeline.settle_carried(merged)
-
-        # Physics step
-        if Physics.step(merged) != PhysicsResult.OK:
-            self.collapsed = True
-            return False
 
         self.main_branch = merged
         self.sub_branch = None
@@ -194,11 +201,6 @@ class GameController:
         # Attempt move
         if GameLogic.can_move(active, direction):
             GameLogic.execute_move(active, direction)
-
-            if Physics.step(active) != PhysicsResult.OK:
-                self.collapsed = True
-                return False
-
             self.input_log.append(dir_key)
             self._save_snapshot()
             return True
@@ -208,11 +210,6 @@ class GameController:
         """Handle pickup action"""
         active = self.get_active_branch()
         result = GameLogic.try_pickup(active)
-
-        if result and Physics.step(active) != PhysicsResult.OK:
-            self.collapsed = True
-            return False
-
         if result:
             self.input_log.append('P')
             self._save_snapshot()
@@ -222,11 +219,6 @@ class GameController:
         """Handle drop action"""
         active = self.get_active_branch()
         result = GameLogic.try_drop(active)
-
-        if result and Physics.step(active) != PhysicsResult.OK:
-            self.collapsed = True
-            return False
-
         if result:
             self.input_log.append('O')
             self._save_snapshot()
@@ -261,12 +253,6 @@ class GameController:
         if active.is_shadow(target.uid):
             # Shadow: converge to front position, don't pickup
             Timeline.converge_one(active, target.uid, front_pos)
-
-            # Physics check after converge (e.g., player falls if standing on removed box)
-            if Physics.step(active) != PhysicsResult.OK:
-                self.collapsed = True
-                return False
-
             self.input_log.append('X')
             self._save_snapshot()
             return True
