@@ -1039,11 +1039,36 @@ class Renderer:
             spec.input_sequence
         )
 
-        # 7. Draw overlay (if collapsed or victory)
+        # 7. Draw V-key hold progress bar
+        if spec.v_hold_progress > 0:
+            self.draw_merge_progress(spec.v_hold_progress)
+
+        # 8. Draw overlay (if collapsed or victory)
         if spec.is_collapsed:
             self.draw_overlay("FALL DOWN!", (150, 0, 0))
         elif spec.is_victory:
             self.draw_overlay("LEVEL COMPLETE!", (0, 0, 0))
+
+    def draw_merge_progress(self, progress: float):
+        """Draw a small progress bar indicating V-key hold for merge."""
+        bar_width = 120
+        bar_height = 8
+        x = PADDING
+        y = 300  # Just above the preview panel
+
+        # Background track
+        pygame.draw.rect(self.screen, (80, 80, 80), (x, y, bar_width, bar_height), border_radius=4)
+
+        # Fill
+        fill_w = int(bar_width * progress)
+        if fill_w > 0:
+            color = (150, 50, 150) if progress < 1.0 else (200, 80, 200)
+            pygame.draw.rect(self.screen, color, (x, y, fill_w, bar_height), border_radius=4)
+
+        # Label
+        label = "合併" if progress >= 1.0 else "... Merge"
+        label_surface = self.font.render(label, True, (150, 50, 150))
+        self.screen.blit(label_surface, (x + bar_width + 8, y - 4))
 
     def draw_tutorial(self, tutorial: 'TutorialSpec'):
         """Draw tutorial box with bullet points (top-left)."""

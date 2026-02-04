@@ -33,6 +33,8 @@ def run_game(floor_map: str, object_map: str,
     move_cooldown = 0
     MOVE_DELAY = 10
     animation_frame = 0
+    v_press_time = None
+    V_HOLD_THRESHOLD = 800  # ms
 
     running = True
     while running:
@@ -60,13 +62,28 @@ def run_game(floor_map: str, object_map: str,
                     continue
 
                 if event.key == pygame.K_v:
-                    controller.try_branch()
+                    if not controller.has_branched:
+                        controller.try_branch()
+                    else:
+                        v_press_time = pygame.time.get_ticks()
                 elif event.key == pygame.K_c:
                     controller.try_merge()
                 elif event.key == pygame.K_TAB:
                     controller.switch_focus()
                 elif event.key == pygame.K_x or event.key == pygame.K_SPACE:
                     controller.handle_adaptive_action()
+
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_v:
+                    v_press_time = None
+
+        # V-key hold merge: trigger while still holding
+        if v_press_time is not None and controller.has_branched:
+            if not controller.collapsed and not controller.victory:
+                hold_duration = pygame.time.get_ticks() - v_press_time
+                if hold_duration >= V_HOLD_THRESHOLD:
+                    controller.try_merge()
+                    v_press_time = None
 
         # Continuous movement
         if not controller.collapsed and not controller.victory and move_cooldown == 0:
@@ -98,8 +115,14 @@ def run_game(floor_map: str, object_map: str,
             print(f"Solution: {solution}")
             print(f"===============\n")
 
+        # Calculate V-key hold progress for visual feedback
+        v_hold_progress = 0.0
+        if v_press_time is not None and controller.has_branched:
+            elapsed = pygame.time.get_ticks() - v_press_time
+            v_hold_progress = min(elapsed / V_HOLD_THRESHOLD, 1.0)
+
         # Rendering - Layer 2 transforms state to visual spec, Layer 3 draws it
-        frame_spec = ViewModelBuilder.build(controller, animation_frame, tutorial_title, tutorial_items)
+        frame_spec = ViewModelBuilder.build(controller, animation_frame, tutorial_title, tutorial_items, v_hold_progress)
         renderer.draw_frame(frame_spec)
 
         pygame.display.flip()

@@ -66,6 +66,9 @@ class FrameViewSpec:
     hidden_sub: Optional[BranchState]
     current_focus: int
 
+    # V-key hold progress (0.0 ~ 1.0, 0 = not holding)
+    v_hold_progress: float
+
     # Debug info
     step_count: int
     input_sequence: List[str]
@@ -91,7 +94,8 @@ class ViewModelBuilder:
 
     @staticmethod
     def build(controller, animation_frame: int,
-              tutorial_title: str = None, tutorial_items: List[str] = None) -> FrameViewSpec:
+              tutorial_title: str = None, tutorial_items: List[str] = None,
+              v_hold_progress: float = 0.0) -> FrameViewSpec:
         """
         Main entry point: build complete frame specification.
 
@@ -199,6 +203,7 @@ class ViewModelBuilder:
             hidden_main=controller.main_branch,
             hidden_sub=controller.sub_branch,
             current_focus=controller.current_focus,
+            v_hold_progress=v_hold_progress,
             step_count=len(controller.history) - 1,
             input_sequence=controller.input_log
         )
