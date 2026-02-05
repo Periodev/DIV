@@ -3,6 +3,7 @@
 # Arcade-based game window. Uses the same controller and presentation model,
 # with arcade rendering.
 
+import time
 import arcade
 from map_parser import parse_dual_layer
 from game_controller import GameController
@@ -47,6 +48,13 @@ class GameWindow(arcade.Window):
         # Track held keys for continuous movement
         self.held_keys = set()
 
+        # Camera system for viewport management
+        # Main camera for game area (branches) - uses Y-up coordinate system
+        self.main_camera = arcade.camera.Camera2D()
+
+        # GUI camera for overlays and UI (debug info, tutorial)
+        self.gui_camera = arcade.camera.Camera2D()
+
         arcade.set_background_color(arcade.color.WHITE)
 
     def on_update(self, delta_time: float):
@@ -59,7 +67,7 @@ class GameWindow(arcade.Window):
         # V-key hold merge
         if self.v_press_time is not None and self.controller.has_branched:
             if not self.controller.collapsed and not self.controller.victory:
-                hold_duration = arcade.get_system_time() - self.v_press_time
+                hold_duration = time.time() - self.v_press_time
                 if hold_duration >= self.V_HOLD_THRESHOLD:
                     self.controller.try_merge()
                     self.v_press_time = None
@@ -123,7 +131,7 @@ class GameWindow(arcade.Window):
             if not self.controller.has_branched:
                 self.controller.try_branch()
             else:
-                self.v_press_time = arcade.get_system_time()
+                self.v_press_time = time.time()
 
         # Merge (C key)
         elif key == arcade.key.C:
@@ -154,7 +162,7 @@ class GameWindow(arcade.Window):
         # Calculate V-key hold progress
         v_hold_progress = 0.0
         if self.v_press_time is not None and self.controller.has_branched:
-            elapsed = arcade.get_system_time() - self.v_press_time
+            elapsed = time.time() - self.v_press_time
             v_hold_progress = min(elapsed / self.V_HOLD_THRESHOLD, 1.0)
 
         # Build frame spec from controller state
@@ -166,8 +174,13 @@ class GameWindow(arcade.Window):
             v_hold_progress
         )
 
-        # Render
+        # Use main camera for game content
+        self.main_camera.use()
         self.renderer.draw_frame(frame_spec)
+
+        # GUI elements use separate camera (currently same view)
+        # Future: could use gui_camera.use() for overlays with fixed position
+        self.gui_camera.use()
 
 
 def run_game(floor_map: str, object_map: str,

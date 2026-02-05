@@ -68,6 +68,218 @@ class ArcadeRenderer:
         # Font path for Chinese characters
         self.chinese_font = "Microsoft YaHei"
 
+        # === Texture Cache for SpriteList Rendering ===
+        self._init_texture_cache()
+
+    def _init_texture_cache(self):
+        """Initialize cached textures for GPU-batched rendering."""
+        # Terrain textures at base cell size
+        self._terrain_textures = {
+            'white': arcade.make_soft_square_texture(CELL_SIZE, WHITE, outer_alpha=255),
+            'black': arcade.make_soft_square_texture(CELL_SIZE, BLACK, outer_alpha=255),
+            'gray': arcade.make_soft_square_texture(CELL_SIZE, GRAY, outer_alpha=255),
+            'yellow': arcade.make_soft_square_texture(CELL_SIZE, YELLOW, outer_alpha=255),
+            'light_orange': arcade.make_soft_square_texture(CELL_SIZE, LIGHT_ORANGE, outer_alpha=255),
+            'switch_on': arcade.make_soft_square_texture(CELL_SIZE, (200, 255, 200), outer_alpha=255),
+            'switch_off': arcade.make_soft_square_texture(CELL_SIZE, (255, 200, 200), outer_alpha=255),
+            'hole_filled': arcade.make_soft_square_texture(CELL_SIZE, (160, 120, 60), outer_alpha=255),
+            'hole_empty': arcade.make_soft_square_texture(CELL_SIZE, (60, 40, 20), outer_alpha=255),
+            'branch_highlight': arcade.make_soft_square_texture(CELL_SIZE, (150, 255, 150), outer_alpha=255),
+        }
+
+        # Box textures (one per color)
+        box_size = int(CELL_SIZE * 0.8)  # Box is smaller than cell
+        self._box_textures = [
+            arcade.make_soft_square_texture(box_size, color, outer_alpha=255)
+            for color in BOX_COLORS
+        ]
+        self._box_textures_desaturated = [
+            arcade.make_soft_square_texture(box_size, desaturate_color(color, 0.5), outer_alpha=255)
+            for color in BOX_COLORS
+        ]
+
+        # Player textures
+        player_radius = CELL_SIZE // 5
+        self._player_texture = arcade.make_circle_texture(player_radius * 2, BLUE)
+        self._player_texture_gray = arcade.make_circle_texture(player_radius * 2, GRAY)
+
+        # Scaled texture cache (lazy-loaded)
+        self._scaled_textures: dict = {}
+
+        # Text object cache for GPU-efficient text rendering
+        self._text_cache: dict = {}
+
+        # Pre-create static text objects
+        self._init_static_text()
+
+    def _init_static_text(self):
+        """Pre-create commonly used static text objects."""
+        # Overlay text (large, centered)
+        self._overlay_texts = {
+            'fall': arcade.Text("FALL DOWN!", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 60,
+                               YELLOW, font_size=72, anchor_x="center", anchor_y="center"),
+            'victory': arcade.Text("LEVEL COMPLETE!", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 60,
+                                  YELLOW, font_size=72, anchor_x="center", anchor_y="center"),
+            'hint': arcade.Text("F5 restart Z undo", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 30,
+                               WHITE, font_size=14, anchor_x="center", anchor_y="center"),
+        }
+
+        # Merge progress labels
+        self._merge_labels = {
+            'merging': arcade.Text("... Merge", 0, 0, (150, 50, 150), font_size=14,
+                                   anchor_x="left", anchor_y="center"),
+            'ready': arcade.Text("合併", 0, 0, (150, 50, 150), font_size=14,
+                                anchor_x="left", anchor_y="center"),
+        }
+
+        # Debug text (single object, content updated each frame)
+        self._debug_text = arcade.Text("", PADDING, 0, DARK_GRAY, font_size=14,
+                                       anchor_x="left", anchor_y="center")
+
+    def _get_text(self, key: str, text: str, x: int, y: int, color: tuple,
+                  font_size: int = 14, anchor_x: str = "center", anchor_y: str = "center") -> arcade.Text:
+        """Get or create a cached text object."""
+        cache_key = (key, text, font_size, color, anchor_x, anchor_y)
+        if cache_key not in self._text_cache:
+            self._text_cache[cache_key] = arcade.Text(
+                text, x, y, color, font_size=font_size,
+                anchor_x=anchor_x, anchor_y=anchor_y
+            )
+        text_obj = self._text_cache[cache_key]
+        # Update position (text content is cached, position may vary)
+        text_obj.x = x
+        text_obj.y = y
+        return text_obj
+
+    def _draw_cached_text(self, key: str, text: str, x: int, y: int, color: tuple,
+                          font_size: int = 14, anchor_x: str = "center", anchor_y: str = "center"):
+        """Draw text using cache for better performance."""
+        text_obj = self._get_text(key, text, x, y, color, font_size, anchor_x, anchor_y)
+        text_obj.draw()
+
+    def _get_scaled_texture(self, base_key: str, scale: float) -> arcade.Texture:
+        """Get or create a scaled version of a base texture."""
+        cache_key = (base_key, scale)
+        if cache_key not in self._scaled_textures:
+            base_texture = self._terrain_textures[base_key]
+            if scale == 1.0:
+                self._scaled_textures[cache_key] = base_texture
+            else:
+                # Create scaled texture
+                new_size = int(CELL_SIZE * scale)
+                color_map = {
+                    'white': WHITE, 'black': BLACK, 'gray': GRAY,
+                    'yellow': YELLOW, 'light_orange': LIGHT_ORANGE,
+                    'switch_on': (200, 255, 200), 'switch_off': (255, 200, 200),
+                    'hole_filled': (160, 120, 60), 'hole_empty': (60, 40, 20),
+                    'branch_highlight': (150, 255, 150),
+                }
+                self._scaled_textures[cache_key] = arcade.make_soft_square_texture(
+                    new_size, color_map[base_key], outer_alpha=255
+                )
+        return self._scaled_textures[cache_key]
+
+    def _build_terrain_spritelist(self, state: BranchState, start_x: int, start_y: int,
+                                   cell_size: int, goal_active: bool, has_branched: bool,
+                                   highlight_branch_point: bool) -> tuple:
+        """Build SpriteList for static terrain. Returns (spritelist, dynamic_cells).
+
+        dynamic_cells contains positions that need immediate-mode rendering (Goal, highlighted branch).
+        """
+        scale = cell_size / CELL_SIZE
+        sprites = arcade.SpriteList()
+        dynamic_cells = []  # (gx, gy, terrain_type) for immediate mode
+
+        for gx in range(GRID_SIZE):
+            for gy in range(GRID_SIZE):
+                pos = (gx, gy)
+                terrain = state.terrain.get(pos, TerrainType.FLOOR)
+                center_x = start_x + gx * cell_size + cell_size // 2
+                center_y = self._flip_y(start_y + gy * cell_size + cell_size // 2)
+
+                # Determine texture key
+                texture_key = None
+
+                if terrain == TerrainType.WALL:
+                    texture_key = 'black'
+                elif terrain == TerrainType.SWITCH:
+                    activated = any(e.pos == pos for e in state.entities)
+                    texture_key = 'switch_on' if activated else 'switch_off'
+                elif terrain in (TerrainType.WEIGHT1, TerrainType.WEIGHT2):
+                    texture_key = 'light_orange'
+                elif terrain in (TerrainType.BRANCH1, TerrainType.BRANCH2,
+                                TerrainType.BRANCH3, TerrainType.BRANCH4):
+                    # Check if this is a highlighted branch point
+                    if (highlight_branch_point and pos == state.player.pos):
+                        texture_key = 'branch_highlight'
+                        dynamic_cells.append((gx, gy, terrain, True))  # True = highlighted
+                    else:
+                        texture_key = 'white'
+                        dynamic_cells.append((gx, gy, terrain, False))  # Need branch marker
+                elif terrain == TerrainType.GOAL:
+                    # Goal is always dynamic (flash effect)
+                    dynamic_cells.append((gx, gy, terrain, goal_active))
+                    texture_key = None  # Will be drawn in immediate mode
+                elif terrain == TerrainType.HOLE:
+                    filled = state.is_hole_filled(pos)
+                    texture_key = 'hole_filled' if filled else 'hole_empty'
+                else:
+                    texture_key = 'white'
+
+                # Create sprite if static
+                if texture_key:
+                    texture = self._get_scaled_texture(texture_key, scale)
+                    sprite = arcade.Sprite(texture)
+                    sprite.center_x = center_x
+                    sprite.center_y = center_y
+                    sprites.append(sprite)
+
+        return sprites, dynamic_cells
+
+    def _draw_dynamic_terrain(self, start_x: int, start_y: int, state: BranchState,
+                              cell_size: int, dynamic_cells: list, has_branched: bool):
+        """Draw dynamic terrain elements (Goal flash, branch markers)."""
+        scale = cell_size / CELL_SIZE
+
+        for gx, gy, terrain, extra in dynamic_cells:
+            cell_x = start_x + gx * cell_size
+            cell_y = start_y + gy * cell_size
+            center_x, center_y = self._grid_to_screen(start_x, start_y, gx, gy, cell_size)
+
+            if terrain == TerrainType.GOAL:
+                goal_active = extra
+                if goal_active:
+                    flash = int((time.time() * 1000 / 300) % 2)
+                    color = (255, 255, 100) if flash else YELLOW
+                    self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, color)
+                    self._draw_rect_outline(cell_x, cell_y, cell_size, cell_size,
+                                           GREEN, max(1, int(6 * scale)))
+                else:
+                    self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, YELLOW)
+                self._draw_cached_text(f'goal_{scale:.2f}', 'Goal', center_x, center_y,
+                                       BLACK, font_size=int(14 * scale))
+
+            elif terrain in (TerrainType.BRANCH1, TerrainType.BRANCH2,
+                            TerrainType.BRANCH3, TerrainType.BRANCH4):
+                is_highlighted = extra
+                if is_highlighted:
+                    self._draw_branch_marker(center_x, center_y, terrain, GREEN, cell_size)
+                else:
+                    color = GRAY if has_branched else GREEN
+                    self._draw_branch_marker(center_x, center_y, terrain, color, cell_size)
+
+        # Draw weight text overlays
+        for gx in range(GRID_SIZE):
+            for gy in range(GRID_SIZE):
+                pos = (gx, gy)
+                terrain = state.terrain.get(pos, TerrainType.FLOOR)
+                if terrain in (TerrainType.WEIGHT1, TerrainType.WEIGHT2):
+                    center_x, center_y = self._grid_to_screen(start_x, start_y, gx, gy, cell_size)
+                    text = '1' if terrain == TerrainType.WEIGHT1 else '2'
+                    self._draw_cached_text(f'weight_{text}_{scale:.2f}', text,
+                                           center_x, center_y, ORANGE,
+                                           font_size=int(14 * scale))
+
     def draw_frame(self, spec: 'FrameViewSpec'):
         """Main entry point for rendering a complete frame."""
         # 1. Clear screen (white background)
@@ -176,10 +388,14 @@ class ArcadeRenderer:
             spec.border_color, max(1, border_width)
         )
 
-        # Terrain
-        self._draw_terrain(start_x, start_y, state, cell_size,
-                          goal_active, has_branched,
-                          highlight_branch_point=spec.highlight_branch_point)
+        # Terrain (SpriteList for static, immediate mode for dynamic)
+        terrain_sprites, dynamic_cells = self._build_terrain_spritelist(
+            state, start_x, start_y, cell_size,
+            goal_active, has_branched, spec.highlight_branch_point
+        )
+        terrain_sprites.draw()
+        self._draw_dynamic_terrain(start_x, start_y, state, cell_size,
+                                   dynamic_cells, has_branched)
 
         # Entities (boxes)
         for e in state.entities:
@@ -340,12 +556,11 @@ class ArcadeRenderer:
             self._draw_rect_outline(cell_x, cell_y, box_size, box_size,
                                    BLACK, max(1, int(2 * scale)))
 
-        # UID text
+        # UID text (cached)
         center_x = cell_x + box_size // 2
         center_y = self._flip_y(cell_y + box_size // 2)
-        arcade.draw_text(str(entity.uid), center_x, center_y, WHITE,
-                        font_size=int(14 * scale),
-                        anchor_x="center", anchor_y="center")
+        self._draw_cached_text(f'uid_{entity.uid}_{scale:.2f}', str(entity.uid),
+                               center_x, center_y, WHITE, font_size=int(14 * scale))
 
     def _draw_dashed_rect(self, x: int, y: int, w: int, h: int,
                           color: Tuple, thickness: int):
@@ -397,10 +612,9 @@ class ArcadeRenderer:
             self._draw_rect_outline(cell_x, cell_y, box_size, box_size,
                                    BLACK, max(1, int(3 * scale)))
 
-            # UID text
-            arcade.draw_text(str(held_uid), center_x, center_y, WHITE,
-                            font_size=int(14 * scale),
-                            anchor_x="center", anchor_y="center")
+            # UID text (cached)
+            self._draw_cached_text(f'held_{held_uid}_{scale:.2f}', str(held_uid),
+                                   center_x, center_y, WHITE, font_size=int(14 * scale))
 
             # Arrow
             arrow_size = int(21 * scale)
@@ -559,12 +773,12 @@ class ArcadeRenderer:
             self._draw_rect_outline(cell_x, cell_y, box_size, box_size,
                                    ghost_color, max(1, int(3 * scale)))
 
-            # UID text
+            # UID text (cached)
             center_x = cell_x + box_size // 2
             center_y = self._flip_y(cell_y + box_size // 2)
-            arcade.draw_text(str(uid), center_x, center_y, GRAY,
-                            font_size=max(12, int(14 * scale)),
-                            anchor_x="center", anchor_y="center")
+            self._draw_cached_text(f'ghost_{uid}_{scale:.2f}', str(uid),
+                                   center_x, center_y, GRAY,
+                                   font_size=max(12, int(14 * scale)))
 
             # Dashed line
             ghost_cx, ghost_cy = self._grid_to_screen(start_x, start_y, gx, gy, cell_size)
@@ -669,22 +883,24 @@ class ArcadeRenderer:
         # Border
         self._draw_rect_outline(x, y, width, height, (100, 100, 100), 2)
 
-        # Title
+        # Title (cached)
         title_y = self._flip_y(y + padding_inner + 10)
-        arcade.draw_text(tutorial.title, x + padding_inner, title_y,
-                        (96, 165, 250), font_size=14,
-                        anchor_x="left", anchor_y="center")
+        self._draw_cached_text('tutorial_title', tutorial.title,
+                               x + padding_inner, title_y,
+                               (96, 165, 250), font_size=14, anchor_x="left")
 
-        # Items
+        # Items (cached)
         item_y = y + padding_inner + title_height
-        for item in tutorial.items:
+        for i, item in enumerate(tutorial.items):
             screen_y = self._flip_y(item_y + 12)
-            arcade.draw_text("•", x + padding_inner, screen_y,
-                           (96, 165, 250), font_size=20,
-                           anchor_x="left", anchor_y="center")
-            arcade.draw_text(item, x + padding_inner + 20, screen_y,
-                           (220, 220, 220), font_size=12,
-                           anchor_x="left", anchor_y="center")
+            # Bullet point
+            self._draw_cached_text(f'bullet_{i}', "•",
+                                   x + padding_inner, screen_y,
+                                   (96, 165, 250), font_size=20, anchor_x="left")
+            # Item text
+            self._draw_cached_text(f'tutorial_item_{i}', item,
+                                   x + padding_inner + 20, screen_y,
+                                   (220, 220, 220), font_size=12, anchor_x="left")
             item_y += line_height
 
     def _draw_debug_info(self, step_count: int, focus: int,
@@ -693,8 +909,10 @@ class ArcadeRenderer:
         y = self._flip_y(WINDOW_HEIGHT - 45)
         keys = ''.join(input_log[-30:])
         info = f"Step: {step_count}  |  Keys: {keys}"
-        arcade.draw_text(info, PADDING, y, DARK_GRAY, font_size=14,
-                        anchor_x="left", anchor_y="center")
+        # Update cached text object
+        self._debug_text.text = info
+        self._debug_text.y = y
+        self._debug_text.draw()
 
     def _draw_merge_progress(self, progress: float):
         """Draw V-key hold progress bar."""
@@ -718,11 +936,11 @@ class ArcadeRenderer:
                 color
             )
 
-        # Label
-        label = "合併" if progress >= 1.0 else "... Merge"
-        arcade.draw_text(label, x + bar_width + 8, y,
-                        (150, 50, 150), font_size=14,
-                        anchor_x="left", anchor_y="center")
+        # Label (cached)
+        label_obj = self._merge_labels['ready'] if progress >= 1.0 else self._merge_labels['merging']
+        label_obj.x = x + bar_width + 8
+        label_obj.y = y
+        label_obj.draw()
 
     def _draw_merge_overlay(self, spec: 'FrameViewSpec', focused: 'BranchViewSpec'):
         """Draw merge preview overlay on focused branch."""
@@ -750,12 +968,11 @@ class ArcadeRenderer:
             (*color, 200)
         )
 
-        # Main text
-        arcade.draw_text(text, WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 60,
-                        YELLOW, font_size=72,
-                        anchor_x="center", anchor_y="center")
+        # Main text (cached)
+        if "FALL" in text:
+            self._overlay_texts['fall'].draw()
+        else:
+            self._overlay_texts['victory'].draw()
 
-        # Hint text
-        arcade.draw_text("F5 restart Z undo", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 30,
-                        WHITE, font_size=14,
-                        anchor_x="center", anchor_y="center")
+        # Hint text (cached)
+        self._overlay_texts['hint'].draw()
