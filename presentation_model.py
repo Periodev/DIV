@@ -61,9 +61,6 @@ class FrameViewSpec:
     is_collapsed: bool
     is_victory: bool
 
-    # V-key hold progress
-    v_hold_progress: float
-
     # Debug info
     step_count: int
     input_sequence: List[str]
@@ -105,10 +102,11 @@ class ViewModelBuilder:
 
     @staticmethod
     def build(controller, animation_frame: int,
-              v_hold_progress: float = 0.0,
               slide_progress: float = 0.0,
-              slide_direction: int = 0) -> FrameViewSpec:
-        """Build frame specification with slide animation support."""
+              slide_direction: int = 0,
+              merge_preview_active: bool = False,
+              merge_preview_progress: float = 0.0) -> FrameViewSpec:
+        """Build frame specification with slide animation and merge preview support."""
         B = ViewModelBuilder
 
         # Get hints
@@ -122,11 +120,20 @@ class ViewModelBuilder:
         focus = controller.current_focus
         has_branched = controller.has_branched
 
+        # Alpha values (for merge preview)
+        main_alpha = 1.0
+        sub_alpha = 1.0
+
         # Calculate positions and scales based on animation state
         if not has_branched:
             # Single branch, centered at full scale
             main_x, main_y, main_scale = B.CENTER_X, B.CENTER_Y, B.FOCUS_SCALE
             sub_x, sub_y, sub_scale = B.WINDOW_WIDTH + 50, B.CENTER_Y, B.SIDE_SCALE
+        elif merge_preview_active or merge_preview_progress > 0:
+            # Merge preview mode: both branches move to center, non-focused becomes transparent
+            main_x, main_y, main_scale, sub_x, sub_y, sub_scale, main_alpha, sub_alpha = B._calc_merge_preview_positions(
+                focus, merge_preview_progress, merge_preview_active
+            )
         else:
             # Two branches - focused centered (large), other on side (small)
             if slide_progress > 0:
@@ -148,13 +155,14 @@ class ViewModelBuilder:
             state=controller.main_branch,
             is_focused=(focus == 0),
             title="DIV 0" if has_branched else "MAIN",
-            border_color=(0, 100, 200),
+            border_color=(255, 140, 0),  # Orange - high contrast
             timeline_hint=timeline_hint if focus == 0 else '',
             interaction_hint=interaction_hint if focus == 0 else None,
             is_merge_preview=False,
             scale=main_scale,
             pos_x=main_x,
-            pos_y=main_y
+            pos_y=main_y,
+            alpha=main_alpha
         )
 
         # Build sub branch spec (DIV 1)
@@ -164,13 +172,14 @@ class ViewModelBuilder:
                 state=controller.sub_branch,
                 is_focused=(focus == 1),
                 title="DIV 1",
-                border_color=(50, 150, 200),
+                border_color=(0, 220, 255),  # Cyan - high contrast
                 timeline_hint=timeline_hint if focus == 1 else '',
                 interaction_hint=interaction_hint if focus == 1 else None,
                 is_merge_preview=False,
                 scale=sub_scale,
                 pos_x=sub_x,
-                pos_y=sub_y
+                pos_y=sub_y,
+                alpha=sub_alpha
             )
 
         return FrameViewSpec(
@@ -184,7 +193,6 @@ class ViewModelBuilder:
             current_focus=focus,
             is_collapsed=controller.collapsed,
             is_victory=controller.victory,
-            v_hold_progress=v_hold_progress,
             step_count=len(controller.history) - 1,
             input_sequence=controller.input_log
         )
@@ -231,6 +239,55 @@ class ViewModelBuilder:
         return 1 - (-2 * t + 2) ** 2 / 2
 
     @staticmethod
+    def _calc_merge_preview_positions(focus: int, progress: float, is_active: bool):
+        """Calculate positions for merge preview mode.
+
+        Returns: (main_x, main_y, main_scale, sub_x, sub_y, sub_scale, main_alpha, sub_alpha)
+        In preview: non-focused moves to center, becomes transparent, with diagonal offset
+        """
+        B = ViewModelBuilder
+        t = B._ease_in_out(progress) if progress < 1.0 else 1.0
+
+        def lerp(a, b, t):
+            return a + (b - a) * t
+
+        # Diagonal offset for visual separation (top-right)
+        OFFSET_X = 3
+        OFFSET_Y = -3
+
+        # Determine starting positions based on focus
+        if focus == 0:
+            # DIV 0 focused: stays at center, DIV 1 animates from right to center with offset
+            main_x, main_y, main_scale = B.CENTER_X, B.CENTER_Y, B.FOCUS_SCALE
+            main_alpha = 1.0
+
+            # DIV 1: animate from right side position to center + offset
+            start_x, start_y = B.RIGHT_X, B.SIDE_CENTER_Y
+            start_scale = B.SIDE_SCALE
+            target_x = B.CENTER_X + OFFSET_X
+            target_y = B.CENTER_Y + OFFSET_Y
+            sub_x = int(lerp(start_x, target_x, t))
+            sub_y = int(lerp(start_y, target_y, t))
+            sub_scale = lerp(start_scale, B.FOCUS_SCALE, t)
+            sub_alpha = lerp(1.0, 0.7, t)  # Fade to 70% opaque (more visible)
+        else:
+            # DIV 1 focused: stays at center, DIV 0 animates from left to center with offset
+            sub_x, sub_y, sub_scale = B.CENTER_X, B.CENTER_Y, B.FOCUS_SCALE
+            sub_alpha = 1.0
+
+            # DIV 0: animate from left side position to center + offset
+            start_x, start_y = B.LEFT_X, B.SIDE_CENTER_Y
+            start_scale = B.SIDE_SCALE
+            target_x = B.CENTER_X + OFFSET_X
+            target_y = B.CENTER_Y + OFFSET_Y
+            main_x = int(lerp(start_x, target_x, t))
+            main_y = int(lerp(start_y, target_y, t))
+            main_scale = lerp(start_scale, B.FOCUS_SCALE, t)
+            main_alpha = lerp(1.0, 0.7, t)  # Fade to 70% opaque (more visible)
+
+        return main_x, main_y, main_scale, sub_x, sub_y, sub_scale, main_alpha, sub_alpha
+
+    @staticmethod
     def _build_branch_spec(
         state: BranchState,
         is_focused: bool,
@@ -241,7 +298,8 @@ class ViewModelBuilder:
         is_merge_preview: bool,
         scale: float = 1.0,
         pos_x: int = 0,
-        pos_y: int = 0
+        pos_y: int = 0,
+        alpha: float = 1.0
     ) -> BranchViewSpec:
         """Build visual spec for a single branch."""
         highlight = ViewModelBuilder._is_on_branch_point(state)
@@ -257,7 +315,8 @@ class ViewModelBuilder:
             is_merge_preview=is_merge_preview,
             scale=scale,
             pos_x=pos_x,
-            pos_y=pos_y
+            pos_y=pos_y,
+            alpha=alpha
         )
 
     @staticmethod

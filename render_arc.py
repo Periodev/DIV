@@ -237,7 +237,7 @@ class ArcadeRenderer:
         return sprites, dynamic_cells
 
     def _draw_dynamic_terrain(self, start_x: int, start_y: int, state: BranchState,
-                              cell_size: int, dynamic_cells: list, has_branched: bool):
+                              cell_size: int, dynamic_cells: list, has_branched: bool, alpha: float = 1.0):
         """Draw dynamic terrain elements (Goal flash, branch markers)."""
         scale = cell_size / CELL_SIZE
 
@@ -250,22 +250,22 @@ class ArcadeRenderer:
                 goal_active = extra
                 if goal_active:
                     flash = int((time.time() * 1000 / 300) % 2)
-                    color = (255, 255, 100) if flash else YELLOW
+                    color = (255, 255, 100, int(alpha * 255)) if flash else (*YELLOW, int(alpha * 255))
                     self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, color)
                     self._draw_rect_outline(cell_x, cell_y, cell_size, cell_size,
-                                           GREEN, max(1, int(6 * scale)))
+                                           (*GREEN, int(alpha * 255)), max(1, int(6 * scale)))
                 else:
-                    self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, YELLOW)
-                self._draw_cached_text(f'goal_{scale:.2f}', 'Goal', center_x, center_y,
-                                       BLACK, font_size=int(14 * scale))
+                    self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, (*YELLOW, int(alpha * 255)))
+                self._draw_cached_text(f'goal_{scale:.2f}_{alpha:.2f}', 'Goal', center_x, center_y,
+                                       (*BLACK, int(alpha * 255)), font_size=int(14 * scale))
 
             elif terrain in (TerrainType.BRANCH1, TerrainType.BRANCH2,
                             TerrainType.BRANCH3, TerrainType.BRANCH4):
                 is_highlighted = extra
                 if is_highlighted:
-                    self._draw_branch_marker(center_x, center_y, terrain, GREEN, cell_size)
+                    self._draw_branch_marker(center_x, center_y, terrain, (*GREEN, int(alpha * 255)), cell_size)
                 else:
-                    color = GRAY if has_branched else GREEN
+                    color = (*GRAY, int(alpha * 255)) if has_branched else (*GREEN, int(alpha * 255))
                     self._draw_branch_marker(center_x, center_y, terrain, color, cell_size)
 
         # Draw weight text overlays
@@ -276,8 +276,8 @@ class ArcadeRenderer:
                 if terrain in (TerrainType.WEIGHT1, TerrainType.WEIGHT2):
                     center_x, center_y = self._grid_to_screen(start_x, start_y, gx, gy, cell_size)
                     text = '1' if terrain == TerrainType.WEIGHT1 else '2'
-                    self._draw_cached_text(f'weight_{text}_{scale:.2f}', text,
-                                           center_x, center_y, ORANGE,
+                    self._draw_cached_text(f'weight_{text}_{scale:.2f}_{alpha:.2f}', text,
+                                           center_x, center_y, (*ORANGE, int(alpha * 255)),
                                            font_size=int(14 * scale))
 
     def draw_frame(self, spec: 'FrameViewSpec'):
@@ -290,23 +290,56 @@ class ArcadeRenderer:
             0, WINDOW_WIDTH, 0, WINDOW_HEIGHT, WHITE
         )
 
-        # 2. Draw branches (order: non-focused first, then focused on top)
-        # Only draw if visible (pos_x within reasonable range)
-        if spec.sub_branch and -500 < spec.sub_branch.pos_x < WINDOW_WIDTH + 100:
+        # 2. Draw branches
+        # Merge preview mode: draw focused first (opaque), then non-focused on top (transparent)
+        # Normal mode: draw non-focused first, then focused on top
+        # Determine if in merge preview by checking if both branches are at similar positions with different alphas
+        in_merge_preview = False
+        if spec.sub_branch:
+            # Check if both branches are centered (merge preview)
+            both_centered = abs(spec.main_branch.pos_x - spec.sub_branch.pos_x) < 50
+            has_transparency = spec.main_branch.alpha < 0.9 or spec.sub_branch.alpha < 0.9
+            in_merge_preview = both_centered and has_transparency
+
+        if in_merge_preview:
+            # Merge preview: draw focused (opaque) first, non-focused (transparent) second
+            focused_branch = spec.main_branch if spec.current_focus == 0 else spec.sub_branch
+            non_focused_branch = spec.sub_branch if spec.current_focus == 0 else spec.main_branch
+
+            # Draw focused (bottom, opaque) with terrain
             self._draw_branch(
-                spec.sub_branch,
+                focused_branch,
                 goal_active=spec.goal_active,
                 has_branched=spec.has_branched,
-                animation_frame=spec.animation_frame
+                animation_frame=spec.animation_frame,
+                skip_terrain=False
             )
 
-        if -500 < spec.main_branch.pos_x < WINDOW_WIDTH + 100:
+            # Draw non-focused (top, transparent) WITHOUT terrain (entities only)
             self._draw_branch(
-                spec.main_branch,
+                non_focused_branch,
                 goal_active=spec.goal_active,
                 has_branched=spec.has_branched,
-                animation_frame=spec.animation_frame
+                animation_frame=spec.animation_frame,
+                skip_terrain=True
             )
+        else:
+            # Normal mode: draw in standard order
+            if spec.sub_branch and -500 < spec.sub_branch.pos_x < WINDOW_WIDTH + 100:
+                self._draw_branch(
+                    spec.sub_branch,
+                    goal_active=spec.goal_active,
+                    has_branched=spec.has_branched,
+                    animation_frame=spec.animation_frame
+                )
+
+            if -500 < spec.main_branch.pos_x < WINDOW_WIDTH + 100:
+                self._draw_branch(
+                    spec.main_branch,
+                    goal_active=spec.goal_active,
+                    has_branched=spec.has_branched,
+                    animation_frame=spec.animation_frame
+                )
 
         # 3. Draw debug info
         self._draw_debug_info(
@@ -316,14 +349,7 @@ class ArcadeRenderer:
             spec.input_sequence
         )
 
-        # 4. V-key hold progress
-        if spec.v_hold_progress > 0 and spec.has_branched:
-            focused = spec.main_branch if spec.current_focus == 0 else spec.sub_branch
-            if focused:
-                self._draw_merge_overlay(spec, focused)
-            self._draw_merge_progress(spec.v_hold_progress)
-
-        # 5. Overlay (collapsed or victory)
+        # 4. Overlay (collapsed or victory)
         if spec.is_collapsed:
             self._draw_overlay("FALL DOWN!", (150, 0, 0))
         elif spec.is_victory:
@@ -344,7 +370,8 @@ class ArcadeRenderer:
                      has_branched: bool, animation_frame: int,
                      hidden_main: Optional[BranchState] = None,
                      hidden_sub: Optional[BranchState] = None,
-                     current_focus: int = 0):
+                     current_focus: int = 0,
+                     skip_terrain: bool = False):
         """Draw a single branch panel."""
         state = spec.state
         start_x = spec.pos_x
@@ -357,30 +384,32 @@ class ArcadeRenderer:
         title_y = self._flip_y(start_y - int(15 * spec.scale))
         font_size = int(14 * spec.scale)
         self._draw_cached_text(
-            f'title_{spec.title}_{font_size}', spec.title, start_x, title_y,
-            BLACK, font_size=font_size, anchor_x="left", anchor_y="center"
+            f'title_{spec.title}_{font_size}_{spec.alpha:.2f}', spec.title, start_x, title_y,
+            (*BLACK, int(spec.alpha * 255)), font_size=font_size, anchor_x="left", anchor_y="center"
         )
 
         # Border
         border_width = int((5 if spec.is_focused else 3) * spec.scale)
         self._draw_rect_outline(
             start_x, start_y, grid_width, grid_height,
-            spec.border_color, max(1, border_width)
+            (*spec.border_color, int(spec.alpha * 255)), max(1, border_width)
         )
 
-        # Terrain (SpriteList for static, immediate mode for dynamic)
-        terrain_sprites, dynamic_cells = self._build_terrain_spritelist(
-            state, start_x, start_y, cell_size,
-            goal_active, has_branched, spec.highlight_branch_point
-        )
-        terrain_sprites.draw()
-        self._draw_dynamic_terrain(start_x, start_y, state, cell_size,
-                                   dynamic_cells, has_branched)
+        # Terrain (SpriteList for static, immediate mode for dynamic) - skip if requested
+        if not skip_terrain:
+            terrain_sprites, dynamic_cells = self._build_terrain_spritelist(
+                state, start_x, start_y, cell_size,
+                goal_active, has_branched, spec.highlight_branch_point
+            )
+            terrain_sprites.alpha = int(spec.alpha * 255)
+            terrain_sprites.draw()
+            self._draw_dynamic_terrain(start_x, start_y, state, cell_size,
+                                       dynamic_cells, has_branched, spec.alpha)
 
         # Entities (boxes)
         for e in state.entities:
             if e.uid != 0 and e.type == EntityType.BOX:
-                self._draw_entity(start_x, start_y, e, state, cell_size)
+                self._draw_entity(start_x, start_y, e, state, cell_size, spec.alpha, spec.border_color)
 
         # Shadow connections (only on focused, full-scale branch)
         if spec.is_focused and spec.scale >= 1.0:
@@ -402,14 +431,15 @@ class ArcadeRenderer:
             player_color = BOX_COLORS[color_index]
         else:
             player_color = BLUE if (spec.is_focused or spec.is_merge_preview) else GRAY
-        self._draw_player(start_x, start_y, state.player, player_color, held_uid, cell_size)
+        self._draw_player(start_x, start_y, state.player, player_color, held_uid, cell_size, spec.alpha)
 
         # Cell hint (only for focused, full-scale)
         if spec.interaction_hint and spec.scale >= 1.0:
-            self._draw_cell_hint(start_x, start_y, spec.interaction_hint, cell_size)
+            self._draw_cell_hint(start_x, start_y, spec.interaction_hint, cell_size, spec.alpha)
 
-        # Grid lines
-        self._draw_grid_lines(start_x, start_y, state, cell_size)
+        # Grid lines (skip if terrain is skipped)
+        if not skip_terrain:
+            self._draw_grid_lines(start_x, start_y, state, cell_size, spec.alpha)
 
     def _draw_rect_outline(self, x: int, y: int, w: int, h: int,
                            color: Tuple, thickness: int):
@@ -508,7 +538,8 @@ class ArcadeRenderer:
         arcade.draw_circle_filled(cx, cy, base_radius, color)
 
     def _draw_entity(self, start_x: int, start_y: int, entity,
-                     state: BranchState, cell_size: int):
+                     state: BranchState, cell_size: int, alpha: float = 1.0,
+                     branch_color: Tuple[int, int, int] = None):
         """Draw a single entity (box)."""
         scale = cell_size / CELL_SIZE
         padding = int((15 if entity.z == -1 else 9) * scale)
@@ -523,24 +554,45 @@ class ArcadeRenderer:
         base_color = BOX_COLORS[color_index]
 
         is_shadow = state.is_shadow(entity.uid)
-        display_color = desaturate_color(base_color, 0.5) if is_shadow else base_color
+        is_transparent_branch = alpha < 0.9  # In merge preview overlay
+
+        # Apply desaturation
+        if is_shadow:
+            display_color = desaturate_color(base_color, 0.5)
+        elif is_transparent_branch:
+            # Light desaturation for transparent branch in merge preview
+            display_color = desaturate_color(base_color, 0.3)
+        else:
+            display_color = base_color
+
+        display_color = (*display_color, int(alpha * 255))
 
         # Fill
         self._draw_rect_filled(cell_x, cell_y, box_size, box_size, display_color)
 
+        # Border color and style
+        if is_transparent_branch and branch_color:
+            # Use branch color for transparent overlay boxes
+            border_color = (*branch_color, int(alpha * 255))
+            border_thickness = max(1, int(3 * scale))  # Thicker border
+        else:
+            # Normal black border
+            border_color = (*BLACK, int(alpha * 255))
+            border_thickness = max(1, int(2 * scale))
+
         # Border (dashed for shadow, solid otherwise)
         if is_shadow:
             self._draw_dashed_rect(cell_x, cell_y, box_size, box_size,
-                                  BLACK, max(1, int(2 * scale)))
+                                  border_color, border_thickness)
         else:
             self._draw_rect_outline(cell_x, cell_y, box_size, box_size,
-                                   BLACK, max(1, int(2 * scale)))
+                                   border_color, border_thickness)
 
         # UID text (cached)
         center_x = cell_x + box_size // 2
         center_y = self._flip_y(cell_y + box_size // 2)
-        self._draw_cached_text(f'uid_{entity.uid}_{scale:.2f}', str(entity.uid),
-                               center_x, center_y, WHITE, font_size=int(14 * scale))
+        self._draw_cached_text(f'uid_{entity.uid}_{scale:.2f}_{alpha:.2f}', str(entity.uid),
+                               center_x, center_y, (*WHITE, int(alpha * 255)), font_size=int(14 * scale))
 
     def _draw_dashed_rect(self, x: int, y: int, w: int, h: int,
                           color: Tuple, thickness: int):
@@ -570,7 +622,7 @@ class ArcadeRenderer:
                            x + w, self._flip_y(y + end_i), color, thickness)
 
     def _draw_player(self, start_x: int, start_y: int, player,
-                     color: Tuple, held_uid: Optional[int], cell_size: int):
+                     color: Tuple, held_uid: Optional[int], cell_size: int, alpha: float = 1.0):
         """Draw the player."""
         scale = cell_size / CELL_SIZE
         gx, gy = player.pos
@@ -581,6 +633,8 @@ class ArcadeRenderer:
         arrow_cx = center_x + dx * offset
         arrow_cy = center_y - dy * offset  # Flip Y for arrow
 
+        player_color = (*color, int(alpha * 255)) if len(color) == 3 else color
+
         if held_uid is not None:
             # Draw box-shaped player
             pad = int(5 * scale)
@@ -588,24 +642,24 @@ class ArcadeRenderer:
             cell_y = start_y + gy * cell_size + pad
             box_size = cell_size - pad * 2
 
-            self._draw_rect_filled(cell_x, cell_y, box_size, box_size, color)
+            self._draw_rect_filled(cell_x, cell_y, box_size, box_size, player_color)
             self._draw_rect_outline(cell_x, cell_y, box_size, box_size,
-                                   BLACK, max(1, int(3 * scale)))
+                                   (*BLACK, int(alpha * 255)), max(1, int(3 * scale)))
 
             # UID text (cached)
-            self._draw_cached_text(f'held_{held_uid}_{scale:.2f}', str(held_uid),
-                                   center_x, center_y, WHITE, font_size=int(14 * scale))
+            self._draw_cached_text(f'held_{held_uid}_{scale:.2f}_{alpha:.2f}', str(held_uid),
+                                   center_x, center_y, (*WHITE, int(alpha * 255)), font_size=int(14 * scale))
 
             # Arrow
             arrow_size = int(21 * scale)
-            self._draw_arrow(arrow_cx, arrow_cy, dx, -dy, arrow_size, BLACK)
+            self._draw_arrow(arrow_cx, arrow_cy, dx, -dy, arrow_size, (*BLACK, int(alpha * 255)))
         else:
             # Draw circle player
             radius = cell_size // 5
-            arcade.draw_circle_filled(center_x, center_y, radius, color)
+            arcade.draw_circle_filled(center_x, center_y, radius, player_color)
 
             arrow_size = int(21 * scale)
-            self._draw_arrow(arrow_cx, arrow_cy, dx, -dy, arrow_size, BLACK)
+            self._draw_arrow(arrow_cx, arrow_cy, dx, -dy, arrow_size, (*BLACK, int(alpha * 255)))
 
     def _draw_arrow(self, cx: int, cy: int, dx: int, dy: int,
                     size: int, color: Tuple):
@@ -622,7 +676,7 @@ class ArcadeRenderer:
         arcade.draw_polygon_filled(points, color)
 
     def _draw_grid_lines(self, start_x: int, start_y: int,
-                         state: BranchState, cell_size: int):
+                         state: BranchState, cell_size: int, alpha: float = 1.0):
         """Draw grid lines."""
         scale = cell_size / CELL_SIZE
 
@@ -636,11 +690,11 @@ class ArcadeRenderer:
 
                 if terrain == TerrainType.SWITCH:
                     activated = any(e.pos == pos for e in state.entities)
-                    color = (0, 200, 0) if activated else (150, 0, 0)
+                    color = (0, 200, 0, int(alpha * 255)) if activated else (150, 0, 0, int(alpha * 255))
                     self._draw_rect_outline(cell_x, cell_y, cell_size, cell_size,
                                            color, max(1, int(5 * scale)))
                 else:
-                    self._draw_rect_outline(cell_x, cell_y, cell_size, cell_size, GRAY, 1)
+                    self._draw_rect_outline(cell_x, cell_y, cell_size, cell_size, (*GRAY, int(alpha * 255)), 1)
 
     def _draw_shadow_connections(self, start_x: int, start_y: int,
                                   state: BranchState, animation_frame: int,
@@ -811,7 +865,7 @@ class ArcadeRenderer:
         arcade.draw_line(right, bottom, right, bottom + size, color, thickness)
 
     def _draw_cell_hint(self, start_x: int, start_y: int,
-                        hint: 'InteractionHint', cell_size: int):
+                        hint: 'InteractionHint', cell_size: int, alpha: float = 1.0):
         """Draw cell interaction hint."""
         gx, gy = hint.target_pos
         cell_x = start_x + gx * cell_size
@@ -824,12 +878,14 @@ class ArcadeRenderer:
             self._draw_dashed_rect(
                 cell_x + margin, cell_y + margin,
                 cell_size - margin * 2, cell_size - margin * 2,
-                hint.color, 2
+                (*hint.color, int(alpha * 255)), 2
             )
 
         # Text with outline
-        self._draw_text_with_outline('[X]', center_x, center_y + 8, WHITE, BLACK, 12)
-        self._draw_text_with_outline(hint.text, center_x, center_y - 12, WHITE, BLACK, 12)
+        white_alpha = (*WHITE, int(alpha * 255))
+        black_alpha = (*BLACK, int(alpha * 255))
+        self._draw_text_with_outline('[X]', center_x, center_y + 8, white_alpha, black_alpha, 12)
+        self._draw_text_with_outline(hint.text, center_x, center_y - 12, white_alpha, black_alpha, 12)
 
     def _draw_text_with_outline(self, text: str, x: int, y: int,
                                  text_color: Tuple, outline_color: Tuple,

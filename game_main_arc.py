@@ -33,13 +33,14 @@ class GameWindow(arcade.Window):
         self.MOVE_DELAY = 10
         self.animation_frame = 0
 
-        # V-key hold state
-        self.v_press_time = None
-        self.V_HOLD_THRESHOLD = 0.8  # seconds
-
         # Slide animation state
         self.slide_start_time = None
         self.slide_direction = 0  # 1 = switching to DIV1, -1 = switching to DIV0
+
+        # Merge preview state
+        self.merge_preview_active = False
+        self.merge_preview_start_time = None
+        self.MERGE_PREVIEW_DURATION = 0.3  # seconds for preview animation
 
         # Track held keys for continuous movement
         self.held_keys = set()
@@ -52,14 +53,6 @@ class GameWindow(arcade.Window):
 
         if self.move_cooldown > 0:
             self.move_cooldown -= 1
-
-        # V-key hold merge
-        if self.v_press_time is not None and self.controller.has_branched:
-            if not self.controller.collapsed and not self.controller.victory:
-                hold_duration = time.time() - self.v_press_time
-                if hold_duration >= self.V_HOLD_THRESHOLD:
-                    self.controller.try_merge()
-                    self.v_press_time = None
 
         # Slide animation completion
         if self.slide_start_time is not None:
@@ -118,6 +111,8 @@ class GameWindow(arcade.Window):
             self.controller.reset()
             self.slide_start_time = None
             self.slide_direction = 0
+            self.merge_preview_active = False
+            self.merge_preview_start_time = None
             return
 
         # Undo
@@ -130,19 +125,43 @@ class GameWindow(arcade.Window):
             return
 
         # Branch (V key)
+        # Branch (V key)
         if key == arcade.key.V:
             if not self.controller.has_branched:
                 self.controller.try_branch()
-            else:
-                self.v_press_time = time.time()
+                # Clear any lingering merge preview state
+                self.merge_preview_active = False
+                self.merge_preview_start_time = None
 
-        # Merge (C key)
+        # Merge preview toggle (M key)
+        elif key == arcade.key.M:
+            if self.controller.has_branched:
+                if self.merge_preview_active:
+                    # Cancel preview
+                    self.merge_preview_active = False
+                    self.merge_preview_start_time = None
+                else:
+                    # Enter preview
+                    self.merge_preview_active = True
+                    self.merge_preview_start_time = time.time()
+
+        # Cancel merge preview (Esc)
+        elif key == arcade.key.ESCAPE:
+            if self.merge_preview_active:
+                self.merge_preview_active = False
+                self.merge_preview_start_time = None
+
+        # Merge confirm (C key) - works in preview or directly
         elif key == arcade.key.C:
-            self.controller.try_merge()
+            if self.controller.has_branched:
+                self.controller.try_merge()
+                # Exit preview if active
+                self.merge_preview_active = False
+                self.merge_preview_start_time = None
 
-        # Switch focus with slide animation (Tab)
+        # Switch focus with slide animation (Tab) - disabled during merge preview
         elif key == arcade.key.TAB:
-            if self.controller.has_branched and self.slide_start_time is None:
+            if self.controller.has_branched and self.slide_start_time is None and not self.merge_preview_active:
                 # Start slide animation
                 self.slide_start_time = time.time()
                 if self.controller.current_focus == 0:
@@ -159,18 +178,9 @@ class GameWindow(arcade.Window):
         if key in self.held_keys:
             self.held_keys.discard(key)
 
-        if key == arcade.key.V:
-            self.v_press_time = None
-
     def on_draw(self):
         """Render the game."""
         self.clear()
-
-        # Calculate V-key hold progress
-        v_hold_progress = 0.0
-        if self.v_press_time is not None and self.controller.has_branched:
-            elapsed = time.time() - self.v_press_time
-            v_hold_progress = min(elapsed / self.V_HOLD_THRESHOLD, 1.0)
 
         # Calculate slide animation progress
         slide_progress = 0.0
@@ -178,13 +188,20 @@ class GameWindow(arcade.Window):
             elapsed = time.time() - self.slide_start_time
             slide_progress = min(elapsed / self.SLIDE_DURATION, 1.0)
 
+        # Calculate merge preview animation progress
+        merge_preview_progress = 0.0
+        if self.merge_preview_start_time is not None:
+            elapsed = time.time() - self.merge_preview_start_time
+            merge_preview_progress = min(elapsed / self.MERGE_PREVIEW_DURATION, 1.0)
+
         # Build frame spec from controller state
         frame_spec = ViewModelBuilder.build(
             self.controller,
             self.animation_frame,
-            v_hold_progress,
             slide_progress,
-            self.slide_direction
+            self.slide_direction,
+            self.merge_preview_active,
+            merge_preview_progress
         )
 
         # Render
