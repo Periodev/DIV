@@ -11,62 +11,57 @@ from timeline_system import BranchState, TerrainType, Position
 @dataclass
 class InteractionHint:
     """Describes an interaction hint to display on a cell."""
-    text: str                      # "拾取" / "放下" / "收束"
-    color: Tuple[int, int, int]    # RGB frame color
-    target_pos: Position           # Grid position to show hint
-    is_inset: bool                 # True = smaller inset frame (for drop)
+    text: str
+    color: Tuple[int, int, int]
+    target_pos: Position
+    is_inset: bool
 
 
 @dataclass
 class BranchViewSpec:
     """Visual specification for a single branch panel."""
-    state: BranchState             # Game state reference
-    title: str                     # "DIV 0", "DIV 1", "Merge Preview"
-    is_focused: bool               # Is this the active branch?
-    border_color: Tuple[int, int, int]
-    interaction_hint: Optional[InteractionHint]  # Cell hint (focused only)
-    timeline_hint: str             # "V 分裂" / "C 合併" / ""
-    highlight_branch_point: bool   # Player standing on branch terrain
-    is_merge_preview: bool         # Special rendering mode
-    scale: float = 1.0             # Scale factor (1.0 = 75px cells, 0.73 = 55px)
-    pos_x: int = 0                 # Panel X position
-    pos_y: int = 0                 # Panel Y position
-
-
-@dataclass
-class TutorialSpec:
-    """Tutorial box specification."""
+    state: BranchState
     title: str
-    items: List[str]
-    visible: bool = True
+    is_focused: bool
+    border_color: Tuple[int, int, int]
+    interaction_hint: Optional[InteractionHint]
+    timeline_hint: str
+    highlight_branch_point: bool
+    is_merge_preview: bool
+    scale: float = 1.0
+    pos_x: int = 0
+    pos_y: int = 0
+    alpha: float = 1.0  # For fade effects during animation
 
 
 @dataclass
 class FrameViewSpec:
-    """Complete visual specification for one frame."""
-    # Branch panels
-    main_branch: BranchViewSpec
-    merge_preview: BranchViewSpec
-    sub_branch: Optional[BranchViewSpec]
+    """Complete visual specification for one frame.
 
-    # Tutorial
-    tutorial: Optional[TutorialSpec]
+    Layout:
+    - Single focused branch centered
+    - After branching: other branch slides in from right
+    - Tab triggers slide animation
+    """
+    # Main branches (positioned based on focus and animation)
+    main_branch: BranchViewSpec      # DIV 0
+    sub_branch: Optional[BranchViewSpec]  # DIV 1
+
+    # Animation state
+    slide_progress: float  # 0.0 = no animation, 0.0->1.0 = animating
+    slide_direction: int   # 1 = focus moving right (0->1), -1 = focus moving left (1->0)
 
     # Global state
     goal_active: bool
     has_branched: bool
     animation_frame: int
+    current_focus: int
 
     # Game end states
     is_collapsed: bool
     is_victory: bool
 
-    # For inherited hold hint rendering (merge preview needs these)
-    hidden_main: Optional[BranchState]
-    hidden_sub: Optional[BranchState]
-    current_focus: int
-
-    # V-key hold progress (0.0 ~ 1.0, 0 = not holding)
+    # V-key hold progress
     v_hold_progress: float
 
     # Debug info
@@ -77,136 +72,163 @@ class FrameViewSpec:
 class ViewModelBuilder:
     """Transforms game state into visual specifications."""
 
-    # Branch point terrain types
     BRANCH_TERRAINS = {
         TerrainType.BRANCH1, TerrainType.BRANCH2,
         TerrainType.BRANCH3, TerrainType.BRANCH4
     }
 
-    # Layout constants (matching demo.html)
+    # === Layout Constants ===
+    WINDOW_WIDTH = 1150
+    WINDOW_HEIGHT = 600
+
     PADDING = 30
     CELL_SIZE = 75
     GRID_SIZE = 6
-    GRID_WIDTH = CELL_SIZE * GRID_SIZE  # 450
-    PREVIEW_SCALE = 0.80  # 55px / 75px
-    PREVIEW_CELL = int(CELL_SIZE * PREVIEW_SCALE)  # 55px
-    PREVIEW_GRID_WIDTH = PREVIEW_CELL * GRID_SIZE  # 330
+    GRID_PX = CELL_SIZE * GRID_SIZE  # 450
+    GAP = 30
+
+    # Scale settings
+    FOCUS_SCALE = 1.0      # Focused branch: full size
+    SIDE_SCALE = 0.7       # Non-focused branch: 70% size (315px)
+    SIDE_GRID_PX = int(GRID_PX * SIDE_SCALE)  # 315
+
+    # Focused branch: always centered
+    CENTER_X = (WINDOW_WIDTH - GRID_PX) // 2  # 350
+    CENTER_Y = (WINDOW_HEIGHT - GRID_PX) // 2  # 75
+
+    # Side positions (for non-focused branch at 0.7 scale)
+    RIGHT_X = CENTER_X + GRID_PX + GAP  # 830 (to the right of focused)
+    LEFT_X = CENTER_X - GAP - SIDE_GRID_PX  # 5 (to the left of focused)
+
+    # Vertical center for side branch (adjusted for smaller size)
+    SIDE_CENTER_Y = (WINDOW_HEIGHT - SIDE_GRID_PX) // 2  # 142
 
     @staticmethod
     def build(controller, animation_frame: int,
-              tutorial_title: str = None, tutorial_items: List[str] = None,
-              v_hold_progress: float = 0.0) -> FrameViewSpec:
-        """
-        Main entry point: build complete frame specification.
+              v_hold_progress: float = 0.0,
+              slide_progress: float = 0.0,
+              slide_direction: int = 0) -> FrameViewSpec:
+        """Build frame specification with slide animation support."""
+        B = ViewModelBuilder
 
-        Args:
-            controller: GameController instance
-            animation_frame: Current animation frame counter
-            tutorial_title: Optional tutorial box title
-            tutorial_items: Optional list of tutorial text items
-
-        Returns:
-            FrameViewSpec describing what to render
-        """
-        B = ViewModelBuilder  # Shorthand
-
-        # Get preview state for goal_active calculation
-        preview = controller.get_merge_preview()
-        goal_active = B._check_goal_active(preview)
-
-        # Get hints (only for focused branch)
+        # Get hints
         timeline_hint = controller.get_timeline_hint()
         interaction_hint = B._extract_interaction_hint(controller)
 
-        # Layout positions for 1280x800
-        # Left column: Tutorial (top) + Preview (below)
-        # Right side: DIV 0 + DIV 1 (scaled to 0.9 to fit)
+        # Goal active check
+        preview = controller.get_merge_preview()
+        goal_active = B._check_goal_active(preview)
 
-        # Preview: below tutorial (scale 0.73)
-        preview_x = B.PADDING
-        preview_y = 380
+        focus = controller.current_focus
+        has_branched = controller.has_branched
 
-        # Main grids
-        main_scale = 1.0
-        main_cell = int(B.CELL_SIZE * main_scale)  
-        main_grid_width = main_cell * B.GRID_SIZE  
-        grid_gap = 30
+        # Calculate positions and scales based on animation state
+        if not has_branched:
+            # Single branch, centered at full scale
+            main_x, main_y, main_scale = B.CENTER_X, B.CENTER_Y, B.FOCUS_SCALE
+            sub_x, sub_y, sub_scale = B.WINDOW_WIDTH + 50, B.CENTER_Y, B.SIDE_SCALE
+        else:
+            # Two branches - focused centered (large), other on side (small)
+            if slide_progress > 0:
+                # Animating: interpolate position, scale, and Y
+                main_x, main_y, main_scale, sub_x, sub_y, sub_scale = B._calc_slide_positions(
+                    focus, slide_progress, slide_direction
+                )
+            else:
+                # Static positions
+                if focus == 0:
+                    main_x, main_y, main_scale = B.CENTER_X, B.CENTER_Y, B.FOCUS_SCALE
+                    sub_x, sub_y, sub_scale = B.RIGHT_X, B.SIDE_CENTER_Y, B.SIDE_SCALE
+                else:
+                    main_x, main_y, main_scale = B.LEFT_X, B.SIDE_CENTER_Y, B.SIDE_SCALE
+                    sub_x, sub_y, sub_scale = B.CENTER_X, B.CENTER_Y, B.FOCUS_SCALE
 
-        # Position: right-aligned with padding
-        main_x = 450
-        main_y = B.PADDING + 250
-        sub_x = main_x + main_grid_width + grid_gap  
-
-        # Build main branch spec (scaled to fit)
+        # Build main branch spec (DIV 0)
         main_spec = B._build_branch_spec(
             state=controller.main_branch,
-            is_focused=(controller.current_focus == 0),
-            title="DIV 0",
+            is_focused=(focus == 0),
+            title="DIV 0" if has_branched else "MAIN",
             border_color=(0, 100, 200),
-            timeline_hint=timeline_hint if controller.current_focus == 0 else '',
-            interaction_hint=interaction_hint if controller.current_focus == 0 else None,
+            timeline_hint=timeline_hint if focus == 0 else '',
+            interaction_hint=interaction_hint if focus == 0 else None,
             is_merge_preview=False,
             scale=main_scale,
             pos_x=main_x,
             pos_y=main_y
         )
 
-        # Build merge preview spec (scaled, bottom-left)
-        preview_spec = B._build_branch_spec(
-            state=preview,
-            is_focused=False,
-            title="Merge Preview",
-            border_color=(150, 50, 150),
-            timeline_hint='',
-            interaction_hint=None,
-            is_merge_preview=True,
-            scale=B.PREVIEW_SCALE,
-            pos_x=preview_x,
-            pos_y=preview_y
-        )
-
-        # Build sub branch spec (if exists, scaled to fit)
+        # Build sub branch spec (DIV 1)
         sub_spec = None
         if controller.sub_branch:
             sub_spec = B._build_branch_spec(
                 state=controller.sub_branch,
-                is_focused=(controller.current_focus == 1),
+                is_focused=(focus == 1),
                 title="DIV 1",
                 border_color=(50, 150, 200),
-                timeline_hint=timeline_hint if controller.current_focus == 1 else '',
-                interaction_hint=interaction_hint if controller.current_focus == 1 else None,
+                timeline_hint=timeline_hint if focus == 1 else '',
+                interaction_hint=interaction_hint if focus == 1 else None,
                 is_merge_preview=False,
-                scale=main_scale,
+                scale=sub_scale,
                 pos_x=sub_x,
-                pos_y=main_y
-            )
-
-        # Tutorial spec
-        tutorial = None
-        if tutorial_items:
-            tutorial = TutorialSpec(
-                title=tutorial_title or "Tutorial",
-                items=tutorial_items,
-                visible=True
+                pos_y=sub_y
             )
 
         return FrameViewSpec(
             main_branch=main_spec,
-            merge_preview=preview_spec,
             sub_branch=sub_spec,
-            tutorial=tutorial,
+            slide_progress=slide_progress,
+            slide_direction=slide_direction,
             goal_active=goal_active,
-            has_branched=controller.has_branched,
+            has_branched=has_branched,
             animation_frame=animation_frame,
+            current_focus=focus,
             is_collapsed=controller.collapsed,
             is_victory=controller.victory,
-            hidden_main=controller.main_branch,
-            hidden_sub=controller.sub_branch,
-            current_focus=controller.current_focus,
             v_hold_progress=v_hold_progress,
             step_count=len(controller.history) - 1,
             input_sequence=controller.input_log
         )
+
+    @staticmethod
+    def _calc_slide_positions(focus: int, progress: float, direction: int):
+        """Calculate branch positions, scales, and Y during slide animation.
+
+        Returns: (main_x, main_y, main_scale, sub_x, sub_y, sub_scale)
+        direction: 1 = switching from 0 to 1, -1 = switching from 1 to 0
+        """
+        B = ViewModelBuilder
+        t = B._ease_in_out(progress)
+
+        def lerp(a, b, t):
+            return a + (b - a) * t
+
+        if direction == 1:  # Focus 0 -> 1: DIV0 shrinks to left, DIV1 grows to center
+            # DIV 0: center -> left, large -> small
+            main_x = int(lerp(B.CENTER_X, B.LEFT_X, t))
+            main_y = int(lerp(B.CENTER_Y, B.SIDE_CENTER_Y, t))
+            main_scale = lerp(B.FOCUS_SCALE, B.SIDE_SCALE, t)
+            # DIV 1: right -> center, small -> large
+            sub_x = int(lerp(B.RIGHT_X, B.CENTER_X, t))
+            sub_y = int(lerp(B.SIDE_CENTER_Y, B.CENTER_Y, t))
+            sub_scale = lerp(B.SIDE_SCALE, B.FOCUS_SCALE, t)
+        else:  # Focus 1 -> 0: DIV1 shrinks to right, DIV0 grows to center
+            # DIV 0: left -> center, small -> large
+            main_x = int(lerp(B.LEFT_X, B.CENTER_X, t))
+            main_y = int(lerp(B.SIDE_CENTER_Y, B.CENTER_Y, t))
+            main_scale = lerp(B.SIDE_SCALE, B.FOCUS_SCALE, t)
+            # DIV 1: center -> right, large -> small
+            sub_x = int(lerp(B.CENTER_X, B.RIGHT_X, t))
+            sub_y = int(lerp(B.CENTER_Y, B.SIDE_CENTER_Y, t))
+            sub_scale = lerp(B.FOCUS_SCALE, B.SIDE_SCALE, t)
+
+        return main_x, main_y, main_scale, sub_x, sub_y, sub_scale
+
+    @staticmethod
+    def _ease_in_out(t: float) -> float:
+        """Smooth ease-in-out curve."""
+        if t < 0.5:
+            return 2 * t * t
+        return 1 - (-2 * t + 2) ** 2 / 2
 
     @staticmethod
     def _build_branch_spec(
@@ -222,7 +244,6 @@ class ViewModelBuilder:
         pos_y: int = 0
     ) -> BranchViewSpec:
         """Build visual spec for a single branch."""
-        # Check if player standing on branch point
         highlight = ViewModelBuilder._is_on_branch_point(state)
 
         return BranchViewSpec(
@@ -241,7 +262,7 @@ class ViewModelBuilder:
 
     @staticmethod
     def _check_goal_active(state: BranchState) -> bool:
-        """Check if all switches have weight (goal should flash)."""
+        """Check if all switches have weight."""
         return all(
             any(e.pos == pos for e in state.entities)
             for pos, t in state.terrain.items()
@@ -253,16 +274,9 @@ class ViewModelBuilder:
         """Convert controller hint tuple to InteractionHint dataclass."""
         raw = controller.get_interaction_hint()
         text, color, pos, is_inset = raw
-
-        if not text:  # Empty hint
+        if not text:
             return None
-
-        return InteractionHint(
-            text=text,
-            color=color,
-            target_pos=pos,
-            is_inset=is_inset
-        )
+        return InteractionHint(text=text, color=color, target_pos=pos, is_inset=is_inset)
 
     @staticmethod
     def _is_on_branch_point(state: BranchState) -> bool:

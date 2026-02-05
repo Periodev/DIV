@@ -1,7 +1,6 @@
 # game_main_arc.py - Arcade Main Loop
 #
-# Arcade-based game window. Uses the same controller and presentation model,
-# with arcade rendering.
+# Arcade-based game window with slide animation for focus switching.
 
 import time
 import arcade
@@ -14,9 +13,11 @@ from render_arc import ArcadeRenderer, WINDOW_WIDTH, WINDOW_HEIGHT
 class GameWindow(arcade.Window):
     """Main game window using Arcade."""
 
-    def __init__(self, floor_map: str, object_map: str,
-                 tutorial_title: str = None, tutorial_items: list = None):
-        super().__init__(WINDOW_WIDTH, WINDOW_HEIGHT, "div - Timeline Puzzle (Arcade)")
+    # Animation settings
+    SLIDE_DURATION = 0.25  # seconds for slide animation
+
+    def __init__(self, floor_map: str, object_map: str):
+        super().__init__(WINDOW_WIDTH, WINDOW_HEIGHT, "div - Timeline Puzzle")
 
         self.set_update_rate(1/60)  # 60 FPS
 
@@ -27,15 +28,6 @@ class GameWindow(arcade.Window):
         # Renderer
         self.renderer = ArcadeRenderer()
 
-        # Tutorial
-        self.tutorial_title = tutorial_title or "0-3 Pick"
-        self.tutorial_items = tutorial_items or [
-            "靠近並面對方塊，按X或space可拾取方塊",
-            "手上有方塊時，再按X或space可放下到前方一格",
-            "舉著方塊會變為精確移動模式，只能朝正前方移動",
-            "舉方塊時，可以推動正前方一個方塊",
-        ]
-
         # Input state
         self.move_cooldown = 0
         self.MOVE_DELAY = 10
@@ -45,15 +37,12 @@ class GameWindow(arcade.Window):
         self.v_press_time = None
         self.V_HOLD_THRESHOLD = 0.8  # seconds
 
+        # Slide animation state
+        self.slide_start_time = None
+        self.slide_direction = 0  # 1 = switching to DIV1, -1 = switching to DIV0
+
         # Track held keys for continuous movement
         self.held_keys = set()
-
-        # Camera system for viewport management
-        # Main camera for game area (branches) - uses Y-up coordinate system
-        self.main_camera = arcade.camera.Camera2D()
-
-        # GUI camera for overlays and UI (debug info, tutorial)
-        self.gui_camera = arcade.camera.Camera2D()
 
         arcade.set_background_color(arcade.color.WHITE)
 
@@ -72,9 +61,21 @@ class GameWindow(arcade.Window):
                     self.controller.try_merge()
                     self.v_press_time = None
 
-        # Continuous movement from held keys
+        # Slide animation completion
+        if self.slide_start_time is not None:
+            elapsed = time.time() - self.slide_start_time
+            if elapsed >= self.SLIDE_DURATION:
+                # Animation complete - commit the focus change
+                if self.slide_direction == 1:
+                    self.controller.current_focus = 1
+                else:
+                    self.controller.current_focus = 0
+                self.slide_start_time = None
+                self.slide_direction = 0
+
+        # Continuous movement from held keys (only if not animating)
         if not self.controller.collapsed and not self.controller.victory:
-            if self.move_cooldown == 0:
+            if self.slide_start_time is None and self.move_cooldown == 0:
                 direction = self._get_movement_direction()
                 if direction:
                     self.controller.handle_move(direction)
@@ -115,6 +116,8 @@ class GameWindow(arcade.Window):
         # Reset
         if key == arcade.key.F5 or key == arcade.key.R:
             self.controller.reset()
+            self.slide_start_time = None
+            self.slide_direction = 0
             return
 
         # Undo
@@ -137,9 +140,15 @@ class GameWindow(arcade.Window):
         elif key == arcade.key.C:
             self.controller.try_merge()
 
-        # Switch focus (Tab)
+        # Switch focus with slide animation (Tab)
         elif key == arcade.key.TAB:
-            self.controller.switch_focus()
+            if self.controller.has_branched and self.slide_start_time is None:
+                # Start slide animation
+                self.slide_start_time = time.time()
+                if self.controller.current_focus == 0:
+                    self.slide_direction = 1  # Moving to DIV1
+                else:
+                    self.slide_direction = -1  # Moving to DIV0
 
         # Adaptive action (X or Space)
         elif key == arcade.key.X or key == arcade.key.SPACE:
@@ -147,11 +156,9 @@ class GameWindow(arcade.Window):
 
     def on_key_release(self, key: int, modifiers: int):
         """Handle key release events."""
-        # Remove from held keys
         if key in self.held_keys:
             self.held_keys.discard(key)
 
-        # V key release
         if key == arcade.key.V:
             self.v_press_time = None
 
@@ -165,48 +172,48 @@ class GameWindow(arcade.Window):
             elapsed = time.time() - self.v_press_time
             v_hold_progress = min(elapsed / self.V_HOLD_THRESHOLD, 1.0)
 
+        # Calculate slide animation progress
+        slide_progress = 0.0
+        if self.slide_start_time is not None:
+            elapsed = time.time() - self.slide_start_time
+            slide_progress = min(elapsed / self.SLIDE_DURATION, 1.0)
+
         # Build frame spec from controller state
         frame_spec = ViewModelBuilder.build(
             self.controller,
             self.animation_frame,
-            self.tutorial_title,
-            self.tutorial_items,
-            v_hold_progress
+            v_hold_progress,
+            slide_progress,
+            self.slide_direction
         )
 
-        # Use main camera for game content
-        self.main_camera.use()
+        # Render
         self.renderer.draw_frame(frame_spec)
 
-        # GUI elements use separate camera (currently same view)
-        # Future: could use gui_camera.use() for overlays with fixed position
-        self.gui_camera.use()
 
-
-def run_game(floor_map: str, object_map: str,
-             tutorial_title: str = None, tutorial_items: list = None):
+def run_game(floor_map: str, object_map: str):
     """Main entry point - creates window and runs game loop."""
-    window = GameWindow(floor_map, object_map, tutorial_title, tutorial_items)
+    window = GameWindow(floor_map, object_map)
     arcade.run()
 
 
 # ===== Map Definition =====
 floor_map = '''
-###S##
-###w##
-.XwH.#
-##HwH#
-##G###
-######
+#.V.S#
+#H.#.#
+#H##H#
+#HG#H#
+###.H#
+#..V.#
 '''
 
 object_map = '''
+.B....
 ......
 ......
-BPB...
 ......
 ......
-......
+.BP.B.
 '''
 
 

@@ -18,8 +18,8 @@ CELL_SIZE = 75
 GRID_WIDTH = GRID_SIZE * CELL_SIZE  # 450
 GRID_HEIGHT = GRID_SIZE * CELL_SIZE
 
-WINDOW_WIDTH = 1400
-WINDOW_HEIGHT = 800
+WINDOW_WIDTH = 1150
+WINDOW_HEIGHT = 600
 PADDING = 30
 
 # === Colors (RGBA for arcade) ===
@@ -114,13 +114,13 @@ class ArcadeRenderer:
 
     def _init_static_text(self):
         """Pre-create commonly used static text objects."""
-        # Overlay text (large, centered)
+        # Overlay text (centered, sized for 800x600 window)
         self._overlay_texts = {
-            'fall': arcade.Text("FALL DOWN!", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 60,
-                               YELLOW, font_size=72, anchor_x="center", anchor_y="center"),
-            'victory': arcade.Text("LEVEL COMPLETE!", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 60,
-                                  YELLOW, font_size=72, anchor_x="center", anchor_y="center"),
-            'hint': arcade.Text("F5 restart Z undo", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 30,
+            'fall': arcade.Text("FALL DOWN!", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 40,
+                               YELLOW, font_size=48, anchor_x="center", anchor_y="center"),
+            'victory': arcade.Text("LEVEL COMPLETE!", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 40,
+                                  YELLOW, font_size=36, anchor_x="center", anchor_y="center"),
+            'hint': arcade.Text("F5 restart Z undo", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 20,
                                WHITE, font_size=14, anchor_x="center", anchor_y="center"),
         }
 
@@ -281,37 +281,18 @@ class ArcadeRenderer:
                                            font_size=int(14 * scale))
 
     def draw_frame(self, spec: 'FrameViewSpec'):
-        """Main entry point for rendering a complete frame."""
-        # 1. Clear screen (white background)
+        """Main entry point for rendering a complete frame.
+
+        Layout: Single focused branch centered, other branch slides in/out
+        """
+        # 1. Clear screen
         arcade.draw_lrbt_rectangle_filled(
             0, WINDOW_WIDTH, 0, WINDOW_HEIGHT, WHITE
         )
 
-        # 2. Draw tutorial box
-        if spec.tutorial and spec.tutorial.visible:
-            self._draw_tutorial(spec.tutorial)
-
-        # 3. Draw merge preview (bottom-left, scaled)
-        self._draw_branch(
-            spec.merge_preview,
-            goal_active=spec.goal_active,
-            has_branched=spec.has_branched,
-            animation_frame=spec.animation_frame,
-            hidden_main=spec.hidden_main,
-            hidden_sub=spec.hidden_sub,
-            current_focus=spec.current_focus
-        )
-
-        # 4. Draw main branch
-        self._draw_branch(
-            spec.main_branch,
-            goal_active=spec.goal_active,
-            has_branched=spec.has_branched,
-            animation_frame=spec.animation_frame
-        )
-
-        # 5. Draw sub branch (if exists)
-        if spec.sub_branch:
+        # 2. Draw branches (order: non-focused first, then focused on top)
+        # Only draw if visible (pos_x within reasonable range)
+        if spec.sub_branch and -500 < spec.sub_branch.pos_x < WINDOW_WIDTH + 100:
             self._draw_branch(
                 spec.sub_branch,
                 goal_active=spec.goal_active,
@@ -319,7 +300,15 @@ class ArcadeRenderer:
                 animation_frame=spec.animation_frame
             )
 
-        # 6. Draw debug info
+        if -500 < spec.main_branch.pos_x < WINDOW_WIDTH + 100:
+            self._draw_branch(
+                spec.main_branch,
+                goal_active=spec.goal_active,
+                has_branched=spec.has_branched,
+                animation_frame=spec.animation_frame
+            )
+
+        # 3. Draw debug info
         self._draw_debug_info(
             spec.step_count,
             spec.current_focus,
@@ -327,14 +316,14 @@ class ArcadeRenderer:
             spec.input_sequence
         )
 
-        # 7. V-key hold progress
+        # 4. V-key hold progress
         if spec.v_hold_progress > 0 and spec.has_branched:
             focused = spec.main_branch if spec.current_focus == 0 else spec.sub_branch
             if focused:
                 self._draw_merge_overlay(spec, focused)
             self._draw_merge_progress(spec.v_hold_progress)
 
-        # 8. Overlay (collapsed or victory)
+        # 5. Overlay (collapsed or victory)
         if spec.is_collapsed:
             self._draw_overlay("FALL DOWN!", (150, 0, 0))
         elif spec.is_victory:
@@ -366,20 +355,11 @@ class ArcadeRenderer:
 
         # Title
         title_y = self._flip_y(start_y - int(15 * spec.scale))
-        arcade.draw_text(
-            spec.title, start_x, title_y,
-            BLACK, font_size=int(14 * spec.scale),
-            anchor_x="left", anchor_y="center"
+        font_size = int(14 * spec.scale)
+        self._draw_cached_text(
+            f'title_{spec.title}_{font_size}', spec.title, start_x, title_y,
+            BLACK, font_size=font_size, anchor_x="left", anchor_y="center"
         )
-
-        # Focus highlight border
-        if spec.is_focused:
-            margin = int(12 * spec.scale)
-            self._draw_rect_outline(
-                start_x - margin, start_y - margin,
-                grid_width + margin * 2, grid_height + margin * 2,
-                BLUE, int(8 * spec.scale)
-            )
 
         # Border
         border_width = int((5 if spec.is_focused else 3) * spec.scale)
@@ -915,11 +895,11 @@ class ArcadeRenderer:
         self._debug_text.draw()
 
     def _draw_merge_progress(self, progress: float):
-        """Draw V-key hold progress bar."""
+        """Draw V-key hold progress bar (top-left corner)."""
         bar_width = 120
         bar_height = 8
         x = PADDING
-        y = self._flip_y(300)
+        y = self._flip_y(50)  # Near top
 
         # Background
         arcade.draw_lrbt_rectangle_filled(
