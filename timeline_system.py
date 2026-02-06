@@ -194,11 +194,12 @@ class Timeline:
             copied = Timeline._copy_entity(best)
 
             # Drop sub's held items at sub player's position
-            if copied.uid in sub_held_uids and copied.holder == 0:
+            # Only drop if the box was held by sub (at sub's position)
+            if copied.uid in sub_held_uids and copied.holder == 0 and copied.pos == sub.player.pos:
                 copied.holder = None
                 copied.z = 0
                 copied.collision = 1
-                copied.pos = sub.player.pos
+                # pos is already sub.player.pos
 
             result.entities.append(copied)
 

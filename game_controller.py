@@ -355,21 +355,22 @@ class GameController:
             else:
                 return ('', (0, 0, 0), None, False)  # No hint for blocked
 
-        # Cannot pickup while standing on NO_CARRY tile - hide hint
-        player_pos = (px, py)
-        if Physics.effective_capacity(active, at_pos=player_pos) == 0:
-            return ('', (0, 0, 0), None, False)  # No hint in NO_CARRY zone
-
         # Find grounded box at front position
         target = active.find_box_at(front_pos)
 
         if target is None:
             return ('', (0, 0, 0), None, False)
 
+        # Check if it's a shadow - convergence is always allowed (even in NO_CARRY zone)
         if active.is_shadow(target.uid):
             return ('收束', (0, 220, 220), front_pos, False)  # Cyan
-        else:
-            return ('拾取', (50, 200, 50), front_pos, False)  # Green
+
+        # Solid box: check if pickup is allowed (not in NO_CARRY zone)
+        player_pos = (px, py)
+        if Physics.effective_capacity(active, at_pos=player_pos) == 0:
+            return ('', (0, 0, 0), None, False)  # Cannot pickup in NO_CARRY zone
+
+        return ('拾取', (50, 200, 50), front_pos, False)  # Green
 
     def get_timeline_hint(self) -> str:
         """Get timeline hint for branch point.

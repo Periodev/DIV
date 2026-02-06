@@ -280,8 +280,8 @@ class ViewModelBuilder:
             return a + (b - a) * t
 
         # Diagonal offset for visual separation (bottom-right)
-        OFFSET_X = 3
-        OFFSET_Y = 3
+        OFFSET_X = 2
+        OFFSET_Y = 2
 
         # Determine starting positions based on focus
         if focus == 0:
@@ -332,8 +332,8 @@ class ViewModelBuilder:
             return a + (b - a) * t
 
         # Diagonal offset
-        OFFSET_X = 3
-        OFFSET_Y = 3
+        OFFSET_X = 2
+        OFFSET_Y = 2
 
         if focus == 0:
             # Currently DIV 0 focused: swap positions only
@@ -372,8 +372,8 @@ class ViewModelBuilder:
             return a + (b - a) * t
 
         # Diagonal offset
-        OFFSET_X = 3
-        OFFSET_Y = 3
+        OFFSET_X = 2
+        OFFSET_Y = 2
 
         if focus == 0:
             # DIV 0 focused: DIV 1 moves from offset to center and fades in

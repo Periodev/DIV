@@ -285,13 +285,12 @@ def run_game(floor_map: str, object_map: str):
 
 
 # ===== Map Definition =====
-# Floor Map
 floor_map = '''
-###S##
-###c##
-.XcH.#
-##HcH#
-##G###
+##SG##
+##..##
+##HH##
+##.v##
+##..##
 ######
 '''
 
@@ -299,9 +298,9 @@ floor_map = '''
 object_map = '''
 ......
 ......
-BPB...
 ......
 ......
+..BP..
 ......
 '''
 

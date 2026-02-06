@@ -183,10 +183,14 @@ class ArcadeRenderer:
 
     def _build_terrain_spritelist(self, state: BranchState, start_x: int, start_y: int,
                                    cell_size: int, goal_active: bool, has_branched: bool,
-                                   highlight_branch_point: bool) -> tuple:
+                                   highlight_branch_point: bool,
+                                   terrain_diff_reference: Optional[BranchState] = None) -> tuple:
         """Build SpriteList for static terrain. Returns (spritelist, dynamic_cells).
 
         dynamic_cells contains positions that need immediate-mode rendering (Goal, highlighted branch).
+
+        Args:
+            terrain_diff_reference: If provided, only include cells where terrain differs from reference.
         """
         scale = cell_size / CELL_SIZE
         sprites = arcade.SpriteList()
@@ -198,6 +202,28 @@ class ArcadeRenderer:
                 terrain = state.terrain.get(pos, TerrainType.FLOOR)
                 center_x = start_x + gx * cell_size + cell_size // 2
                 center_y = self._flip_y(start_y + gy * cell_size + cell_size // 2)
+
+                # Filter: only draw cells that differ from reference (if provided)
+                if terrain_diff_reference is not None:
+                    ref_terrain = terrain_diff_reference.terrain.get(pos, TerrainType.FLOOR)
+
+                    # Check if terrain differs
+                    if terrain != ref_terrain:
+                        pass  # Different terrain type - include this cell
+                    elif terrain == TerrainType.SWITCH:
+                        # Check if switch activation state differs
+                        activated = any(e.pos == pos for e in state.entities)
+                        ref_activated = any(e.pos == pos for e in terrain_diff_reference.entities)
+                        if activated == ref_activated:
+                            continue  # Same activation state - skip
+                    elif terrain == TerrainType.HOLE:
+                        # Check if hole filled state differs
+                        filled = state.is_hole_filled(pos)
+                        ref_filled = terrain_diff_reference.is_hole_filled(pos)
+                        if filled == ref_filled:
+                            continue  # Same filled state - skip
+                    else:
+                        continue  # Same terrain, no state difference - skip
 
                 # Determine texture key
                 texture_key = None
@@ -242,8 +268,13 @@ class ArcadeRenderer:
         return sprites, dynamic_cells
 
     def _draw_dynamic_terrain(self, start_x: int, start_y: int, state: BranchState,
-                              cell_size: int, dynamic_cells: list, has_branched: bool, alpha: float = 1.0):
-        """Draw dynamic terrain elements (Goal flash, branch markers)."""
+                              cell_size: int, dynamic_cells: list, has_branched: bool, alpha: float = 1.0,
+                              terrain_diff_reference: Optional[BranchState] = None):
+        """Draw dynamic terrain elements (Goal flash, branch markers).
+
+        Args:
+            terrain_diff_reference: If provided, only draw cells where terrain differs from reference.
+        """
         scale = cell_size / CELL_SIZE
 
         for gx, gy, terrain, extra in dynamic_cells:
@@ -278,6 +309,14 @@ class ArcadeRenderer:
             for gy in range(GRID_SIZE):
                 pos = (gx, gy)
                 terrain = state.terrain.get(pos, TerrainType.FLOOR)
+
+                # Filter: only draw cells that differ from reference (if provided)
+                if terrain_diff_reference is not None:
+                    ref_terrain = terrain_diff_reference.terrain.get(pos, TerrainType.FLOOR)
+                    # Only check terrain type for these static decorations
+                    if terrain == ref_terrain:
+                        continue  # Same terrain - skip
+
                 if terrain in (TerrainType.WEIGHT1, TerrainType.WEIGHT2):
                     center_x, center_y = self._grid_to_screen(start_x, start_y, gx, gy, cell_size)
                     text = '1' if terrain == TerrainType.WEIGHT1 else '2'
@@ -319,26 +358,50 @@ class ArcadeRenderer:
             in_merge_preview = both_centered and has_transparency
 
         if in_merge_preview:
-            # Merge preview: draw focused (opaque) first, non-focused (transparent) second
+            # Merge preview: layered rendering for focused objects on top
             focused_branch = spec.main_branch if spec.current_focus == 0 else spec.sub_branch
             non_focused_branch = spec.sub_branch if spec.current_focus == 0 else spec.main_branch
 
-            # Draw focused (bottom, opaque) with terrain
+            # Layer 1: Focused branch terrain and grid (all cells, no entities)
             self._draw_branch(
                 focused_branch,
                 goal_active=spec.goal_active,
                 has_branched=spec.has_branched,
                 animation_frame=spec.animation_frame,
-                skip_terrain=False
+                skip_terrain=False,
+                skip_entities=True  # Skip entities for now
             )
 
-            # Draw non-focused (top, transparent) WITHOUT terrain (entities only)
+            # Layer 2: Non-focused branch terrain differences only (transparent overlay)
+            # Only show terrain cells that differ from focused branch
             self._draw_branch(
                 non_focused_branch,
                 goal_active=spec.goal_active,
                 has_branched=spec.has_branched,
                 animation_frame=spec.animation_frame,
-                skip_terrain=True
+                skip_terrain=False,
+                skip_entities=True,  # Skip entities for now
+                terrain_diff_reference=focused_branch.state  # Only show differences
+            )
+
+            # Layer 3: Non-focused branch entities only (transparent overlay)
+            self._draw_branch(
+                non_focused_branch,
+                goal_active=spec.goal_active,
+                has_branched=spec.has_branched,
+                animation_frame=spec.animation_frame,
+                skip_terrain=True,  # No terrain
+                skip_entities=False  # Draw entities
+            )
+
+            # Layer 4: Focused branch entities on top (opaque, highest layer)
+            self._draw_branch(
+                focused_branch,
+                goal_active=spec.goal_active,
+                has_branched=spec.has_branched,
+                animation_frame=spec.animation_frame,
+                skip_terrain=True,  # No terrain (already drawn)
+                skip_entities=False  # Draw entities on top
             )
         else:
             # Normal mode: draw in standard order
@@ -388,8 +451,14 @@ class ArcadeRenderer:
                      hidden_main: Optional[BranchState] = None,
                      hidden_sub: Optional[BranchState] = None,
                      current_focus: int = 0,
-                     skip_terrain: bool = False):
-        """Draw a single branch panel."""
+                     skip_terrain: bool = False,
+                     skip_entities: bool = False,
+                     terrain_diff_reference: Optional[BranchState] = None):
+        """Draw a single branch panel.
+
+        Args:
+            terrain_diff_reference: If provided, only draw terrain cells that differ from this reference.
+        """
         state = spec.state
         start_x = spec.pos_x
         start_y = spec.pos_y
@@ -416,39 +485,42 @@ class ArcadeRenderer:
         if not skip_terrain:
             terrain_sprites, dynamic_cells = self._build_terrain_spritelist(
                 state, start_x, start_y, cell_size,
-                goal_active, has_branched, spec.highlight_branch_point
+                goal_active, has_branched, spec.highlight_branch_point,
+                terrain_diff_reference
             )
             terrain_sprites.alpha = int(spec.alpha * 255)
             terrain_sprites.draw()
             self._draw_dynamic_terrain(start_x, start_y, state, cell_size,
-                                       dynamic_cells, has_branched, spec.alpha)
+                                       dynamic_cells, has_branched, spec.alpha,
+                                       terrain_diff_reference)
 
-        # Entities (boxes)
-        for e in state.entities:
-            if e.uid != 0 and e.type == EntityType.BOX:
-                self._draw_entity(start_x, start_y, e, state, cell_size, spec.alpha, spec.border_color)
+        # Entities (boxes) - skip if requested
+        if not skip_entities:
+            for e in state.entities:
+                if e.uid != 0 and e.type == EntityType.BOX:
+                    self._draw_entity(start_x, start_y, e, state, cell_size, spec.alpha, spec.border_color)
 
-        # Shadow connections (only on focused, full-scale branch)
-        if spec.is_focused and spec.scale >= 1.0:
-            self._draw_shadow_connections(start_x, start_y, state, animation_frame, cell_size)
+            # Shadow connections (only on focused, full-scale branch)
+            if spec.is_focused and spec.scale >= 1.0:
+                self._draw_shadow_connections(start_x, start_y, state, animation_frame, cell_size)
 
-        # Inherited hold hint (merge preview only)
-        if spec.is_merge_preview and hidden_main and hidden_sub:
-            self._draw_inherited_hold_hint(
-                start_x, start_y, state,
-                hidden_main, hidden_sub,
-                current_focus, animation_frame, cell_size
-            )
+            # Inherited hold hint (merge preview only)
+            if spec.is_merge_preview and hidden_main and hidden_sub:
+                self._draw_inherited_hold_hint(
+                    start_x, start_y, state,
+                    hidden_main, hidden_sub,
+                    current_focus, animation_frame, cell_size
+                )
 
-        # Player
-        held_items = state.get_held_items()
-        held_uid = held_items[0] if held_items else None
-        if held_uid:
-            color_index = (held_uid - 1) % len(BOX_COLORS)
-            player_color = BOX_COLORS[color_index]
-        else:
-            player_color = BLUE if (spec.is_focused or spec.is_merge_preview) else GRAY
-        self._draw_player(start_x, start_y, state.player, player_color, held_uid, cell_size, spec.alpha)
+            # Player
+            held_items = state.get_held_items()
+            held_uid = held_items[0] if held_items else None
+            if held_uid:
+                color_index = (held_uid - 1) % len(BOX_COLORS)
+                player_color = BOX_COLORS[color_index]
+            else:
+                player_color = BLUE if (spec.is_focused or spec.is_merge_preview) else GRAY
+            self._draw_player(start_x, start_y, state.player, player_color, held_uid, cell_size, spec.alpha)
 
         # Cell hint (only for focused, full-scale)
         if spec.interaction_hint and spec.scale >= 1.0:
@@ -599,22 +671,23 @@ class ArcadeRenderer:
         self._draw_rect_filled(cell_x, cell_y, box_size, box_size, display_color)
 
         # Border color and style
-        if is_transparent_branch and branch_color:
-            # Use branch color for transparent overlay boxes
-            border_color = (*branch_color, int(alpha * 255))
-            border_thickness = max(1, int(3 * scale))  # Thicker border
+        if is_transparent_branch:
+            # Transparent overlay: no border
+            border_color = None
+            border_thickness = 0
         else:
             # Normal black border
             border_color = (*BLACK, int(alpha * 255))
             border_thickness = max(1, int(2 * scale))
 
-        # Border (dashed for shadow, solid otherwise)
-        if is_shadow:
-            self._draw_dashed_rect(cell_x, cell_y, box_size, box_size,
-                                  border_color, border_thickness)
-        else:
-            self._draw_rect_outline(cell_x, cell_y, box_size, box_size,
-                                   border_color, border_thickness)
+        # Border (dashed for shadow, solid otherwise, none for transparent overlay)
+        if border_thickness > 0 and border_color is not None:
+            if is_shadow:
+                self._draw_dashed_rect(cell_x, cell_y, box_size, box_size,
+                                      border_color, border_thickness)
+            else:
+                self._draw_rect_outline(cell_x, cell_y, box_size, box_size,
+                                       border_color, border_thickness)
 
         # UID text (cached)
         center_x = cell_x + box_size // 2
