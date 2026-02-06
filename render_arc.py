@@ -233,8 +233,6 @@ class ArcadeRenderer:
                 elif terrain == TerrainType.SWITCH:
                     activated = any(e.pos == pos for e in state.entities)
                     texture_key = 'switch_on' if activated else 'switch_off'
-                elif terrain in (TerrainType.WEIGHT1, TerrainType.WEIGHT2):
-                    texture_key = 'light_orange'
                 elif terrain == TerrainType.NO_CARRY:
                     texture_key = 'no_carry_bg'
                     dynamic_cells.append((gx, gy, terrain, False))  # Need NO_CARRY rendering
@@ -304,7 +302,7 @@ class ArcadeRenderer:
                     color = (*GRAY, int(alpha * 255)) if has_branched else (*GREEN, int(alpha * 255))
                     self._draw_branch_marker(center_x, center_y, terrain, color, cell_size)
 
-        # Draw weight text overlays and NO_CARRY markers
+        # Draw NO_CARRY markers
         for gx in range(GRID_SIZE):
             for gy in range(GRID_SIZE):
                 pos = (gx, gy)
@@ -317,13 +315,7 @@ class ArcadeRenderer:
                     if terrain == ref_terrain:
                         continue  # Same terrain - skip
 
-                if terrain in (TerrainType.WEIGHT1, TerrainType.WEIGHT2):
-                    center_x, center_y = self._grid_to_screen(start_x, start_y, gx, gy, cell_size)
-                    text = '1' if terrain == TerrainType.WEIGHT1 else '2'
-                    self._draw_cached_text(f'weight_{text}_{scale:.2f}_{alpha:.2f}', text,
-                                           center_x, center_y, (*ORANGE, int(alpha * 255)),
-                                           font_size=int(14 * scale))
-                elif terrain == TerrainType.NO_CARRY:
+                if terrain == TerrainType.NO_CARRY:
                     cell_x = start_x + gx * cell_size
                     cell_y = start_y + gy * cell_size
                     center_x, center_y = self._grid_to_screen(start_x, start_y, gx, gy, cell_size)
@@ -575,16 +567,6 @@ class ArcadeRenderer:
                     activated = any(e.pos == pos for e in state.entities)
                     color = (200, 255, 200) if activated else (255, 200, 200)
                     self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, color)
-                elif terrain == TerrainType.WEIGHT1:
-                    self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, LIGHT_ORANGE)
-                    arcade.draw_text('1', center_x, center_y, ORANGE,
-                                    font_size=int(14 * cell_size / CELL_SIZE),
-                                    anchor_x="center", anchor_y="center")
-                elif terrain == TerrainType.WEIGHT2:
-                    self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, LIGHT_ORANGE)
-                    arcade.draw_text('2', center_x, center_y, ORANGE,
-                                    font_size=int(14 * cell_size / CELL_SIZE),
-                                    anchor_x="center", anchor_y="center")
                 elif terrain == TerrainType.NO_CARRY:
                     # Light orange background
                     self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, (255, 240, 220))

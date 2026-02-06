@@ -143,8 +143,6 @@
         .cell.floor-void { background: #0a0a0a; color: #333; }
         .cell.floor-wall { background: #000; color: #666; }
         .cell.floor-switch { background: #ffcccc; color: #c00; }
-        .cell.floor-weight1 { background: #ffe4cc; color: #f80; }
-        .cell.floor-weight2 { background: #ffccaa; color: #f60; }
         .cell.floor-branch1 { background: #e8ffe8; color: #0a0; }
         .cell.floor-branch2 { background: #ccffcc; color: #0a0; }
         .cell.floor-branch3 { background: #a0ffa0; color: #080; }
@@ -215,7 +213,7 @@
                 <span id="playerPos" style="color: #60a5fa;">Not set</span>
             </div>
             <div class="info-box">
-                ℹ️ <strong>Single-char symbols</strong> • IDs auto-generated • <strong>w</strong>=weight1, <strong>W</strong>=weight2, <strong>H</strong>=hole • <strong>v/V/x/X</strong>=branch×1/2/3/4 • Default: all walls (#)
+                ℹ️ <strong>Single-char symbols</strong> • IDs auto-generated • <strong>H</strong>=hole • <strong>v/V/x/X</strong>=branch×1/2/3/4 • Default: all walls (#)
             </div>
         </div>
         
@@ -357,10 +355,8 @@
                 cell.classList.add('floor-switch');
                 cell.textContent = 'S';
             } else if (floor === 'w') {
-                cell.classList.add('floor-weight1');
                 cell.textContent = 'w';
             } else if (floor === 'W') {
-                cell.classList.add('floor-weight2');
                 cell.textContent = 'W';
             } else if (floor === 'v') {
                 cell.classList.add('floor-branch1');

@@ -14,8 +14,6 @@ class TerrainType(Enum):
     FLOOR = "."
     WALL = "#"
     SWITCH = "S"
-    WEIGHT1 = "w"
-    WEIGHT2 = "W"
     NO_CARRY = "c"
     BRANCH1 = "v"  # 1 use remaining
     BRANCH2 = "V"  # 2 uses remaining

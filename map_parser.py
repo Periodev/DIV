@@ -1,7 +1,7 @@
 """
 div - Dual-layer Map Parser
 Symbol definitions:
-  Floor: . (floor) ' ' (void) # (wall) S (switch) w (weight-limit 1) W (weight-limit 2) V (branch point) G (goal) H (hole)
+  Floor: . (floor) ' ' (void) # (wall) S (switch) V (branch point) G (goal) H (hole)
   Object: . (empty) P (player) B (box)
 
 All IDs are auto-generated in left-to-right, top-to-bottom order.
@@ -49,10 +49,6 @@ def parse_dual_layer(floor_map_str, object_map_str) -> LevelSource:
                 terrain[pos] = TerrainType.HOLE
             elif char == 'S':
                 terrain[pos] = TerrainType.SWITCH
-            elif char == 'w':
-                terrain[pos] = TerrainType.WEIGHT1
-            elif char == 'W':
-                terrain[pos] = TerrainType.WEIGHT2
             elif char == 'c':
                 terrain[pos] = TerrainType.NO_CARRY
             # '.' is not added to terrain (default FLOOR)
