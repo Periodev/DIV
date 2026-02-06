@@ -209,6 +209,25 @@ class Timeline:
         return result
 
     @staticmethod
+    def merge_normal(main: BranchState, sub: BranchState) -> BranchState:
+        """Full normal merge: converge + settle carried items."""
+        merged = Timeline.converge(main, sub)
+        Timeline.settle_carried(merged)
+        return merged
+
+    @staticmethod
+    def merge_inherit(main: BranchState, sub: BranchState, inherit_uids: Set[int]) -> BranchState:
+        """Full inherit merge: converge + mark inherit items + settle."""
+        merged = Timeline.converge(main, sub)
+        if inherit_uids:
+            for uid in inherit_uids:
+                for e in merged.entities:
+                    if e.uid == uid:
+                        e.holder = 0
+        Timeline.settle_carried(merged)
+        return merged
+
+    @staticmethod
     def converge_one(state: BranchState, target_uid: int, target_pos: Position = None) -> Entity:
         """Collapse all instances of a uid into one.
 

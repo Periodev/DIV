@@ -99,10 +99,8 @@ class GameController:
             return self.main_branch
 
         focused, other = (self.main_branch, self.sub_branch) if self.current_focus == 0 else (self.sub_branch, self.main_branch)
-        merged = Timeline.converge(focused, other)
-        preview = merged.copy()
-        Timeline.settle_carried(preview)
-        return preview
+        preview = Timeline.merge_normal(focused, other)
+        return preview.copy()
 
     # Branch point usage: decrement after use
     BRANCH_DECREMENT = {
@@ -143,11 +141,7 @@ class GameController:
             return False
 
         focused, other = (self.main_branch, self.sub_branch) if self.current_focus == 0 else (self.sub_branch, self.main_branch)
-        merged = Timeline.converge(focused, other)
-
-        # Normal merge: settle focused player's held items to converge shadows
-        # (sub's held items were already dropped by converge)
-        Timeline.settle_carried(merged)
+        merged = Timeline.merge_normal(focused, other)
 
         self.main_branch = merged
         self.sub_branch = None
@@ -191,20 +185,7 @@ class GameController:
         # Remember which items to inherit (before converge drops them)
         items_to_inherit = focused_held | other_held
 
-        # Execute merge (this will drop other's held items)
-        merged = Timeline.converge(focused, other)
-
-        # Mark ALL instances of items to inherit as held
-        # This ensures settle_carried can properly converge all shadows
-        for uid in items_to_inherit:
-            # Find all instances of this entity
-            instances = [e for e in merged.entities if e.uid == uid]
-            # Mark ALL instances as holder=0 so settle_carried can converge them
-            for e in instances:
-                e.holder = 0
-
-        # Use settle_carried to properly converge shadows and set position
-        Timeline.settle_carried(merged)
+        merged = Timeline.merge_inherit(focused, other, items_to_inherit)
 
         self.main_branch = merged
         self.sub_branch = None
