@@ -212,8 +212,8 @@ class ArcadeRenderer:
                         pass  # Different terrain type - include this cell
                     elif terrain == TerrainType.SWITCH:
                         # Check if switch activation state differs
-                        activated = any(e.pos == pos for e in state.entities)
-                        ref_activated = any(e.pos == pos for e in terrain_diff_reference.entities)
+                        activated = state.switch_activated(pos)
+                        ref_activated = terrain_diff_reference.switch_activated(pos)
                         if activated == ref_activated:
                             continue  # Same activation state - skip
                     elif terrain == TerrainType.HOLE:
@@ -231,7 +231,7 @@ class ArcadeRenderer:
                 if terrain == TerrainType.WALL:
                     texture_key = 'black'
                 elif terrain == TerrainType.SWITCH:
-                    activated = any(e.pos == pos for e in state.entities)
+                    activated = state.switch_activated(pos)
                     texture_key = 'switch_on' if activated else 'switch_off'
                 elif terrain == TerrainType.NO_CARRY:
                     texture_key = 'no_carry_bg'
@@ -564,7 +564,7 @@ class ArcadeRenderer:
                 if terrain == TerrainType.WALL:
                     self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, BLACK)
                 elif terrain == TerrainType.SWITCH:
-                    activated = any(e.pos == pos for e in state.entities)
+                    activated = state.switch_activated(pos)
                     color = (200, 255, 200) if activated else (255, 200, 200)
                     self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, color)
                 elif terrain == TerrainType.NO_CARRY:
@@ -772,7 +772,7 @@ class ArcadeRenderer:
                 terrain = state.terrain.get(pos)
 
                 if terrain == TerrainType.SWITCH:
-                    activated = any(e.pos == pos for e in state.entities)
+                    activated = state.switch_activated(pos)
                     color = (0, 200, 0, int(alpha * 255)) if activated else (150, 0, 0, int(alpha * 255))
                     self._draw_rect_outline(cell_x, cell_y, cell_size, cell_size,
                                            color, max(1, int(5 * scale)))

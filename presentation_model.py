@@ -426,9 +426,9 @@ class ViewModelBuilder:
 
     @staticmethod
     def _check_goal_active(state: BranchState) -> bool:
-        """Check if all switches have weight."""
+        """Check if all switches are activated by boxes."""
         return all(
-            any(e.pos == pos for e in state.entities)
+            state.switch_activated(pos)
             for pos, t in state.terrain.items()
             if t == TerrainType.SWITCH
         )

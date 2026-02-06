@@ -123,9 +123,16 @@ class BranchState:
                    and Physics.grounded(e)
                    for e in self.entities)
 
+    def switch_activated(self, pos: Position) -> bool:
+        """Check if a switch is activated by a grounded box at pos."""
+        return any(e.type == EntityType.BOX
+                   and e.pos == pos
+                   and Physics.grounded(e)
+                   for e in self.entities)
+
     def all_switches_activated(self) -> bool:
-        """Check if all switches have weight on them."""
-        return all(Physics.weight_at(pos, self) > 0
+        """Check if all switches are activated by boxes."""
+        return all(self.switch_activated(pos)
                    for pos, t in self.terrain.items()
                    if t == TerrainType.SWITCH)
 
