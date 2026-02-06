@@ -353,6 +353,8 @@ class ArcadeRenderer:
             # Merge preview: layered rendering for focused objects on top
             focused_branch = spec.main_branch if spec.current_focus == 0 else spec.sub_branch
             non_focused_branch = spec.sub_branch if spec.current_focus == 0 else spec.main_branch
+            hidden_main = spec.main_branch.state
+            hidden_sub = spec.sub_branch.state
 
             # Layer 1: Focused branch terrain and grid (all cells, no entities)
             self._draw_branch(
@@ -361,7 +363,10 @@ class ArcadeRenderer:
                 has_branched=spec.has_branched,
                 animation_frame=spec.animation_frame,
                 skip_terrain=False,
-                skip_entities=True  # Skip entities for now
+                skip_entities=True,  # Skip entities for now
+                hidden_main=hidden_main,
+                hidden_sub=hidden_sub,
+                current_focus=spec.current_focus
             )
 
             # Layer 2: Non-focused branch terrain differences only (transparent overlay)
@@ -373,7 +378,10 @@ class ArcadeRenderer:
                 animation_frame=spec.animation_frame,
                 skip_terrain=False,
                 skip_entities=True,  # Skip entities for now
-                terrain_diff_reference=focused_branch.state  # Only show differences
+                terrain_diff_reference=focused_branch.state,  # Only show differences
+                hidden_main=hidden_main,
+                hidden_sub=hidden_sub,
+                current_focus=spec.current_focus
             )
 
             # Layer 3: Non-focused branch entities only (transparent overlay)
@@ -383,7 +391,10 @@ class ArcadeRenderer:
                 has_branched=spec.has_branched,
                 animation_frame=spec.animation_frame,
                 skip_terrain=True,  # No terrain
-                skip_entities=False  # Draw entities
+                skip_entities=False,  # Draw entities
+                hidden_main=hidden_main,
+                hidden_sub=hidden_sub,
+                current_focus=spec.current_focus
             )
 
             # Layer 4: Focused branch entities on top (opaque, highest layer)
@@ -393,7 +404,10 @@ class ArcadeRenderer:
                 has_branched=spec.has_branched,
                 animation_frame=spec.animation_frame,
                 skip_terrain=True,  # No terrain (already drawn)
-                skip_entities=False  # Draw entities on top
+                skip_entities=False,  # Draw entities on top
+                hidden_main=hidden_main,
+                hidden_sub=hidden_sub,
+                current_focus=spec.current_focus
             )
         else:
             # Normal mode: draw in standard order
@@ -497,7 +511,7 @@ class ArcadeRenderer:
                 self._draw_shadow_connections(start_x, start_y, state, animation_frame, cell_size)
 
             # Inherited hold hint (merge preview only)
-            if spec.is_merge_preview and hidden_main and hidden_sub:
+            if spec.is_merge_preview and spec.show_inherit_hint and hidden_main and hidden_sub:
                 self._draw_inherited_hold_hint(
                     start_x, start_y, state,
                     hidden_main, hidden_sub,

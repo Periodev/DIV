@@ -55,6 +55,7 @@ class GameWindow(arcade.Window):
 
         # Track held keys for continuous movement
         self.held_keys = set()
+        self.shift_held = False
 
         arcade.set_background_color(arcade.color.WHITE)
 
@@ -131,6 +132,9 @@ class GameWindow(arcade.Window):
 
     def on_key_press(self, key: int, modifiers: int):
         """Handle key press events."""
+        if key in (arcade.key.LSHIFT, arcade.key.RSHIFT):
+            self.shift_held = True
+            return
         # Movement keys - add to held set
         if key in (arcade.key.UP, arcade.key.DOWN, arcade.key.LEFT, arcade.key.RIGHT,
                    arcade.key.W, arcade.key.A, arcade.key.S, arcade.key.D):
@@ -228,6 +232,9 @@ class GameWindow(arcade.Window):
 
     def on_key_release(self, key: int, modifiers: int):
         """Handle key release events."""
+        if key in (arcade.key.LSHIFT, arcade.key.RSHIFT):
+            self.shift_held = False
+            return
         if key in self.held_keys:
             self.held_keys.discard(key)
 
@@ -266,6 +273,7 @@ class GameWindow(arcade.Window):
             slide_progress,
             self.slide_direction,
             self.merge_preview_active,
+            self.merge_preview_active and self.shift_held and self.controller.can_show_inherit_hint(),
             merge_preview_progress,
             merge_preview_swap_progress,
             merge_animation_progress,
@@ -289,9 +297,9 @@ floor_map = '''
 ##SG##
 ##..##
 ##HH##
+##HH##
 ##.v##
-##..##
-######
+##.S##
 '''
 
 # Object Map
@@ -300,8 +308,8 @@ object_map = '''
 ......
 ......
 ......
+..B...
 ..BP..
-......
 '''
 
 

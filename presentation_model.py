@@ -28,6 +28,7 @@ class BranchViewSpec:
     timeline_hint: str
     highlight_branch_point: bool
     is_merge_preview: bool
+    show_inherit_hint: bool
     scale: float = 1.0
     pos_x: int = 0
     pos_y: int = 0
@@ -105,6 +106,7 @@ class ViewModelBuilder:
               slide_progress: float = 0.0,
               slide_direction: int = 0,
               merge_preview_active: bool = False,
+              show_inherit_hint: bool = False,
               merge_preview_progress: float = 0.0,
               merge_preview_swap_progress: float = 0.0,
               merge_animation_progress: float = 0.0,
@@ -141,6 +143,7 @@ class ViewModelBuilder:
         # Alpha values (for merge preview)
         main_alpha = 1.0
         sub_alpha = 1.0
+        is_merge_preview = merge_preview_active or merge_preview_progress > 0 or merge_animation_progress > 0
 
         # Calculate positions and scales based on animation state
         if not has_branched:
@@ -186,7 +189,8 @@ class ViewModelBuilder:
             border_color=(255, 140, 0),  # Orange - high contrast
             timeline_hint=timeline_hint if focus == 0 else '',
             interaction_hint=interaction_hint if focus == 0 else None,
-            is_merge_preview=False,
+            is_merge_preview=is_merge_preview,
+            show_inherit_hint=show_inherit_hint and focus == 0,
             scale=main_scale,
             pos_x=main_x,
             pos_y=main_y,
@@ -203,7 +207,8 @@ class ViewModelBuilder:
                 border_color=(0, 220, 255),  # Cyan - high contrast
                 timeline_hint=timeline_hint if focus == 1 else '',
                 interaction_hint=interaction_hint if focus == 1 else None,
-                is_merge_preview=False,
+                is_merge_preview=is_merge_preview,
+                show_inherit_hint=show_inherit_hint and focus == 1,
                 scale=sub_scale,
                 pos_x=sub_x,
                 pos_y=sub_y,
@@ -401,6 +406,7 @@ class ViewModelBuilder:
         timeline_hint: str,
         interaction_hint: Optional[InteractionHint],
         is_merge_preview: bool,
+        show_inherit_hint: bool,
         scale: float = 1.0,
         pos_x: int = 0,
         pos_y: int = 0,
@@ -418,6 +424,7 @@ class ViewModelBuilder:
             timeline_hint=timeline_hint,
             highlight_branch_point=highlight and is_focused,
             is_merge_preview=is_merge_preview,
+            show_inherit_hint=show_inherit_hint,
             scale=scale,
             pos_x=pos_x,
             pos_y=pos_y,

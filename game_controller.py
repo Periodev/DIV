@@ -157,6 +157,25 @@ class GameController:
         """
         return self._merge_branches(mode="inherit")
 
+    def can_show_inherit_hint(self) -> bool:
+        """Check if inherit merge is possible and would inherit items."""
+        if not self.has_branched:
+            return False
+
+        focused = self.get_active_branch()
+        other = self.sub_branch if self.current_focus == 0 else self.main_branch
+
+        focused_held = set(focused.get_held_items())
+        other_held = set(other.get_held_items())
+
+        # Hint only when focused is empty and other holds items
+        if focused_held or not other_held:
+            return False
+
+        total_items = len(focused_held | other_held)
+        capacity = Physics.effective_capacity(focused)
+        return total_items <= capacity
+
     def _merge_branches(self, mode: str) -> bool:
         """Merge branches with optional inherit mode."""
         if not self.has_branched:
@@ -253,7 +272,7 @@ class GameController:
         active = self.get_active_branch()
         result = GameLogic.try_drop(active)
         if result:
-            self.input_log.append('O')
+            self.input_log.append('D')
             self._save_snapshot()
         return result
 
