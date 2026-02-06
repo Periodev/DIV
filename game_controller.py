@@ -140,16 +140,7 @@ class GameController:
         if not self.has_branched:
             return False
 
-        focused, other = (self.main_branch, self.sub_branch) if self.current_focus == 0 else (self.sub_branch, self.main_branch)
-        merged = Timeline.merge_normal(focused, other)
-
-        self.main_branch = merged
-        self.sub_branch = None
-        self.has_branched = False
-        self.current_focus = 0
-        self.input_log.append('C')
-        self._save_snapshot()
-        return True
+        return self._merge_branches(mode="normal")
 
     def try_inherit_merge(self) -> bool:
         """Attempt to merge branches with inheritance (Shift+C).
@@ -164,34 +155,35 @@ class GameController:
         Returns:
             True if merge successful, False otherwise
         """
+        return self._merge_branches(mode="inherit")
+
+    def _merge_branches(self, mode: str) -> bool:
+        """Merge branches with optional inherit mode."""
         if not self.has_branched:
             return False
 
-        # Determine focused and other branches
         focused = self.get_active_branch()
         other = self.sub_branch if self.current_focus == 0 else self.main_branch
 
-        # Count total unique items being held
-        focused_held = set(focused.get_held_items())
-        other_held = set(other.get_held_items())
-        total_items = len(focused_held | other_held)
-
-        # Check capacity at focused player's position
-        capacity = Physics.effective_capacity(focused)
-
-        if total_items > capacity:
-            return False  # Not enough capacity to inherit
-
-        # Remember which items to inherit (before converge drops them)
-        items_to_inherit = focused_held | other_held
-
-        merged = Timeline.merge_inherit(focused, other, items_to_inherit)
+        if mode == "inherit":
+            focused_held = set(focused.get_held_items())
+            other_held = set(other.get_held_items())
+            total_items = len(focused_held | other_held)
+            capacity = Physics.effective_capacity(focused)
+            if total_items > capacity:
+                return False  # Not enough capacity to inherit
+            items_to_inherit = focused_held | other_held
+            merged = Timeline.merge_inherit(focused, other, items_to_inherit)
+            log_char = 'I'
+        else:
+            merged = Timeline.merge_normal(focused, other)
+            log_char = 'C'
 
         self.main_branch = merged
         self.sub_branch = None
         self.has_branched = False
         self.current_focus = 0
-        self.input_log.append('I')  # 'I' for Inherit
+        self.input_log.append(log_char)
         self._save_snapshot()
         return True
 
