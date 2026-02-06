@@ -944,7 +944,7 @@ class ArcadeRenderer:
                 int(inherit_line_color[1] * pulse),
                 int(inherit_line_color[2] * pulse)
             )
-            self._draw_lock_corners(start_x, start_y, (px, py), lock_color,
+            self._draw_lock_corners(start_x, start_y, (gx, gy), lock_color,
                                    cell_size, size=int(24 * scale),
                                    thickness=max(1, int(8 * scale)),
                                    margin=int(5 * scale))
