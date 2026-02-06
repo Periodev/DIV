@@ -916,7 +916,7 @@ class ArcadeRenderer:
 
             # Converge line: focused branch instance -> other branch ghost
             focused_instance = next(
-                (e for e in focused.entities if e.uid == uid and Physics.grounded(e)),
+                (e for e in focused.entities if e.uid == uid and (Physics.grounded(e) or e.z == -1)),
                 None
             )
             if focused_instance:
