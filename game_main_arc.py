@@ -182,19 +182,30 @@ class GameWindow(arcade.Window):
                 self.merge_preview_active = False
                 self.merge_preview_start_time = None
 
-        # Merge confirm (C key) - works in preview or directly
+        # Merge (C key) or Inherit Merge (Shift+C)
         elif key == arcade.key.C:
             if self.controller.has_branched:
+                # Check for Shift modifier
+                is_inherit = modifiers & arcade.key.MOD_SHIFT
+
                 if self.merge_preview_active:
                     # In preview mode: store states, execute merge, then animate
                     self.merge_animation_pre_focus = self.controller.current_focus
                     self.merge_animation_stored_main = self.controller.main_branch
                     self.merge_animation_stored_sub = self.controller.sub_branch
-                    self.controller.try_merge()  # Execute immediately
+
+                    if is_inherit:
+                        self.controller.try_inherit_merge()
+                    else:
+                        self.controller.try_merge()
+
                     self.merge_animation_start_time = time.time()  # Then animate with stored states
                 else:
                     # Not in preview: merge directly
-                    self.controller.try_merge()
+                    if is_inherit:
+                        self.controller.try_inherit_merge()
+                    else:
+                        self.controller.try_merge()
 
         # Switch focus with slide animation (Tab)
         elif key == arcade.key.TAB:

@@ -67,7 +67,12 @@ def run_game(floor_map: str, object_map: str,
                     else:
                         v_press_time = pygame.time.get_ticks()
                 elif event.key == pygame.K_c:
-                    controller.try_merge()
+                    # Check for Shift modifier
+                    mods = pygame.key.get_mods()
+                    if mods & pygame.KMOD_SHIFT:
+                        controller.try_inherit_merge()
+                    else:
+                        controller.try_merge()
                 elif event.key == pygame.K_TAB:
                     controller.switch_focus()
                 elif event.key == pygame.K_x or event.key == pygame.K_SPACE:

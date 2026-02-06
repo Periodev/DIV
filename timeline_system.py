@@ -168,16 +168,15 @@ class Timeline:
         main: the focused branch (player taken from here)
         sub: the non-focused branch
         Caller must determine focus and pass in correct order.
+
+        Non-focused branch's held items are dropped at sub player's position.
         """
         result = BranchState()
         result.terrain = main.terrain.copy()
         result.grid_size = main.grid_size
 
-        # Find uids that must drop: sub holding something AND main also holding something
-        main_held_uids = set(main.get_held_items())
+        # Find items held by sub (non-focused) branch that need to be dropped
         sub_held_uids = set(sub.get_held_items())
-        # Only drop sub's held items if main is also holding (can't hold two different items)
-        drop_uids = (sub_held_uids - main_held_uids) if main_held_uids else set()
 
         # Collect all non-player entities from both branches
         all_entities = [e for e in main.entities if e.uid != 0] + \
@@ -194,8 +193,8 @@ class Timeline:
             best = max(instances, key=Timeline._entity_priority)
             copied = Timeline._copy_entity(best)
 
-            # Sub's held entities drop at sub player's position (only if main also holding)
-            if copied.uid in drop_uids and copied.holder == 0:
+            # Drop sub's held items at sub player's position
+            if copied.uid in sub_held_uids and copied.holder == 0:
                 copied.holder = None
                 copied.z = 0
                 copied.collision = 1

@@ -135,14 +135,18 @@ class GameController:
         return True
 
     def try_merge(self) -> bool:
-        """Attempt to merge branches"""
+        """Attempt to merge branches (normal merge).
+
+        Non-focused branch's held items are dropped at their position.
+        """
         if not self.has_branched:
             return False
 
         focused, other = (self.main_branch, self.sub_branch) if self.current_focus == 0 else (self.sub_branch, self.main_branch)
         merged = Timeline.converge(focused, other)
 
-        # Settle: held boxes must converge immediately
+        # Normal merge: settle focused player's held items to converge shadows
+        # (sub's held items were already dropped by converge)
         Timeline.settle_carried(merged)
 
         self.main_branch = merged
@@ -150,6 +154,63 @@ class GameController:
         self.has_branched = False
         self.current_focus = 0
         self.input_log.append('C')
+        self._save_snapshot()
+        return True
+
+    def try_inherit_merge(self) -> bool:
+        """Attempt to merge branches with inheritance (Shift+C).
+
+        Unlike normal merge, this automatically settles all held items
+        to the focused player's position.
+
+        Checks:
+        1. Must be in branched state
+        2. Focused position must have enough capacity for all held items
+
+        Returns:
+            True if merge successful, False otherwise
+        """
+        if not self.has_branched:
+            return False
+
+        # Determine focused and other branches
+        focused = self.get_active_branch()
+        other = self.sub_branch if self.current_focus == 0 else self.main_branch
+
+        # Count total unique items being held
+        focused_held = set(focused.get_held_items())
+        other_held = set(other.get_held_items())
+        total_items = len(focused_held | other_held)
+
+        # Check capacity at focused player's position
+        capacity = Physics.effective_capacity(focused)
+
+        if total_items > capacity:
+            return False  # Not enough capacity to inherit
+
+        # Remember which items to inherit (before converge drops them)
+        items_to_inherit = focused_held | other_held
+
+        # Execute merge (this will drop other's held items)
+        merged = Timeline.converge(focused, other)
+
+        # Mark ALL instances of items to inherit as held
+        # This ensures settle_carried can properly converge all shadows
+        for uid in items_to_inherit:
+            # Find all instances of this entity
+            instances = [e for e in merged.entities if e.uid == uid]
+            # Mark ALL instances as holder=0 so settle_carried can converge them
+            for e in instances:
+                e.holder = 0
+
+        # Use settle_carried to properly converge shadows and set position
+        Timeline.settle_carried(merged)
+
+        self.main_branch = merged
+        self.sub_branch = None
+        self.has_branched = False
+        self.current_focus = 0
+        self.input_log.append('I')  # 'I' for Inherit
         self._save_snapshot()
         return True
 
@@ -313,15 +374,34 @@ class GameController:
     def get_timeline_hint(self) -> str:
         """Get timeline hint for branch point.
 
-        Returns: 'V' when on branch point (for highlight), '' otherwise
+        Returns: Hint string for V/C/Shift+C actions
         """
-        if self.has_branched:
-            #return 'C 合併  Tab 切換視角'
-            return 'C 合併'
+        if not self.has_branched:
+            # Not branched: show branch hint if on branch point
+            active = self.get_active_branch()
+            terrain = active.terrain.get(active.player.pos)
+            if terrain in self.BRANCH_DECREMENT:
+                return 'V 分裂'
+            return ''
 
-        active = self.get_active_branch()
-        terrain = active.terrain.get(active.player.pos)
-        if terrain in self.BRANCH_DECREMENT:
-            return 'V 分裂'
+        # Branched state: determine merge hint
+        focused = self.get_active_branch()
+        other = self.sub_branch if self.current_focus == 0 else self.main_branch
 
-        return ''
+        focused_held = set(focused.get_held_items())
+        other_held = set(other.get_held_items())
+
+        # Case 1: Both holding different items → must use inherit merge
+        if focused_held and other_held and focused_held != other_held:
+            return 'Shift+C 繼承合併'
+
+        # Case 2: Only other branch holding items
+        if not focused_held and other_held:
+            # Check if focused is on NO_CARRY
+            if focused.terrain.get(focused.player.pos) == TerrainType.NO_CARRY:
+                return 'C 合併  [繼承禁止]'
+            else:
+                return 'C 合併  Shift+C 繼承'
+
+        # Case 3: Normal merge available
+        return 'C 合併'
