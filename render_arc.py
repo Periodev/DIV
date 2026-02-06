@@ -880,8 +880,11 @@ class ArcadeRenderer:
         if not inherited:
             return
 
+        from timeline_system import Physics
+
         scale = cell_size / CELL_SIZE
         inherit_line_color = ORANGE
+        converge_line_color = CYAN
         slow_offset = animation_frame * 0.25
 
         for uid in inherited:
@@ -910,6 +913,19 @@ class ArcadeRenderer:
             self._draw_cached_text(f'ghost_{uid}_{scale:.2f}', str(uid),
                                    center_x, center_y, GRAY,
                                    font_size=max(12, int(14 * scale)))
+
+            # Converge line: focused branch instance -> other branch ghost
+            focused_instance = next(
+                (e for e in focused.entities if e.uid == uid and Physics.grounded(e)),
+                None
+            )
+            if focused_instance:
+                fx, fy = focused_instance.pos
+                focused_cx, focused_cy = self._grid_to_screen(start_x, start_y, fx, fy, cell_size)
+                ghost_cx, ghost_cy = self._grid_to_screen(start_x, start_y, gx, gy, cell_size)
+                self._draw_dashed_line(focused_cx, focused_cy, ghost_cx, ghost_cy,
+                                       converge_line_color, max(1, int(2 * scale)),
+                                       int(10 * scale), slow_offset)
 
             # Dashed line
             ghost_cx, ghost_cy = self._grid_to_screen(start_x, start_y, gx, gy, cell_size)
