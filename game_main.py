@@ -134,9 +134,9 @@ def run_game(floor_map: str, object_map: str,
 # Floor Map
 floor_map = '''
 ###S##
-###w##
-.XwH.#
-##HwH#
+###c##
+.XcH.#
+##HcH#
 ##G###
 ######
 '''

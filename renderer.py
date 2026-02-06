@@ -280,6 +280,13 @@ class Renderer:
                     pygame.draw.rect(self.screen, LIGHT_ORANGE, rect)
                     text = self.font.render('2', True, ORANGE)
                     self.screen.blit(text, text.get_rect(center=rect.center))
+                elif terrain == TerrainType.NO_CARRY:
+                    # Light orange background with dark orange border
+                    pygame.draw.rect(self.screen, (255, 240, 220), rect)
+                    pygame.draw.rect(self.screen, (255, 140, 0), rect, 4)
+                    # 'c' symbol in center
+                    text = self.font.render('c', True, (255, 100, 0))
+                    self.screen.blit(text, text.get_rect(center=rect.center))
                 elif terrain in (TerrainType.BRANCH1, TerrainType.BRANCH2,
                                  TerrainType.BRANCH3, TerrainType.BRANCH4):
                     # Concentric circles: BRANCH4=3circles+dot, BRANCH3=2+dot, etc.
@@ -486,6 +493,13 @@ class Renderer:
                 elif terrain == TerrainType.WEIGHT2:
                     pygame.draw.rect(self.screen, LIGHT_ORANGE, rect)
                     text = self.font.render('2', True, ORANGE)
+                    self.screen.blit(text, text.get_rect(center=rect.center))
+                elif terrain == TerrainType.NO_CARRY:
+                    # Light orange background with dark orange border
+                    pygame.draw.rect(self.screen, (255, 240, 220), rect)
+                    pygame.draw.rect(self.screen, (255, 140, 0), rect, 4)
+                    # 'c' symbol in center
+                    text = self.font.render('c', True, (255, 100, 0))
                     self.screen.blit(text, text.get_rect(center=rect.center))
                 elif terrain in (TerrainType.BRANCH1, TerrainType.BRANCH2,
                                  TerrainType.BRANCH3, TerrainType.BRANCH4):

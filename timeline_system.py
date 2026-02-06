@@ -16,6 +16,7 @@ class TerrainType(Enum):
     SWITCH = "S"
     WEIGHT1 = "w"
     WEIGHT2 = "W"
+    NO_CARRY = "c"
     BRANCH1 = "v"  # 1 use remaining
     BRANCH2 = "V"  # 2 uses remaining
     BRANCH3 = "x"  # 3 uses remaining
@@ -25,8 +26,7 @@ class TerrainType(Enum):
 
 class PhysicsResult(Enum):
     OK = 0
-    COLLAPSE = 1
-    FALL = 2
+    FALL = 1
 
 # ===== Static Configuration =====
 @dataclass
@@ -276,18 +276,6 @@ class Physics:
         return state.sum_weight_at(pos)
 
     @staticmethod
-    def check_collapse(state: BranchState) -> bool:
-        """Check if weight-limited floors are overloaded"""
-        for pos, terrain in state.terrain.items():
-            if terrain == TerrainType.WEIGHT1:
-                if Physics.weight_at(pos, state) > 1:
-                    return True
-            elif terrain == TerrainType.WEIGHT2:
-                if Physics.weight_at(pos, state) > 2:
-                    return True
-        return False
-
-    @staticmethod
     def check_fall(state: BranchState) -> bool:
         """Ground can't support player: net collision < player's own contribution"""
         return Physics.collision_at(state.player.pos, state) < state.player.collision
@@ -313,6 +301,29 @@ class Physics:
         return entity.z == 0
 
     @staticmethod
+    def effective_capacity(state: BranchState, at_pos: Position = None) -> int:
+        """Calculate effective carrying capacity at a position.
+
+        Args:
+            state: Current game state
+            at_pos: Position to check (None = player's current position)
+
+        Returns:
+            Effective capacity (0 = cannot carry, 1 = can carry one item)
+        """
+        base_capacity = 1
+
+        # Default to player's current position
+        pos = at_pos if at_pos is not None else state.player.pos
+        terrain = state.terrain.get(pos, TerrainType.FLOOR)
+
+        # NO_CARRY terrain reduces capacity to 0
+        if terrain == TerrainType.NO_CARRY:
+            return 0
+
+        return base_capacity
+
+    @staticmethod
     def in_bound(pos: Position, state: BranchState):
         return (0 <= pos[0] < state.grid_size and 0 <= pos[1] < state.grid_size)
 
@@ -331,9 +342,7 @@ class Physics:
             if not changed:
                 break
 
-        # 2. Check failure conditions
-        if Physics.check_collapse(state):
-            return PhysicsResult.COLLAPSE
+        # 2. Check fall only (collapse checks removed)
         if Physics.check_fall(state):
             return PhysicsResult.FALL
 

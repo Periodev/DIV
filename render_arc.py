@@ -80,6 +80,7 @@ class ArcadeRenderer:
             'gray': arcade.make_soft_square_texture(CELL_SIZE, GRAY, outer_alpha=255),
             'yellow': arcade.make_soft_square_texture(CELL_SIZE, YELLOW, outer_alpha=255),
             'light_orange': arcade.make_soft_square_texture(CELL_SIZE, LIGHT_ORANGE, outer_alpha=255),
+            'no_carry_bg': arcade.make_soft_square_texture(CELL_SIZE, (255, 240, 220), outer_alpha=255),
             'switch_on': arcade.make_soft_square_texture(CELL_SIZE, (200, 255, 200), outer_alpha=255),
             'switch_off': arcade.make_soft_square_texture(CELL_SIZE, (255, 200, 200), outer_alpha=255),
             'hole_filled': arcade.make_soft_square_texture(CELL_SIZE, (160, 120, 60), outer_alpha=255),
@@ -170,6 +171,7 @@ class ArcadeRenderer:
                 color_map = {
                     'white': WHITE, 'black': BLACK, 'gray': GRAY,
                     'yellow': YELLOW, 'light_orange': LIGHT_ORANGE,
+                    'no_carry_bg': (255, 240, 220),
                     'switch_on': (200, 255, 200), 'switch_off': (255, 200, 200),
                     'hole_filled': (160, 120, 60), 'hole_empty': (60, 40, 20),
                     'branch_highlight': (150, 255, 150),
@@ -207,6 +209,9 @@ class ArcadeRenderer:
                     texture_key = 'switch_on' if activated else 'switch_off'
                 elif terrain in (TerrainType.WEIGHT1, TerrainType.WEIGHT2):
                     texture_key = 'light_orange'
+                elif terrain == TerrainType.NO_CARRY:
+                    texture_key = 'no_carry_bg'
+                    dynamic_cells.append((gx, gy, terrain, False))  # Need NO_CARRY rendering
                 elif terrain in (TerrainType.BRANCH1, TerrainType.BRANCH2,
                                 TerrainType.BRANCH3, TerrainType.BRANCH4):
                     # Check if this is a highlighted branch point
@@ -268,7 +273,7 @@ class ArcadeRenderer:
                     color = (*GRAY, int(alpha * 255)) if has_branched else (*GREEN, int(alpha * 255))
                     self._draw_branch_marker(center_x, center_y, terrain, color, cell_size)
 
-        # Draw weight text overlays
+        # Draw weight text overlays and NO_CARRY markers
         for gx in range(GRID_SIZE):
             for gy in range(GRID_SIZE):
                 pos = (gx, gy)
@@ -278,6 +283,18 @@ class ArcadeRenderer:
                     text = '1' if terrain == TerrainType.WEIGHT1 else '2'
                     self._draw_cached_text(f'weight_{text}_{scale:.2f}_{alpha:.2f}', text,
                                            center_x, center_y, (*ORANGE, int(alpha * 255)),
+                                           font_size=int(14 * scale))
+                elif terrain == TerrainType.NO_CARRY:
+                    cell_x = start_x + gx * cell_size
+                    cell_y = start_y + gy * cell_size
+                    center_x, center_y = self._grid_to_screen(start_x, start_y, gx, gy, cell_size)
+                    # Dark orange border
+                    self._draw_rect_outline(cell_x, cell_y, cell_size, cell_size,
+                                           (*((255, 140, 0)), int(alpha * 255)),
+                                           max(1, int(4 * scale)))
+                    # 'c' symbol
+                    self._draw_cached_text(f'nocarry_{scale:.2f}_{alpha:.2f}', 'c',
+                                           center_x, center_y, (*((255, 100, 0)), int(alpha * 255)),
                                            font_size=int(14 * scale))
 
     def draw_frame(self, spec: 'FrameViewSpec'):
@@ -495,6 +512,17 @@ class ArcadeRenderer:
                     self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, LIGHT_ORANGE)
                     arcade.draw_text('2', center_x, center_y, ORANGE,
                                     font_size=int(14 * cell_size / CELL_SIZE),
+                                    anchor_x="center", anchor_y="center")
+                elif terrain == TerrainType.NO_CARRY:
+                    # Light orange background
+                    self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, (255, 240, 220))
+                    # Dark orange border
+                    scale = cell_size / CELL_SIZE
+                    self._draw_rect_outline(cell_x, cell_y, cell_size, cell_size,
+                                           (255, 140, 0), max(1, int(4 * scale)))
+                    # 'c' symbol
+                    arcade.draw_text('c', center_x, center_y, (255, 100, 0),
+                                    font_size=int(14 * scale),
                                     anchor_x="center", anchor_y="center")
                 elif terrain in (TerrainType.BRANCH1, TerrainType.BRANCH2,
                                 TerrainType.BRANCH3, TerrainType.BRANCH4):

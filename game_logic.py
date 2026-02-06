@@ -24,6 +24,13 @@ class GameLogic:
         if collision >= 255:
             return False
 
+        # Capacity check: cannot enter NO_CARRY tiles while holding items
+        held_count = len(state.get_held_items())
+        target_capacity = Physics.effective_capacity(state, at_pos=new_pos)
+
+        if held_count > target_capacity:
+            return False
+
         if collision > 0:
             # Check if any blocking entity is a shadow (can't push shadows)
             pushable = state.get_blocking_entities_at(new_pos)
@@ -66,6 +73,12 @@ class GameLogic:
     def try_pickup(state: BranchState) -> bool:
         """Pick up object in front of player"""
         px, py = state.player.pos
+
+        # Cannot pick up while standing on NO_CARRY tile
+        player_pos = state.player.pos
+        if Physics.effective_capacity(state, at_pos=player_pos) == 0:
+            return False
+
         dx, dy = state.player.direction
         front_pos = (px + dx, py + dy)
 

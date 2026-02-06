@@ -53,6 +53,8 @@ def parse_dual_layer(floor_map_str, object_map_str) -> LevelSource:
                 terrain[pos] = TerrainType.WEIGHT1
             elif char == 'W':
                 terrain[pos] = TerrainType.WEIGHT2
+            elif char == 'c':
+                terrain[pos] = TerrainType.NO_CARRY
             # '.' is not added to terrain (default FLOOR)
 
     # Parse object layer -> entity_definitions

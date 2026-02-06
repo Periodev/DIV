@@ -82,13 +82,15 @@ class GameController:
     def update_physics(self):
         """Unified physics check. Call once per frame in the main loop.
 
-        Settles holes and checks for collapse/fall conditions.
+        Settles holes and checks for fall conditions.
         The failed state is already saved in history, so the player
         sees the failure frame before the overlay appears.
         """
         active = self.get_active_branch()
         result = Physics.step(active)
-        if result != PhysicsResult.OK:
+
+        # Simplified: only check FALL
+        if result == PhysicsResult.FALL:
             self.collapsed = True
 
     def get_merge_preview(self) -> BranchState:
@@ -291,6 +293,11 @@ class GameController:
                 return ('放下', (50, 200, 50), front_pos, True)  # Green, inset
             else:
                 return ('', (0, 0, 0), None, False)  # No hint for blocked
+
+        # Cannot pickup while standing on NO_CARRY tile - hide hint
+        player_pos = (px, py)
+        if Physics.effective_capacity(active, at_pos=player_pos) == 0:
+            return ('', (0, 0, 0), None, False)  # No hint in NO_CARRY zone
 
         # Find grounded box at front position
         target = active.find_box_at(front_pos)
