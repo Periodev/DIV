@@ -915,17 +915,18 @@ class ArcadeRenderer:
                                    font_size=max(12, int(14 * scale)))
 
             # Converge line: focused branch instance -> other branch ghost
-            focused_instance = next(
-                (e for e in focused.entities if e.uid == uid and (Physics.grounded(e) or e.z == -1)),
-                None
-            )
-            if focused_instance:
-                fx, fy = focused_instance.pos
-                focused_cx, focused_cy = self._grid_to_screen(start_x, start_y, fx, fy, cell_size)
+            focused_instances = [
+                e for e in focused.entities
+                if e.uid == uid and (Physics.grounded(e) or e.z == -1)
+            ]
+            if focused_instances:
                 ghost_cx, ghost_cy = self._grid_to_screen(start_x, start_y, gx, gy, cell_size)
-                self._draw_dashed_line(focused_cx, focused_cy, ghost_cx, ghost_cy,
-                                       converge_line_color, max(1, int(2 * scale)),
-                                       int(10 * scale), slow_offset)
+                for inst in focused_instances:
+                    fx, fy = inst.pos
+                    focused_cx, focused_cy = self._grid_to_screen(start_x, start_y, fx, fy, cell_size)
+                    self._draw_dashed_line(focused_cx, focused_cy, ghost_cx, ghost_cy,
+                                           converge_line_color, max(1, int(2 * scale)),
+                                           int(10 * scale), slow_offset)
 
             # Dashed line
             ghost_cx, ghost_cy = self._grid_to_screen(start_x, start_y, gx, gy, cell_size)
