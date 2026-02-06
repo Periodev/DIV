@@ -42,6 +42,17 @@ class GameWindow(arcade.Window):
         self.merge_preview_start_time = None
         self.MERGE_PREVIEW_DURATION = 0.3  # seconds for preview animation
 
+        # Merge preview swap animation (Tab in preview mode)
+        self.merge_preview_swap_start_time = None
+        self.MERGE_PREVIEW_SWAP_DURATION = 0.25  # seconds for swap animation
+
+        # Merge animation (C key confirms merge)
+        self.merge_animation_start_time = None
+        self.MERGE_ANIMATION_DURATION = 0.3  # seconds for merge animation
+        self.merge_animation_pre_focus = None  # Store focus before merge for animation
+        self.merge_animation_stored_main = None  # Store main_branch state for animation
+        self.merge_animation_stored_sub = None   # Store sub_branch state for animation
+
         # Track held keys for continuous movement
         self.held_keys = set()
 
@@ -65,6 +76,26 @@ class GameWindow(arcade.Window):
                     self.controller.current_focus = 0
                 self.slide_start_time = None
                 self.slide_direction = 0
+
+        # Merge preview swap animation completion
+        if self.merge_preview_swap_start_time is not None:
+            elapsed = time.time() - self.merge_preview_swap_start_time
+            if elapsed >= self.MERGE_PREVIEW_SWAP_DURATION:
+                # Animation complete - commit focus switch
+                self.controller.current_focus = 1 - self.controller.current_focus
+                self.merge_preview_swap_start_time = None
+
+        # Merge animation completion
+        if self.merge_animation_start_time is not None:
+            elapsed = time.time() - self.merge_animation_start_time
+            if elapsed >= self.MERGE_ANIMATION_DURATION:
+                # Animation complete - merge already executed, just clean up
+                self.merge_preview_active = False
+                self.merge_preview_start_time = None
+                self.merge_animation_start_time = None
+                self.merge_animation_pre_focus = None
+                self.merge_animation_stored_main = None
+                self.merge_animation_stored_sub = None
 
         # Continuous movement from held keys (only if not animating)
         if not self.controller.collapsed and not self.controller.victory:
@@ -154,20 +185,31 @@ class GameWindow(arcade.Window):
         # Merge confirm (C key) - works in preview or directly
         elif key == arcade.key.C:
             if self.controller.has_branched:
-                self.controller.try_merge()
-                # Exit preview if active
-                self.merge_preview_active = False
-                self.merge_preview_start_time = None
-
-        # Switch focus with slide animation (Tab) - disabled during merge preview
-        elif key == arcade.key.TAB:
-            if self.controller.has_branched and self.slide_start_time is None and not self.merge_preview_active:
-                # Start slide animation
-                self.slide_start_time = time.time()
-                if self.controller.current_focus == 0:
-                    self.slide_direction = 1  # Moving to DIV1
+                if self.merge_preview_active:
+                    # In preview mode: store states, execute merge, then animate
+                    self.merge_animation_pre_focus = self.controller.current_focus
+                    self.merge_animation_stored_main = self.controller.main_branch
+                    self.merge_animation_stored_sub = self.controller.sub_branch
+                    self.controller.try_merge()  # Execute immediately
+                    self.merge_animation_start_time = time.time()  # Then animate with stored states
                 else:
-                    self.slide_direction = -1  # Moving to DIV0
+                    # Not in preview: merge directly
+                    self.controller.try_merge()
+
+        # Switch focus with slide animation (Tab)
+        elif key == arcade.key.TAB:
+            if self.controller.has_branched:
+                if self.merge_preview_active:
+                    # In merge preview: start swap animation if not already swapping
+                    if self.merge_preview_swap_start_time is None:
+                        self.merge_preview_swap_start_time = time.time()
+                elif self.slide_start_time is None:
+                    # Normal mode: start slide animation
+                    self.slide_start_time = time.time()
+                    if self.controller.current_focus == 0:
+                        self.slide_direction = 1  # Moving to DIV1
+                    else:
+                        self.slide_direction = -1  # Moving to DIV0
 
         # Adaptive action (X or Space)
         elif key == arcade.key.X or key == arcade.key.SPACE:
@@ -194,6 +236,18 @@ class GameWindow(arcade.Window):
             elapsed = time.time() - self.merge_preview_start_time
             merge_preview_progress = min(elapsed / self.MERGE_PREVIEW_DURATION, 1.0)
 
+        # Calculate merge preview swap progress
+        merge_preview_swap_progress = 0.0
+        if self.merge_preview_swap_start_time is not None:
+            elapsed = time.time() - self.merge_preview_swap_start_time
+            merge_preview_swap_progress = min(elapsed / self.MERGE_PREVIEW_SWAP_DURATION, 1.0)
+
+        # Calculate merge animation progress
+        merge_animation_progress = 0.0
+        if self.merge_animation_start_time is not None:
+            elapsed = time.time() - self.merge_animation_start_time
+            merge_animation_progress = min(elapsed / self.MERGE_ANIMATION_DURATION, 1.0)
+
         # Build frame spec from controller state
         frame_spec = ViewModelBuilder.build(
             self.controller,
@@ -201,7 +255,12 @@ class GameWindow(arcade.Window):
             slide_progress,
             self.slide_direction,
             self.merge_preview_active,
-            merge_preview_progress
+            merge_preview_progress,
+            merge_preview_swap_progress,
+            merge_animation_progress,
+            self.merge_animation_pre_focus,
+            self.merge_animation_stored_main,
+            self.merge_animation_stored_sub
         )
 
         # Render

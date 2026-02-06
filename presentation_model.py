@@ -105,7 +105,12 @@ class ViewModelBuilder:
               slide_progress: float = 0.0,
               slide_direction: int = 0,
               merge_preview_active: bool = False,
-              merge_preview_progress: float = 0.0) -> FrameViewSpec:
+              merge_preview_progress: float = 0.0,
+              merge_preview_swap_progress: float = 0.0,
+              merge_animation_progress: float = 0.0,
+              merge_animation_pre_focus: int = None,
+              merge_animation_stored_main = None,
+              merge_animation_stored_sub = None) -> FrameViewSpec:
         """Build frame specification with slide animation and merge preview support."""
         B = ViewModelBuilder
 
@@ -119,6 +124,19 @@ class ViewModelBuilder:
 
         focus = controller.current_focus
         has_branched = controller.has_branched
+
+        # Special case: merge animation playing (use stored states for visual animation)
+        if merge_animation_progress > 0 and merge_animation_stored_main and merge_animation_stored_sub:
+            # Override controller states with stored pre-merge states
+            main_branch_state = merge_animation_stored_main
+            sub_branch_state = merge_animation_stored_sub
+            has_branched = True
+            focus = merge_animation_pre_focus
+            merge_preview_active = True
+        else:
+            # Use normal controller states
+            main_branch_state = controller.main_branch
+            sub_branch_state = controller.sub_branch
 
         # Alpha values (for merge preview)
         main_alpha = 1.0
@@ -134,6 +152,16 @@ class ViewModelBuilder:
             main_x, main_y, main_scale, sub_x, sub_y, sub_scale, main_alpha, sub_alpha = B._calc_merge_preview_positions(
                 focus, merge_preview_progress, merge_preview_active
             )
+            # If swapping focus in preview, animate position and alpha swap
+            if merge_preview_swap_progress > 0:
+                main_x, main_y, sub_x, sub_y, main_alpha, sub_alpha = B._calc_merge_preview_swap(
+                    focus, merge_preview_swap_progress, main_x, main_y, sub_x, sub_y, main_alpha, sub_alpha
+                )
+            # If merging, animate non-focused to center and fade in
+            if merge_animation_progress > 0:
+                main_x, main_y, sub_x, sub_y, main_alpha, sub_alpha = B._calc_merge_animation(
+                    focus, merge_animation_progress, main_x, main_y, sub_x, sub_y, main_alpha, sub_alpha
+                )
         else:
             # Two branches - focused centered (large), other on side (small)
             if slide_progress > 0:
@@ -152,7 +180,7 @@ class ViewModelBuilder:
 
         # Build main branch spec (DIV 0)
         main_spec = B._build_branch_spec(
-            state=controller.main_branch,
+            state=main_branch_state,
             is_focused=(focus == 0),
             title="DIV 0" if has_branched else "MAIN",
             border_color=(255, 140, 0),  # Orange - high contrast
@@ -167,9 +195,9 @@ class ViewModelBuilder:
 
         # Build sub branch spec (DIV 1)
         sub_spec = None
-        if controller.sub_branch:
+        if sub_branch_state:
             sub_spec = B._build_branch_spec(
-                state=controller.sub_branch,
+                state=sub_branch_state,
                 is_focused=(focus == 1),
                 title="DIV 1",
                 border_color=(0, 220, 255),  # Cyan - high contrast
@@ -251,9 +279,9 @@ class ViewModelBuilder:
         def lerp(a, b, t):
             return a + (b - a) * t
 
-        # Diagonal offset for visual separation (top-right)
+        # Diagonal offset for visual separation (bottom-right)
         OFFSET_X = 3
-        OFFSET_Y = -3
+        OFFSET_Y = 3
 
         # Determine starting positions based on focus
         if focus == 0:
@@ -286,6 +314,83 @@ class ViewModelBuilder:
             main_alpha = lerp(1.0, 0.7, t)  # Fade to 70% opaque (more visible)
 
         return main_x, main_y, main_scale, sub_x, sub_y, sub_scale, main_alpha, sub_alpha
+
+    @staticmethod
+    def _calc_merge_preview_swap(focus: int, progress: float,
+                                   main_x: int, main_y: int, sub_x: int, sub_y: int,
+                                   main_alpha: float, sub_alpha: float):
+        """Calculate positions during merge preview focus swap.
+
+        Returns: (main_x, main_y, sub_x, sub_y, main_alpha, sub_alpha)
+        Swaps positions between center and offset. Alpha values remain constant
+        during animation to avoid white flash, then snap to correct values when focus switches.
+        """
+        B = ViewModelBuilder
+        t = B._ease_in_out(progress)
+
+        def lerp(a, b, t):
+            return a + (b - a) * t
+
+        # Diagonal offset
+        OFFSET_X = 3
+        OFFSET_Y = 3
+
+        if focus == 0:
+            # Currently DIV 0 focused: swap positions only
+            # DIV 0: center → offset (alpha stays 1.0)
+            main_x = int(lerp(B.CENTER_X, B.CENTER_X + OFFSET_X, t))
+            main_y = int(lerp(B.CENTER_Y, B.CENTER_Y + OFFSET_Y, t))
+            # DIV 1: offset → center (alpha stays 0.7)
+            sub_x = int(lerp(B.CENTER_X + OFFSET_X, B.CENTER_X, t))
+            sub_y = int(lerp(B.CENTER_Y + OFFSET_Y, B.CENTER_Y, t))
+        else:
+            # Currently DIV 1 focused: swap positions only
+            # DIV 0: offset → center (alpha stays 0.7)
+            main_x = int(lerp(B.CENTER_X + OFFSET_X, B.CENTER_X, t))
+            main_y = int(lerp(B.CENTER_Y + OFFSET_Y, B.CENTER_Y, t))
+            # DIV 1: center → offset (alpha stays 1.0)
+            sub_x = int(lerp(B.CENTER_X, B.CENTER_X + OFFSET_X, t))
+            sub_y = int(lerp(B.CENTER_Y, B.CENTER_Y + OFFSET_Y, t))
+
+        # Alpha values unchanged during animation
+        return main_x, main_y, sub_x, sub_y, main_alpha, sub_alpha
+
+    @staticmethod
+    def _calc_merge_animation(focus: int, progress: float,
+                               main_x: int, main_y: int, sub_x: int, sub_y: int,
+                               main_alpha: float, sub_alpha: float):
+        """Calculate positions and alphas during merge animation.
+
+        Returns: (main_x, main_y, sub_x, sub_y, main_alpha, sub_alpha)
+        Non-focused branch moves from offset to exact center (full overlap)
+        and becomes opaque (alpha 0.7 → 1.0) to visually merge.
+        """
+        B = ViewModelBuilder
+        t = B._ease_in_out(progress)
+
+        def lerp(a, b, t):
+            return a + (b - a) * t
+
+        # Diagonal offset
+        OFFSET_X = 3
+        OFFSET_Y = 3
+
+        if focus == 0:
+            # DIV 0 focused: DIV 1 moves from offset to center and fades in
+            # DIV 0: stays at center (alpha 1.0)
+            # DIV 1: offset → center, alpha 0.7 → 1.0
+            sub_x = int(lerp(B.CENTER_X + OFFSET_X, B.CENTER_X, t))
+            sub_y = int(lerp(B.CENTER_Y + OFFSET_Y, B.CENTER_Y, t))
+            sub_alpha = lerp(0.7, 1.0, t)
+        else:
+            # DIV 1 focused: DIV 0 moves from offset to center and fades in
+            # DIV 1: stays at center (alpha 1.0)
+            # DIV 0: offset → center, alpha 0.7 → 1.0
+            main_x = int(lerp(B.CENTER_X + OFFSET_X, B.CENTER_X, t))
+            main_y = int(lerp(B.CENTER_Y + OFFSET_Y, B.CENTER_Y, t))
+            main_alpha = lerp(0.7, 1.0, t)
+
+        return main_x, main_y, sub_x, sub_y, main_alpha, sub_alpha
 
     @staticmethod
     def _build_branch_spec(
