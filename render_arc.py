@@ -184,13 +184,15 @@ class ArcadeRenderer:
     def _build_terrain_spritelist(self, state: BranchState, start_x: int, start_y: int,
                                    cell_size: int, goal_active: bool, has_branched: bool,
                                    highlight_branch_point: bool,
-                                   terrain_diff_reference: Optional[BranchState] = None) -> tuple:
+                                   terrain_diff_reference: Optional[BranchState] = None,
+                                   terrain_type_filter: Optional[str] = None) -> tuple:
         """Build SpriteList for static terrain. Returns (spritelist, dynamic_cells).
 
         dynamic_cells contains positions that need immediate-mode rendering (Goal, highlighted branch).
 
         Args:
             terrain_diff_reference: If provided, only include cells where terrain differs from reference.
+            terrain_type_filter: "static" (FLOOR, WALL, etc.) or "variable" (SWITCH, HOLE) or None (all).
         """
         scale = cell_size / CELL_SIZE
         sprites = arcade.SpriteList()
@@ -202,6 +204,16 @@ class ArcadeRenderer:
                 terrain = state.terrain.get(pos, TerrainType.FLOOR)
                 center_x = start_x + gx * cell_size + cell_size // 2
                 center_y = self._flip_y(start_y + gy * cell_size + cell_size // 2)
+
+                # Filter by terrain type (static/variable) if requested
+                if terrain_type_filter is not None:
+                    # Static terrain: everything except SWITCH and HOLE
+                    is_variable = terrain in (TerrainType.SWITCH, TerrainType.HOLE)
+
+                    if terrain_type_filter == "static" and is_variable:
+                        continue  # Skip variable terrain in static layer
+                    elif terrain_type_filter == "variable" and not is_variable:
+                        continue  # Skip static terrain in variable layer
 
                 # Filter: only draw cells that differ from reference (if provided)
                 if terrain_diff_reference is not None:
@@ -267,11 +279,13 @@ class ArcadeRenderer:
 
     def _draw_dynamic_terrain(self, start_x: int, start_y: int, state: BranchState,
                               cell_size: int, dynamic_cells: list, has_branched: bool, alpha: float = 1.0,
-                              terrain_diff_reference: Optional[BranchState] = None):
+                              terrain_diff_reference: Optional[BranchState] = None,
+                              terrain_type_filter: Optional[str] = None):
         """Draw dynamic terrain elements (Goal flash, branch markers).
 
         Args:
             terrain_diff_reference: If provided, only draw cells where terrain differs from reference.
+            terrain_type_filter: "static" or "variable" or None (all).
         """
         scale = cell_size / CELL_SIZE
 
@@ -307,6 +321,14 @@ class ArcadeRenderer:
             for gy in range(GRID_SIZE):
                 pos = (gx, gy)
                 terrain = state.terrain.get(pos, TerrainType.FLOOR)
+
+                # Filter by terrain type if requested
+                if terrain_type_filter is not None:
+                    is_variable = terrain in (TerrainType.SWITCH, TerrainType.HOLE)
+                    if terrain_type_filter == "static" and is_variable:
+                        continue
+                    elif terrain_type_filter == "variable" and not is_variable:
+                        continue
 
                 # Filter: only draw cells that differ from reference (if provided)
                 if terrain_diff_reference is not None:
@@ -350,62 +372,87 @@ class ArcadeRenderer:
             in_merge_preview = both_centered and has_transparency
 
         if in_merge_preview:
-            # Merge preview: layered rendering for focused objects on top
+            # Merge preview: 3-layer optimized rendering
             focused_branch = spec.main_branch if spec.current_focus == 0 else spec.sub_branch
             non_focused_branch = spec.sub_branch if spec.current_focus == 0 else spec.main_branch
             hidden_main = spec.main_branch.state
             hidden_sub = spec.sub_branch.state
 
-            # Layer 1: Focused branch terrain and grid (all cells, no entities)
+            # Layer 1: Static terrain only (FLOOR, WALL, GOAL, BRANCH*, NO_CARRY)
+            # Draw once from focused branch (static terrain is same in both branches)
+            # Draw focused title here
             self._draw_branch(
                 focused_branch,
                 goal_active=spec.goal_active,
                 has_branched=spec.has_branched,
                 animation_frame=spec.animation_frame,
                 skip_terrain=False,
-                skip_entities=True,  # Skip entities for now
+                skip_entities=True,
+                skip_decorations=False,  # Draw focused title
+                terrain_type_filter="static",  # Only static terrain
                 hidden_main=hidden_main,
                 hidden_sub=hidden_sub,
                 current_focus=spec.current_focus
             )
 
-            # Layer 2: Non-focused branch terrain differences only (transparent overlay)
-            # Only show terrain cells that differ from focused branch
+            # Layer 2: Variable terrain (SWITCH, HOLE states)
+            # 2a: Focused variable terrain (opaque)
+            self._draw_branch(
+                focused_branch,
+                goal_active=spec.goal_active,
+                has_branched=spec.has_branched,
+                animation_frame=spec.animation_frame,
+                skip_terrain=False,
+                skip_entities=True,
+                skip_decorations=True,  # Skip title (already drawn)
+                terrain_type_filter="variable",  # Only variable terrain
+                hidden_main=hidden_main,
+                hidden_sub=hidden_sub,
+                current_focus=spec.current_focus
+            )
+
+            # 2b: Non-focused variable terrain differences (transparent overlay)
+            # Draw non-focused title here
             self._draw_branch(
                 non_focused_branch,
                 goal_active=spec.goal_active,
                 has_branched=spec.has_branched,
                 animation_frame=spec.animation_frame,
                 skip_terrain=False,
-                skip_entities=True,  # Skip entities for now
+                skip_entities=True,
+                skip_decorations=False,  # Draw non-focused title
+                terrain_type_filter="variable",  # Only variable terrain
                 terrain_diff_reference=focused_branch.state,  # Only show differences
-                hidden_main=hidden_main,
-                hidden_sub=hidden_sub,
-                current_focus=spec.current_focus,
-                override_pos=(focused_branch.pos_x, focused_branch.pos_y)
-            )
-
-            # Layer 3: Non-focused branch entities only (transparent overlay)
-            self._draw_branch(
-                non_focused_branch,
-                goal_active=spec.goal_active,
-                has_branched=spec.has_branched,
-                animation_frame=spec.animation_frame,
-                skip_terrain=True,  # No terrain
-                skip_entities=False,  # Draw entities
+                override_pos=(focused_branch.pos_x, focused_branch.pos_y),
                 hidden_main=hidden_main,
                 hidden_sub=hidden_sub,
                 current_focus=spec.current_focus
             )
 
-            # Layer 4: Focused branch entities on top (opaque, highest layer)
+            # Layer 3: Entities (layered)
+            # 3a: Non-focused entities (transparent)
+            self._draw_branch(
+                non_focused_branch,
+                goal_active=spec.goal_active,
+                has_branched=spec.has_branched,
+                animation_frame=spec.animation_frame,
+                skip_terrain=True,
+                skip_entities=False,
+                skip_decorations=True,  # Skip title (already drawn)
+                hidden_main=hidden_main,
+                hidden_sub=hidden_sub,
+                current_focus=spec.current_focus
+            )
+
+            # 3b: Focused entities (opaque, on top)
             self._draw_branch(
                 focused_branch,
                 goal_active=spec.goal_active,
                 has_branched=spec.has_branched,
                 animation_frame=spec.animation_frame,
-                skip_terrain=True,  # No terrain (already drawn)
-                skip_entities=False,  # Draw entities on top
+                skip_terrain=True,
+                skip_entities=False,
+                skip_decorations=True,  # Skip title (already drawn)
                 hidden_main=hidden_main,
                 hidden_sub=hidden_sub,
                 current_focus=spec.current_focus
@@ -460,12 +507,16 @@ class ArcadeRenderer:
                      current_focus: int = 0,
                      skip_terrain: bool = False,
                      skip_entities: bool = False,
+                     skip_decorations: bool = False,
                      terrain_diff_reference: Optional[BranchState] = None,
+                     terrain_type_filter: Optional[str] = None,
                      override_pos: Optional[Tuple[int, int]] = None):
         """Draw a single branch panel.
 
         Args:
             terrain_diff_reference: If provided, only draw terrain cells that differ from this reference.
+            terrain_type_filter: "static" or "variable" or None (all).
+            skip_decorations: If True, skip title and border drawing.
         """
         state = spec.state
         if override_pos is None:
@@ -477,33 +528,48 @@ class ArcadeRenderer:
         grid_width = cell_size * GRID_SIZE
         grid_height = cell_size * GRID_SIZE
 
-        # Title
-        title_y = self._flip_y(start_y - int(15 * spec.scale))
-        font_size = int(14 * spec.scale)
-        self._draw_cached_text(
-            f'title_{spec.title}_{font_size}_{spec.alpha:.2f}', spec.title, start_x, title_y,
-            (*BLACK, int(spec.alpha * 255)), font_size=font_size, anchor_x="left", anchor_y="center"
-        )
+        # Title and Border (skip if decorations disabled)
+        if not skip_decorations:
+            # Title - always centered above first cell (standard configuration)
+            font_size = int(14 * spec.scale)
+            cell_size_px = int(CELL_SIZE * spec.scale)
 
-        # Border
-        border_width = int((5 if spec.is_focused else 3) * spec.scale)
-        self._draw_rect_outline(
-            start_x, start_y, grid_width, grid_height,
-            (*spec.border_color, int(spec.alpha * 255)), max(1, border_width)
-        )
+            # In merge preview: DIV 0 at column 0, DIV 1 at column 1
+            # In normal mode: always at column 0 (first cell)
+            if spec.is_merge_preview:
+                col = 0 if spec.title == "DIV 0" else 1
+            else:
+                col = 0  # Standard: above first cell
+
+            title_x = start_x + col * cell_size_px + cell_size_px // 2
+            title_y = self._flip_y(start_y - int(15 * spec.scale))
+            anchor_x = "center"
+
+            self._draw_cached_text(
+                f'title_{spec.title}_{font_size}_{spec.alpha:.2f}', spec.title, title_x, title_y,
+                (*BLACK, int(spec.alpha * 255)), font_size=font_size, anchor_x=anchor_x, anchor_y="center"
+            )
+
+            # Border (disabled for merge preview - no colored outer frame)
+            if not spec.is_merge_preview:
+                border_width = int((5 if spec.is_focused else 3) * spec.scale)
+                self._draw_rect_outline(
+                    start_x, start_y, grid_width, grid_height,
+                    (*spec.border_color, int(spec.alpha * 255)), max(1, border_width)
+                )
 
         # Terrain (SpriteList for static, immediate mode for dynamic) - skip if requested
         if not skip_terrain:
             terrain_sprites, dynamic_cells = self._build_terrain_spritelist(
                 state, start_x, start_y, cell_size,
                 goal_active, has_branched, spec.highlight_branch_point,
-                terrain_diff_reference
+                terrain_diff_reference, terrain_type_filter
             )
             terrain_sprites.alpha = int(spec.alpha * 255)
             terrain_sprites.draw()
             self._draw_dynamic_terrain(start_x, start_y, state, cell_size,
                                        dynamic_cells, has_branched, spec.alpha,
-                                       terrain_diff_reference)
+                                       terrain_diff_reference, terrain_type_filter)
 
         # Entities (boxes) - skip if requested
         if not skip_entities:
