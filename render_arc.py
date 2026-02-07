@@ -309,8 +309,12 @@ class ArcadeRenderer:
                     flash = int((time.time() * 1000 / 300) % 2)
                     color = (255, 255, 100, int(alpha * 255)) if flash else (*YELLOW, int(alpha * 255))
                     self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, color)
-                    self._draw_rect_outline(cell_x, cell_y, cell_size, cell_size,
-                                           (*GREEN, int(alpha * 255)), max(1, int(6 * scale)))
+                    inset = max(1, int(3 * scale))
+                    self._draw_rect_outline(
+                        cell_x + inset, cell_y + inset,
+                        cell_size - inset * 2, cell_size - inset * 2,
+                        (*GREEN, int(alpha * 255)), max(1, int(4 * scale))
+                    )
                 else:
                     self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, (*YELLOW, int(alpha * 255)))
                 self._draw_cached_text(f'goal_{scale:.2f}_{alpha:.2f}', 'Goal', center_x, center_y,
@@ -563,10 +567,10 @@ class ArcadeRenderer:
 
             # Border (disabled for merge preview and DIV split view)
             if not spec.is_merge_preview and spec.title == "MAIN":
-                border_width = int((5 if spec.is_focused else 3) * spec.scale)
+                border_width = max(1, int(2 * spec.scale))
                 self._draw_rect_outline(
                     start_x, start_y, grid_width, grid_height,
-                    (*spec.border_color, int(spec.alpha * 255)), max(1, border_width)
+                    (*GRAY, int(spec.alpha * 255)), border_width
                 )
 
         # Terrain (SpriteList for static, immediate mode for dynamic) - skip if requested
@@ -879,8 +883,12 @@ class ArcadeRenderer:
                 if terrain == TerrainType.SWITCH:
                     activated = state.switch_activated(pos)
                     color = (0, 200, 0, int(alpha * 255)) if activated else (150, 0, 0, int(alpha * 255))
-                    self._draw_rect_outline(cell_x, cell_y, cell_size, cell_size,
-                                           color, max(1, int(5 * scale)))
+                    inset = max(1, int(3 * scale))
+                    self._draw_rect_outline(
+                        cell_x + inset, cell_y + inset,
+                        cell_size - inset * 2, cell_size - inset * 2,
+                        color, max(1, int(3 * scale))
+                    )
                 else:
                     self._draw_rect_outline(cell_x, cell_y, cell_size, cell_size, (*GRAY, int(alpha * 255)), 1)
 
