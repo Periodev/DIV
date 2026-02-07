@@ -504,7 +504,8 @@ class ArcadeRenderer:
         if not skip_entities:
             for e in state.entities:
                 if e.uid != 0 and e.type == EntityType.BOX:
-                    self._draw_entity(start_x, start_y, e, state, cell_size, spec.alpha, spec.border_color)
+                    self._draw_entity(start_x, start_y, e, state, cell_size, spec.alpha,
+                                      spec.border_color, spec.is_focused)
 
             # Shadow connections (only on focused, full-scale branch)
             if spec.is_focused and spec.scale >= 1.0:
@@ -635,7 +636,8 @@ class ArcadeRenderer:
 
     def _draw_entity(self, start_x: int, start_y: int, entity,
                      state: BranchState, cell_size: int, alpha: float = 1.0,
-                     branch_color: Tuple[int, int, int] = None):
+                     branch_color: Tuple[int, int, int] = None,
+                     is_focused: bool = False):
         """Draw a single entity (box)."""
         scale = cell_size / CELL_SIZE
         padding = int((15 if entity.z == -1 else 9) * scale)
@@ -653,11 +655,11 @@ class ArcadeRenderer:
         is_transparent_branch = alpha < 0.9  # In merge preview overlay
 
         # Apply desaturation
-        if is_shadow:
-            display_color = desaturate_color(base_color, 0.5)
-        elif is_transparent_branch:
+        if is_transparent_branch:
             # Light desaturation for transparent branch in merge preview
             display_color = desaturate_color(base_color, 0.3)
+        elif is_shadow and not is_focused:
+            display_color = desaturate_color(base_color, 0.5)
         else:
             display_color = base_color
 
