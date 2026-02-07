@@ -140,14 +140,15 @@ class GameWindow(arcade.Window):
         if self.controller.collapsed or self.controller.victory:
             return
 
-        # Branch (V key)
-        # Branch (V key)
+        # Branch / Merge (V key)
         if key == arcade.key.V:
-            if not self.controller.has_branched:
+            if self.controller.has_branched:
+                self.controller.try_merge()
+            else:
                 self.controller.try_branch()
-                # Clear any lingering merge preview state
-                self.merge_preview_active = False
-                self.merge_preview_start_time = None
+            # Clear any lingering merge preview state
+            self.merge_preview_active = False
+            self.merge_preview_start_time = None
 
         # Merge preview toggle (M key)
         elif key == arcade.key.M:
@@ -167,21 +168,9 @@ class GameWindow(arcade.Window):
                 self.merge_preview_active = False
                 self.merge_preview_start_time = None
 
-        # Merge (C key) or Inherit Merge (Alt+C)
+        # Merge (C key) disabled
         elif key == arcade.key.C:
-            if self.controller.has_branched:
-                # Check for Alt modifier
-                is_inherit = modifiers & arcade.key.MOD_ALT
-
-                # Execute merge immediately (no animation)
-                if is_inherit:
-                    self.controller.try_inherit_merge()
-                else:
-                    self.controller.try_merge()
-
-                # Close merge preview if active
-                self.merge_preview_active = False
-                self.merge_preview_start_time = None
+            return
 
         # Switch focus with slide animation (Tab)
         elif key == arcade.key.TAB:

@@ -1471,10 +1471,10 @@ class ArcadeRenderer:
                               font_size=18, anchor_x="center", anchor_y="center")
 
     def _draw_merge_hint(self, alt_pressed: bool = False):
-        """Draw 'C 合併' or 'C 繼承合併' hint at center bottom.
+        """Draw 'V 合併' or 'V 繼承合併' hint at center bottom.
 
         Args:
-            alt_pressed: If True, show orange "C 繼承合併" instead of blue "C 合併"
+            alt_pressed: If True, show orange "V 繼承合併" instead of blue "V 合併"
         """
         from presentation_model import ViewModelBuilder
         B = ViewModelBuilder
@@ -1494,7 +1494,7 @@ class ArcadeRenderer:
             bg_color = (200, 100, 20, 200)
             border_color = (255, 140, 0)
             text_color = (255, 255, 255)
-            text = 'C 繼承合併'
+            text = 'V 繼承合併'
             cache_key = 'inherit_merge_hint'
         else:
             # Blue normal merge hint
@@ -1504,7 +1504,7 @@ class ArcadeRenderer:
             bg_color = (40, 80, 120, 200)
             border_color = (100, 150, 200)
             text_color = (255, 255, 255)
-            text = 'C 合併'
+            text = 'V 合併'
             cache_key = 'merge_hint'
 
         # Background
