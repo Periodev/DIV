@@ -191,6 +191,7 @@ class ViewModelBuilder:
             interaction_hint=interaction_hint if focus == 0 else None,
             is_merge_preview=is_merge_preview,
             show_inherit_hint=show_inherit_hint and focus == 0,
+            has_branched=has_branched,
             scale=main_scale,
             pos_x=main_x,
             pos_y=main_y,
@@ -209,6 +210,7 @@ class ViewModelBuilder:
                 interaction_hint=interaction_hint if focus == 1 else None,
                 is_merge_preview=is_merge_preview,
                 show_inherit_hint=show_inherit_hint and focus == 1,
+                has_branched=has_branched,
                 scale=sub_scale,
                 pos_x=sub_x,
                 pos_y=sub_y,
@@ -407,13 +409,14 @@ class ViewModelBuilder:
         interaction_hint: Optional[InteractionHint],
         is_merge_preview: bool,
         show_inherit_hint: bool,
+        has_branched: bool,
         scale: float = 1.0,
         pos_x: int = 0,
         pos_y: int = 0,
         alpha: float = 1.0
     ) -> BranchViewSpec:
         """Build visual spec for a single branch."""
-        highlight = ViewModelBuilder._is_on_branch_point(state)
+        highlight = ViewModelBuilder._is_on_branch_point(state) and not has_branched
 
         return BranchViewSpec(
             state=state,
