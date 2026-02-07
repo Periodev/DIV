@@ -33,6 +33,12 @@ class GameController:
         self.failed_action_pos: Optional[tuple] = None
         self.failed_action_time: float = 0.0
 
+        # Falling animation tracking (box falling into hole)
+        self.falling_boxes: dict = {}  # {(uid, pos): start_time} - track specific instance
+
+        # Undo flag (prevent re-triggering animations after undo)
+        self.just_undid: bool = False
+
         self.reset()
 
     def reset(self):
@@ -55,6 +61,39 @@ class GameController:
         import time
         self.failed_action_pos = pos
         self.failed_action_time = time.time()
+
+    def get_falling_progress(self, uid: int, pos: tuple) -> Optional[float]:
+        """Get falling animation progress for a specific box instance (0.0 to 1.0), or None if not falling.
+
+        Args:
+            uid: Box unique ID
+            pos: Box position (to identify specific shadow instance)
+
+        Returns None after animation completes (> 0.2s).
+        """
+        import time
+        key = (uid, pos)
+        if key not in self.falling_boxes:
+            return None
+
+        elapsed = time.time() - self.falling_boxes[key]
+        duration = 0.2  # 200ms duration
+
+        if elapsed >= duration:
+            # Animation complete, clean up
+            del self.falling_boxes[key]
+            return None
+
+        # Delayed fall: hang in air, then accelerate down
+        t = elapsed / duration  # 0.0 to 1.0
+
+        if t < 0.6:
+            # First 40%: no change (hang in air)
+            return 0.0
+        else:
+            # Remaining 60%: accelerate down with quadratic easing
+            t_fall = (t - 0.6) / 0.6  # Normalize to 0.0 → 1.0
+            return t_fall * t_fall  # 0.0 → 1.0 with acceleration
 
     def _save_snapshot(self):
         """Save current state to history."""
@@ -83,6 +122,14 @@ class GameController:
         self.collapsed = False
         self.victory = False
 
+        # Clear animation state (undo should show static state, no animations)
+        self.falling_boxes.clear()
+        self.failed_action_pos = None
+        self.failed_action_time = 0.0
+
+        # Set flag to prevent re-triggering animations when physics runs
+        self.just_undid = True
+
         return True
 
     def get_active_branch(self) -> BranchState:
@@ -98,8 +145,25 @@ class GameController:
         The failed state is already saved in history, so the player
         sees the failure frame before the overlay appears.
         """
+        import time
         active = self.get_active_branch()
+
+        # Track boxes before physics (to detect new falls)
+        # Store (uid, pos) for each underground box
+        before_underground = {(e.uid, e.pos) for e in active.entities if e.z == -1}
+
         result = Physics.step(active)
+
+        # Detect newly fallen boxes (specific instances) and start animation
+        # Skip animation triggering if we just undid (to prevent re-animation of already-filled holes)
+        if not self.just_undid:
+            after_underground = {(e.uid, e.pos) for e in active.entities if e.z == -1}
+            newly_fallen = after_underground - before_underground
+            for uid, pos in newly_fallen:
+                self.falling_boxes[(uid, pos)] = time.time()
+
+        # Reset undo flag
+        self.just_undid = False
 
         # Simplified: only check FALL
         if result == PhysicsResult.FALL:

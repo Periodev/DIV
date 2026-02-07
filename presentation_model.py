@@ -70,6 +70,9 @@ class FrameViewSpec:
     flash_pos: Optional[Position] = None
     flash_intensity: float = 0.0  # 0.0-1.0, for fade-out
 
+    # Falling animation (boxes falling into holes)
+    falling_boxes: dict = None  # {(uid, pos): progress} where progress is 0.0-1.0
+
 
 class ViewModelBuilder:
     """Transforms game state into visual specifications."""
@@ -135,6 +138,13 @@ class ViewModelBuilder:
                 # Linear fade-out
                 flash_intensity = 1.0 - (elapsed / flash_duration)
                 flash_pos = controller.failed_action_pos
+
+        # Build falling boxes animation state
+        falling_boxes = {}
+        for (uid, pos) in list(controller.falling_boxes.keys()):
+            progress = controller.get_falling_progress(uid, pos)
+            if progress is not None:
+                falling_boxes[(uid, pos)] = progress
 
         # Goal active check
         preview = controller.get_merge_preview()
@@ -247,7 +257,8 @@ class ViewModelBuilder:
             step_count=len(controller.history) - 1,
             input_sequence=controller.input_log,
             flash_pos=flash_pos,
-            flash_intensity=flash_intensity
+            flash_intensity=flash_intensity,
+            falling_boxes=falling_boxes
         )
 
     @staticmethod

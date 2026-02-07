@@ -40,7 +40,7 @@ LIGHT_RED = (255, 100, 100)
 SWITCH_OFF_COLOR = (200, 200, 200)
 SWITCH_OFF_BORDER = (160, 160, 160)
 INTERACT_GRAY = (100, 100, 100)
-
+HOLE_COLOR = (60, 40, 20)
 
 
 # Box colors (colorblind-friendly)
@@ -91,8 +91,8 @@ class ArcadeRenderer:
             'no_carry_bg': arcade.make_soft_square_texture(CELL_SIZE, LIGHT_RED, outer_alpha=255),
             'switch_on': arcade.make_soft_square_texture(CELL_SIZE, (200, 255, 200), outer_alpha=255),
             'switch_off': arcade.make_soft_square_texture(CELL_SIZE, SWITCH_OFF_COLOR, outer_alpha=255),
-            'hole_filled': arcade.make_soft_square_texture(CELL_SIZE, (160, 120, 60), outer_alpha=255),
-            'hole_empty': arcade.make_soft_square_texture(CELL_SIZE, (60, 40, 20), outer_alpha=255),
+            'hole_filled': arcade.make_soft_square_texture(CELL_SIZE, HOLE_COLOR, outer_alpha=255),  # Same as floor
+            'hole_empty': arcade.make_soft_square_texture(CELL_SIZE, HOLE_COLOR, outer_alpha=255),
             'branch_highlight': arcade.make_soft_square_texture(CELL_SIZE, (150, 255, 150), outer_alpha=255),
         }
 
@@ -179,9 +179,9 @@ class ArcadeRenderer:
                 color_map = {
                     'white': WHITE, 'black': BLACK, 'gray': GRAY,
                     'yellow': YELLOW, 'light_orange': LIGHT_ORANGE,
-                    'no_carry_bg': (255, 240, 220),
+                    'no_carry_bg': LIGHT_RED,
                     'switch_on': (200, 255, 200), 'switch_off': SWITCH_OFF_COLOR,
-                    'hole_filled': (160, 120, 60), 'hole_empty': (60, 40, 20),
+                    'hole_filled': HOLE_COLOR, 'hole_empty': HOLE_COLOR,
                     'branch_highlight': (150, 255, 150),
                 }
                 self._scaled_textures[cache_key] = arcade.make_soft_square_texture(
@@ -416,7 +416,8 @@ class ArcadeRenderer:
                 terrain_type_filter="static",  # Only static terrain
                 hidden_main=hidden_main,
                 hidden_sub=hidden_sub,
-                current_focus=spec.current_focus
+                current_focus=spec.current_focus,
+                falling_boxes=spec.falling_boxes
             )
 
             # Layer 2: Variable terrain (SWITCH, HOLE states)
@@ -432,7 +433,8 @@ class ArcadeRenderer:
                 terrain_type_filter="variable",  # Only variable terrain
                 hidden_main=hidden_main,
                 hidden_sub=hidden_sub,
-                current_focus=spec.current_focus
+                current_focus=spec.current_focus,
+                falling_boxes=spec.falling_boxes
             )
 
             # Layer 3: Entities (layered)
@@ -447,7 +449,8 @@ class ArcadeRenderer:
                 skip_decorations=True,  # Skip title (already drawn)
                 hidden_main=hidden_main,
                 hidden_sub=hidden_sub,
-                current_focus=spec.current_focus
+                current_focus=spec.current_focus,
+                falling_boxes=spec.falling_boxes
             )
 
             # 3b: Focused entities (opaque, on top)
@@ -461,7 +464,8 @@ class ArcadeRenderer:
                 skip_decorations=True,  # Skip title (already drawn)
                 hidden_main=hidden_main,
                 hidden_sub=hidden_sub,
-                current_focus=spec.current_focus
+                current_focus=spec.current_focus,
+                falling_boxes=spec.falling_boxes
             )
 
             # Layer 4: Merge convergence hints (when focused is holding)
@@ -480,7 +484,8 @@ class ArcadeRenderer:
                     spec.sub_branch,
                     goal_active=spec.goal_active,
                     has_branched=spec.has_branched,
-                    animation_frame=spec.animation_frame
+                    animation_frame=spec.animation_frame,
+                    falling_boxes=spec.falling_boxes
                 )
 
             if -500 < spec.main_branch.pos_x < WINDOW_WIDTH + 100:
@@ -488,7 +493,8 @@ class ArcadeRenderer:
                     spec.main_branch,
                     goal_active=spec.goal_active,
                     has_branched=spec.has_branched,
-                    animation_frame=spec.animation_frame
+                    animation_frame=spec.animation_frame,
+                    falling_boxes=spec.falling_boxes
                 )
 
         # 2.5. Draw flash effect on focused branch
@@ -536,7 +542,8 @@ class ArcadeRenderer:
                      skip_decorations: bool = False,
                      terrain_diff_reference: Optional[BranchState] = None,
                      terrain_type_filter: Optional[str] = None,
-                     override_pos: Optional[Tuple[int, int]] = None):
+                     override_pos: Optional[Tuple[int, int]] = None,
+                     falling_boxes: dict = None):
         """Draw a single branch panel.
 
         Args:
@@ -602,7 +609,7 @@ class ArcadeRenderer:
             for e in state.entities:
                 if e.uid != 0 and e.type == EntityType.BOX:
                     self._draw_entity(start_x, start_y, e, state, cell_size, spec.alpha,
-                                      spec.border_color, spec.is_focused)
+                                      spec.border_color, spec.is_focused, falling_boxes)
 
             # Shadow connections (only on focused, full-scale branch)
             if spec.is_focused and spec.scale >= 1.0:
@@ -730,7 +737,7 @@ class ArcadeRenderer:
                                     anchor_x="center", anchor_y="center")
                 elif terrain == TerrainType.HOLE:
                     filled = state.is_hole_filled(pos)
-                    color = (160, 120, 60) if filled else (60, 40, 20)
+                    color = WHITE if filled else (60, 40, 20)
                     self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, color)
                 else:
                     self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, WHITE)
@@ -755,10 +762,23 @@ class ArcadeRenderer:
     def _draw_entity(self, start_x: int, start_y: int, entity,
                      state: BranchState, cell_size: int, alpha: float = 1.0,
                      branch_color: Tuple[int, int, int] = None,
-                     is_focused: bool = False):
+                     is_focused: bool = False,
+                     falling_boxes: dict = None):
         """Draw a single entity (box)."""
         scale = cell_size / CELL_SIZE
-        padding = int((15 if entity.z == -1 else 9) * scale)
+
+        # Calculate padding with falling animation
+        # Normal box: padding = 9, In-hole box: padding = 15
+        base_padding = 15 if entity.z == -1 else 9
+
+        # Check if this specific box instance is currently falling (animating into hole)
+        instance_key = (entity.uid, entity.pos)
+        if falling_boxes and instance_key in falling_boxes:
+            progress = falling_boxes[instance_key]  # 0.0 to 1.0
+            # Interpolate from normal (9) to in-hole (15)
+            padding = int((9 + (15 - 9) * progress) * scale)
+        else:
+            padding = int(base_padding * scale)
 
         gx, gy = entity.pos
         cell_x = start_x + gx * cell_size + padding
