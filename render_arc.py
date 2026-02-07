@@ -244,7 +244,16 @@ class ArcadeRenderer:
                     texture_key = 'black'
                 elif terrain == TerrainType.SWITCH:
                     activated = state.switch_activated(pos)
-                    texture_key = 'switch_on' if activated else 'switch_off'
+                    if terrain_diff_reference is not None:
+                        ref_activated = terrain_diff_reference.switch_activated(pos)
+                        if activated != ref_activated:
+                            # Draw diff as outline only to avoid overriding focused fill
+                            dynamic_cells.append((gx, gy, terrain, activated))
+                            texture_key = None
+                        else:
+                            texture_key = None
+                    else:
+                        texture_key = 'switch_on' if activated else 'switch_off'
                 elif terrain == TerrainType.NO_CARRY:
                     texture_key = 'no_carry_bg'
                     dynamic_cells.append((gx, gy, terrain, False))  # Need NO_CARRY rendering
@@ -315,6 +324,16 @@ class ArcadeRenderer:
                 else:
                     color = (*GRAY, int(alpha * 255)) if has_branched else (*GREEN, int(alpha * 255))
                     self._draw_branch_marker(center_x, center_y, terrain, color, cell_size)
+            elif terrain == TerrainType.SWITCH:
+                # Diff-only switch overlay: outline only
+                is_active = bool(extra)
+                color = (0, 200, 0, int(alpha * 255)) if is_active else (150, 0, 0, int(alpha * 255))
+                inset = max(1, int(3 * scale))
+                self._draw_rect_outline(
+                    cell_x + inset, cell_y + inset,
+                    cell_size - inset * 2, cell_size - inset * 2,
+                    color, max(1, int(3 * scale))
+                )
 
         # Draw NO_CARRY markers
         for gx in range(GRID_SIZE):
@@ -406,24 +425,6 @@ class ArcadeRenderer:
                 skip_entities=True,
                 skip_decorations=True,  # Skip title (already drawn)
                 terrain_type_filter="variable",  # Only variable terrain
-                hidden_main=hidden_main,
-                hidden_sub=hidden_sub,
-                current_focus=spec.current_focus
-            )
-
-            # 2b: Non-focused variable terrain differences (transparent overlay)
-            # Draw non-focused title here
-            self._draw_branch(
-                non_focused_branch,
-                goal_active=spec.goal_active,
-                has_branched=spec.has_branched,
-                animation_frame=spec.animation_frame,
-                skip_terrain=False,
-                skip_entities=True,
-                skip_decorations=False,  # Draw non-focused title
-                terrain_type_filter="variable",  # Only variable terrain
-                terrain_diff_reference=focused_branch.state,  # Only show differences
-                override_pos=(focused_branch.pos_x, focused_branch.pos_y),
                 hidden_main=hidden_main,
                 hidden_sub=hidden_sub,
                 current_focus=spec.current_focus
@@ -560,8 +561,8 @@ class ArcadeRenderer:
                 (*BLACK, int(spec.alpha * 255)), font_size=font_size, anchor_x=anchor_x, anchor_y="center"
             )
 
-            # Border (disabled for merge preview - no colored outer frame)
-            if not spec.is_merge_preview:
+            # Border (disabled for merge preview and DIV split view)
+            if not spec.is_merge_preview and spec.title == "MAIN":
                 border_width = int((5 if spec.is_focused else 3) * spec.scale)
                 self._draw_rect_outline(
                     start_x, start_y, grid_width, grid_height,
@@ -959,9 +960,8 @@ class ArcadeRenderer:
 
         # For each held item, find instances in other branch
         for uid in focused_held:
-            # Include both grounded (z==0) and in-hole (z==-1) objects
-            other_instances = [e for e in other_state.entities
-                             if e.uid == uid and e.z >= -1 and e.holder is None]
+            # Get non-held instances that will converge (z≤0)
+            other_instances = other_state.get_non_held_instances(uid)
 
             # Draw convergence lines from other instances to focused position
             for instance in other_instances:

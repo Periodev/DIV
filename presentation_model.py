@@ -370,7 +370,7 @@ class ViewModelBuilder:
 
         Returns: (main_x, main_y, sub_x, sub_y, main_alpha, sub_alpha)
         Non-focused branch moves from offset to exact center (full overlap)
-        and becomes opaque (alpha 0.7 → 1.0) to visually merge.
+        and fades in from transparent to opaque to visually merge.
         """
         B = ViewModelBuilder
         t = B._ease_in_out(progress)
@@ -385,17 +385,17 @@ class ViewModelBuilder:
         if focus == 0:
             # DIV 0 focused: DIV 1 moves from offset to center and fades in
             # DIV 0: stays at center (alpha 1.0)
-            # DIV 1: offset → center, alpha 0.7 → 1.0
+            # DIV 1: offset → center, alpha 0.0 → 1.0
             sub_x = int(lerp(B.CENTER_X + OFFSET_X, B.CENTER_X, t))
             sub_y = int(lerp(B.CENTER_Y + OFFSET_Y, B.CENTER_Y, t))
-            sub_alpha = lerp(0.7, 1.0, t)
+            sub_alpha = lerp(0.0, 1.0, t)
         else:
             # DIV 1 focused: DIV 0 moves from offset to center and fades in
             # DIV 1: stays at center (alpha 1.0)
-            # DIV 0: offset → center, alpha 0.7 → 1.0
+            # DIV 0: offset → center, alpha 0.0 → 1.0
             main_x = int(lerp(B.CENTER_X + OFFSET_X, B.CENTER_X, t))
             main_y = int(lerp(B.CENTER_Y + OFFSET_Y, B.CENTER_Y, t))
-            main_alpha = lerp(0.7, 1.0, t)
+            main_alpha = lerp(0.0, 1.0, t)
 
         return main_x, main_y, sub_x, sub_y, main_alpha, sub_alpha
 

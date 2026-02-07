@@ -85,6 +85,15 @@ class BranchState:
         """Get all instances with the same uid (for shadow detection)"""
         return [e for e in self.entities if e.uid == uid]
 
+    def get_non_held_instances(self, uid: int) -> List[Entity]:
+        """Get non-held instances of a uid that will converge when merged.
+
+        Returns instances that are grounded (z=0) or in-hole (z=-1).
+        Used for convergence hints and merge preview.
+        """
+        return [e for e in self.entities
+                if e.uid == uid and e.z <= 0 and e.holder is None]
+
     def is_shadow(self, uid: int) -> bool:
         """Check if entity is in shadow state (multiple positions)"""
         instances = self.get_entities_by_uid(uid)
