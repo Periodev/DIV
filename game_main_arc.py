@@ -144,14 +144,19 @@ class GameWindow(arcade.Window):
             return
 
         # Toggle inherit mode (Shift key)
-        if key == arcade.key.LSHIFT or key == arcade.key.RSHIFT:
+        if key == arcade.key.C:
             self.inherit_mode_enabled = not self.inherit_mode_enabled
             return
 
         # Branch / Merge (V key)
         if key == arcade.key.V:
             if self.controller.has_branched:
-                self.controller.try_merge()
+                if self.inherit_mode_enabled:
+                    # Fallback to normal merge when inherit merge is not possible.
+                    if not self.controller.try_inherit_merge():
+                        self.controller.try_merge()
+                else:
+                    self.controller.try_merge()
             else:
                 self.controller.try_branch()
             # Clear any lingering merge preview state
@@ -175,10 +180,6 @@ class GameWindow(arcade.Window):
             if self.merge_preview_active:
                 self.merge_preview_active = False
                 self.merge_preview_start_time = None
-
-        # Merge (C key) disabled
-        elif key == arcade.key.C:
-            return
 
         # Switch focus with slide animation (Tab)
         elif key == arcade.key.TAB:

@@ -8,6 +8,7 @@ import time
 import arcade
 from typing import Optional, Tuple, List, TYPE_CHECKING
 from timeline_system import BranchState, TerrainType, EntityType
+from presentation_model import ViewModelBuilder
 
 if TYPE_CHECKING:
     from presentation_model import FrameViewSpec, BranchViewSpec, InteractionHint
@@ -541,11 +542,7 @@ class ArcadeRenderer:
             self._draw_overlay("LEVEL COMPLETE!", (0, 0, 0))
 
         # 6. Draw inherit mode indicator
-        main_cell_size = int(CELL_SIZE * spec.main_branch.scale)
-        self._draw_inherit_mode_indicator(spec.inherit_mode_enabled,
-                                          spec.main_branch.pos_x,
-                                          spec.main_branch.pos_y,
-                                          main_cell_size)
+        self._draw_inherit_mode_indicator(spec.inherit_mode_enabled)
 
     def _flip_y(self, y: int) -> int:
         """Convert top-down Y to arcade's bottom-up Y."""
@@ -1458,8 +1455,8 @@ class ArcadeRenderer:
         box_height = 40
         y_offset = 15
 
-        # Position: center bottom, right of center
-        x = B.CENTER_X + grid_px // 2 + 10
+        # Position: align right edge with focused main view right edge
+        x = B.CENTER_X + grid_px - box_width
         y = B.CENTER_Y + grid_px + y_offset
 
         # Colors - cyan/blue hint
@@ -1486,18 +1483,14 @@ class ArcadeRenderer:
         from presentation_model import ViewModelBuilder
         B = ViewModelBuilder
 
-        grid_px = CELL_SIZE * GRID_SIZE
-        y_offset = 15
-
-        # Position: center bottom, left of center
-        x = B.CENTER_X + grid_px // 2 - 10
-        y = B.CENTER_Y + grid_px + y_offset
+        # Match timeline hint ("V 分裂") size and position
+        box_width = 150
+        box_height = 40
+        x = (WINDOW_WIDTH - box_width) // 2
+        y = WINDOW_HEIGHT - 60
 
         if alt_pressed:
             # Orange inherit merge hint
-            box_width = 120
-            box_height = 40
-            x = x - box_width  # Adjust x for wider box
             bg_color = (200, 100, 20, 200)
             border_color = (255, 140, 0)
             text_color = (255, 255, 255)
@@ -1505,9 +1498,6 @@ class ArcadeRenderer:
             cache_key = 'inherit_merge_hint'
         else:
             # Blue normal merge hint
-            box_width = 90
-            box_height = 40
-            x = x - box_width
             bg_color = (40, 80, 120, 200)
             border_color = (100, 150, 200)
             text_color = (255, 255, 255)
@@ -1522,7 +1512,7 @@ class ArcadeRenderer:
         text_x = x + box_width // 2
         text_y = self._flip_y(y + box_height // 2)
         self._draw_cached_text(cache_key, text, text_x, text_y, text_color,
-                              font_size=18, anchor_x="center", anchor_y="center")
+                              font_size=16, anchor_x="center", anchor_y="center")
 
     def _draw_debug_info(self, step_count: int, focus: int,
                          has_branched: bool, input_log: List[str]):
@@ -1599,18 +1589,16 @@ class ArcadeRenderer:
         # Hint text (cached)
         self._overlay_texts['hint'].draw()
 
-    def _draw_inherit_mode_indicator(self, enabled: bool, main_grid_x: int, main_grid_y: int, cell_size: int):
-        """Draw the inherit mode indicator at the bottom-left corner, aligned with the main grid."""
-        indicator_width = 120 # Narrower width
-        indicator_height = 40 # Match height of other hint blocks
+    def _draw_inherit_mode_indicator(self, enabled: bool):
+        """Draw the inherit mode indicator, fixed at the bottom and aligned with the main view's static left edge."""
+        indicator_width = 120
+        indicator_height = 40
         
-        # Align x with the main grid's left edge
-        x = main_grid_x
+        # Use the static CENTER_X from ViewModelBuilder for a fixed horizontal position
+        # that aligns with the main grid's left edge when centered.
+        x = ViewModelBuilder.CENTER_X
         
-        # Position 20 pixels from the bottom of the window (to match _draw_timeline_hint_box's bottom alignment)
-        # My _draw_rect_filled expects top-left y.
-        # So, if bottom edge is 20, then top edge is 20 + indicator_height = 60
-        # And the top-left y will be WINDOW_HEIGHT - 60
+        # Position 20 pixels from the bottom of the window (to match other hint boxes).
         y = WINDOW_HEIGHT - 60
 
         bg_color = (60, 60, 60, 200) # Dark gray background
@@ -1618,7 +1606,7 @@ class ArcadeRenderer:
         border_color = (100, 100, 100) # Gray border
 
         if enabled:
-            bg_color = (255, 140, 0, 200) # Orange background when enabled (using ORANGE)
+            bg_color = (255, 140, 0, 200) # Orange background when enabled
             text_color = WHITE
             border_color = (255, 180, 0) # Lighter orange border
 
@@ -1629,7 +1617,7 @@ class ArcadeRenderer:
         self._draw_rect_outline(x, y, indicator_width, indicator_height, border_color, 2)
 
         # Text
-        text = "Inherit: ON" if enabled else "Inherit: OFF"
+        text = "C 繼承: ON" if enabled else "C 繼承: OFF"
         text_x = x + indicator_width // 2
         text_y = self._flip_y(y + indicator_height // 2)
 
@@ -1638,7 +1626,7 @@ class ArcadeRenderer:
             text,
             text_x, text_y,
             text_color,
-            font_size=14,
+            font_size=16,
             anchor_x="center", anchor_y="center"
         )
 
