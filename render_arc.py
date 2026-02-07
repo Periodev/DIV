@@ -527,7 +527,9 @@ class ArcadeRenderer:
                 player_color = BOX_COLORS[color_index]
             else:
                 player_color = BLUE if (spec.is_focused or spec.is_merge_preview) else GRAY
-            self._draw_player(start_x, start_y, state.player, player_color, held_uid, cell_size, spec.alpha)
+            self._draw_player(start_x, start_y, state.player, player_color, held_uid,
+                              cell_size, spec.alpha,
+                              show_border=not (spec.is_merge_preview and not spec.is_focused))
 
         # Cell hint (only for focused, full-scale)
         if spec.interaction_hint and spec.scale >= 1.0:
@@ -721,7 +723,8 @@ class ArcadeRenderer:
                            x + w, self._flip_y(y + end_i), color, thickness)
 
     def _draw_player(self, start_x: int, start_y: int, player,
-                     color: Tuple, held_uid: Optional[int], cell_size: int, alpha: float = 1.0):
+                     color: Tuple, held_uid: Optional[int], cell_size: int, alpha: float = 1.0,
+                     show_border: bool = True):
         """Draw the player."""
         scale = cell_size / CELL_SIZE
         gx, gy = player.pos
@@ -742,8 +745,9 @@ class ArcadeRenderer:
             box_size = cell_size - pad * 2
 
             self._draw_rect_filled(cell_x, cell_y, box_size, box_size, player_color)
-            self._draw_rect_outline(cell_x, cell_y, box_size, box_size,
-                                   (*BLACK, int(alpha * 255)), max(1, int(3 * scale)))
+            if show_border:
+                self._draw_rect_outline(cell_x, cell_y, box_size, box_size,
+                                       (*BLACK, int(alpha * 255)), max(1, int(3 * scale)))
 
             # UID text (cached)
             self._draw_cached_text(f'held_{held_uid}_{scale:.2f}_{alpha:.2f}', str(held_uid),
