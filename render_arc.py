@@ -361,17 +361,7 @@ class ArcadeRenderer:
                         continue  # Same terrain - skip
 
                 if terrain == TerrainType.NO_CARRY:
-                    cell_x = start_x + gx * cell_size
-                    cell_y = start_y + gy * cell_size
-                    center_x, center_y = self._grid_to_screen(start_x, start_y, gx, gy, cell_size)
-                    # Dark orange border
-                    self._draw_rect_outline(cell_x, cell_y, cell_size, cell_size,
-                                           (*((255, 140, 0)), int(alpha * 255)),
-                                           max(1, int(4 * scale)))
-                    # 'c' symbol
-                    self._draw_cached_text(f'nocarry_{scale:.2f}_{alpha:.2f}', 'c',
-                                           center_x, center_y, (*((255, 100, 0)), int(alpha * 255)),
-                                           font_size=int(14 * scale))
+                    pass
 
     def draw_frame(self, spec: 'FrameViewSpec'):
         """Main entry point for rendering a complete frame.
