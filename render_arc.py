@@ -39,6 +39,9 @@ LIGHT_RED = (255, 100, 100)
 
 SWITCH_OFF_COLOR = (200, 200, 200)
 SWITCH_OFF_BORDER = (160, 160, 160)
+INTERACT_GRAY = (100, 100, 100)
+
+
 
 # Box colors (colorblind-friendly)
 BOX_COLORS = [
@@ -1089,7 +1092,7 @@ class ArcadeRenderer:
                 int(inherit_line_color[1] * pulse),
                 int(inherit_line_color[2] * pulse)
             )
-            self._draw_lock_corners(start_x, start_y, (gx, gy), lock_color,
+            self._draw_lock_corners(start_x, start_y, (other_px, other_py), lock_color,
                                    cell_size, size=int(24 * scale),
                                    thickness=max(1, int(8 * scale)),
                                    margin=int(5 * scale))
@@ -1134,7 +1137,7 @@ class ArcadeRenderer:
         if hint.is_inset:
             # Inset dashed frame
             margin = 8
-            frame_color = (*GRAY, int(alpha * 255))
+            frame_color = (*(INTERACT_GRAY), int(alpha * 255))
             self._draw_dashed_rect(
                 cell_x + margin, cell_y + margin,
                 cell_size - margin * 2, cell_size - margin * 2,
@@ -1144,8 +1147,8 @@ class ArcadeRenderer:
         # Text with outline
         white_alpha = (*WHITE, int(alpha * 255))
         black_alpha = (*BLACK, int(alpha * 255))
-        hint_font = int(12 * 1.44)
-        self._draw_text_with_outline('[X]', center_x, center_y + 8, white_alpha, black_alpha, hint_font)
+        hint_font = int(12)
+        self._draw_text_with_outline('[SPACE]', center_x, center_y + 8, white_alpha, black_alpha, hint_font)
         self._draw_text_with_outline(hint.text, center_x, center_y - 12, white_alpha, black_alpha, hint_font)
 
     def _draw_text_with_outline(self, text: str, x: int, y: int,
