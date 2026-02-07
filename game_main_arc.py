@@ -50,6 +50,9 @@ class GameWindow(arcade.Window):
         self.held_keys = set()
         self.alt_held = False
 
+        # Global inherit mode toggle (Shift key)
+        self.inherit_mode_enabled = False
+
         arcade.set_background_color(arcade.color.WHITE)
 
     def on_update(self, delta_time: float):
@@ -140,6 +143,11 @@ class GameWindow(arcade.Window):
         if self.controller.collapsed or self.controller.victory:
             return
 
+        # Toggle inherit mode (Shift key)
+        if key == arcade.key.LSHIFT or key == arcade.key.RSHIFT:
+            self.inherit_mode_enabled = not self.inherit_mode_enabled
+            return
+
         # Branch / Merge (V key)
         if key == arcade.key.V:
             if self.controller.has_branched:
@@ -228,10 +236,10 @@ class GameWindow(arcade.Window):
             slide_progress,
             self.slide_direction,
             self.merge_preview_active,
-            self.merge_preview_active and self.alt_held and self.controller.can_show_inherit_hint(),
+            self.merge_preview_active and self.inherit_mode_enabled and self.controller.can_show_inherit_hint(),
             merge_preview_progress,
             merge_preview_swap_progress,
-            self.alt_held
+            self.inherit_mode_enabled
         )
 
         # Render

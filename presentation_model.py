@@ -76,9 +76,9 @@ class FrameViewSpec:
     # Timeline hint (bottom bar)
     branch_hint_active: bool = False  # True if player is on branch point
     show_merge_preview_hint: bool = False  # Show "M 預覽" hint
-    show_merge_hint: bool = False  # Show "C 合併" hint
-    show_alt_hint: bool = False  # Show "ALT" hint (when inherit merge is possible)
-    alt_pressed: bool = False  # True if ALT key is held down
+    show_merge_hint: bool = False  # Show "V 合併" hint
+    show_inherit_indicator: bool = False  # Show orange player when inherit available
+    inherit_mode_enabled: bool = False  # Global inherit mode toggle (Shift key)
 
 
 class ViewModelBuilder:
@@ -123,7 +123,7 @@ class ViewModelBuilder:
               show_inherit_hint: bool = False,
               merge_preview_progress: float = 0.0,
               merge_preview_swap_progress: float = 0.0,
-              alt_pressed: bool = False) -> FrameViewSpec:
+              inherit_mode_enabled: bool = False) -> FrameViewSpec:
         """Build frame specification with slide animation and merge preview support."""
         import time
         B = ViewModelBuilder
@@ -261,8 +261,8 @@ class ViewModelBuilder:
             branch_hint_active=branch_hint_active,
             show_merge_preview_hint=has_branched,
             show_merge_hint=has_branched,
-            show_alt_hint=has_branched and controller.can_show_inherit_hint(),
-            alt_pressed=alt_pressed
+            show_inherit_indicator=has_branched and controller.can_show_inherit_hint(),
+            inherit_mode_enabled=inherit_mode_enabled
         )
 
     @staticmethod

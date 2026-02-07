@@ -466,7 +466,7 @@ class ArcadeRenderer:
                 hidden_sub=hidden_sub,
                 current_focus=spec.current_focus,
                 falling_boxes=spec.falling_boxes,
-                show_inherit_ring=spec.show_alt_hint
+                show_inherit_ring=spec.show_inherit_indicator
             )
 
             # Layer 4: Merge convergence hints (when focused is holding)
@@ -487,7 +487,7 @@ class ArcadeRenderer:
                     has_branched=spec.has_branched,
                     animation_frame=spec.animation_frame,
                     falling_boxes=spec.falling_boxes,
-                    show_inherit_ring=spec.show_alt_hint and spec.current_focus == 1
+                    show_inherit_ring=spec.show_inherit_indicator and spec.current_focus == 1
                 )
 
             if -500 < spec.main_branch.pos_x < WINDOW_WIDTH + 100:
@@ -497,7 +497,7 @@ class ArcadeRenderer:
                     has_branched=spec.has_branched,
                     animation_frame=spec.animation_frame,
                     falling_boxes=spec.falling_boxes,
-                    show_inherit_ring=spec.show_alt_hint and spec.current_focus == 0
+                    show_inherit_ring=spec.show_inherit_indicator and spec.current_focus == 0
                 )
 
         # 2.5. Draw flash effect on focused branch
@@ -523,8 +523,8 @@ class ArcadeRenderer:
         if spec.show_merge_preview_hint:
             self._draw_merge_preview_hint()
         if spec.show_merge_hint:
-            # Only change to inherit merge hint if alt is valid (show_alt_hint is True)
-            self._draw_merge_hint(spec.alt_pressed and spec.show_alt_hint)
+            # Show inherit hint if inherit mode enabled and inherit is available
+            self._draw_merge_hint(spec.inherit_mode_enabled and spec.show_inherit_indicator)
 
         # 4. Draw debug info
         self._draw_debug_info(
@@ -539,6 +539,13 @@ class ArcadeRenderer:
             self._draw_overlay("FALL DOWN!", (150, 0, 0))
         elif spec.is_victory:
             self._draw_overlay("LEVEL COMPLETE!", (0, 0, 0))
+
+        # 6. Draw inherit mode indicator
+        main_cell_size = int(CELL_SIZE * spec.main_branch.scale)
+        self._draw_inherit_mode_indicator(spec.inherit_mode_enabled,
+                                          spec.main_branch.pos_x,
+                                          spec.main_branch.pos_y,
+                                          main_cell_size)
 
     def _flip_y(self, y: int) -> int:
         """Convert top-down Y to arcade's bottom-up Y."""
@@ -1517,46 +1524,11 @@ class ArcadeRenderer:
         self._draw_cached_text(cache_key, text, text_x, text_y, text_color,
                               font_size=18, anchor_x="center", anchor_y="center")
 
-    def _draw_alt_hint(self, alt_pressed: bool = False):
-        """Draw orange 'Alt' or 'Alt+' hint left of merge hint.
-
-        Args:
-            alt_pressed: If True, show "Alt+" instead of "Alt"
-        """
-        from presentation_model import ViewModelBuilder
-        B = ViewModelBuilder
-
-        grid_px = CELL_SIZE * GRID_SIZE
-        box_width = 60
-        box_height = 40
-        y_offset = 15
-
-        # Position: right edge aligns with left edge of "C 繼承合併" (width 120)
-        inherit_merge_left = B.CENTER_X + grid_px // 2 - 10 - 120
-        x = inherit_merge_left - box_width  # Alt box right edge aligns with inherit merge left edge
-        y = B.CENTER_Y + grid_px + y_offset
-
-        # Colors - orange
-        bg_color = (200, 100, 20, 200)
-        border_color = (255, 140, 0)
-        text_color = (255, 255, 255)
-
-        # Background
-        self._draw_rect_filled(x, y, box_width, box_height, bg_color)
-        self._draw_rect_outline(x, y, box_width, box_height, border_color, 2)
-
-        # Text "Alt" or "Alt+"
-        text = 'Alt+' if alt_pressed else 'Alt'
-        cache_key = 'alt_hint_pressed' if alt_pressed else 'alt_hint'
-        text_x = x + box_width // 2
-        text_y = self._flip_y(y + box_height // 2)
-        self._draw_cached_text(cache_key, text, text_x, text_y, text_color,
-                              font_size=18, anchor_x="center", anchor_y="center")
-
     def _draw_debug_info(self, step_count: int, focus: int,
                          has_branched: bool, input_log: List[str]):
         """Draw debug info at bottom."""
-        y = self._flip_y(WINDOW_HEIGHT - 45)
+        # Adjusted Y to avoid overlap with inherit mode indicator
+        y = self._flip_y(WINDOW_HEIGHT - 100) # Moved further up
         keys = ''.join(input_log[-30:])
         info = f"Step: {step_count}  |  Keys: {keys}"
         # Update cached text object
@@ -1626,3 +1598,47 @@ class ArcadeRenderer:
 
         # Hint text (cached)
         self._overlay_texts['hint'].draw()
+
+    def _draw_inherit_mode_indicator(self, enabled: bool, main_grid_x: int, main_grid_y: int, cell_size: int):
+        """Draw the inherit mode indicator at the bottom-left corner, aligned with the main grid."""
+        indicator_width = 120 # Narrower width
+        indicator_height = 40 # Match height of other hint blocks
+        
+        # Align x with the main grid's left edge
+        x = main_grid_x
+        
+        # Position 20 pixels from the bottom of the window (to match _draw_timeline_hint_box's bottom alignment)
+        # My _draw_rect_filled expects top-left y.
+        # So, if bottom edge is 20, then top edge is 20 + indicator_height = 60
+        # And the top-left y will be WINDOW_HEIGHT - 60
+        y = WINDOW_HEIGHT - 60
+
+        bg_color = (60, 60, 60, 200) # Dark gray background
+        text_color = LIGHT_GRAY
+        border_color = (100, 100, 100) # Gray border
+
+        if enabled:
+            bg_color = (255, 140, 0, 200) # Orange background when enabled (using ORANGE)
+            text_color = WHITE
+            border_color = (255, 180, 0) # Lighter orange border
+
+        # Background
+        self._draw_rect_filled(x, y, indicator_width, indicator_height, bg_color)
+
+        # Border
+        self._draw_rect_outline(x, y, indicator_width, indicator_height, border_color, 2)
+
+        # Text
+        text = "Inherit: ON" if enabled else "Inherit: OFF"
+        text_x = x + indicator_width // 2
+        text_y = self._flip_y(y + indicator_height // 2)
+
+        self._draw_cached_text(
+            f'inherit_indicator_{enabled}',
+            text,
+            text_x, text_y,
+            text_color,
+            font_size=14,
+            anchor_x="center", anchor_y="center"
+        )
+
