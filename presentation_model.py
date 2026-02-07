@@ -115,11 +115,7 @@ class ViewModelBuilder:
               merge_preview_active: bool = False,
               show_inherit_hint: bool = False,
               merge_preview_progress: float = 0.0,
-              merge_preview_swap_progress: float = 0.0,
-              merge_animation_progress: float = 0.0,
-              merge_animation_pre_focus: int = None,
-              merge_animation_stored_main = None,
-              merge_animation_stored_sub = None) -> FrameViewSpec:
+              merge_preview_swap_progress: float = 0.0) -> FrameViewSpec:
         """Build frame specification with slide animation and merge preview support."""
         import time
         B = ViewModelBuilder
@@ -153,23 +149,14 @@ class ViewModelBuilder:
         focus = controller.current_focus
         has_branched = controller.has_branched
 
-        # Special case: merge animation playing (use stored states for visual animation)
-        if merge_animation_progress > 0 and merge_animation_stored_main and merge_animation_stored_sub:
-            # Override controller states with stored pre-merge states
-            main_branch_state = merge_animation_stored_main
-            sub_branch_state = merge_animation_stored_sub
-            has_branched = True
-            focus = merge_animation_pre_focus
-            merge_preview_active = True
-        else:
-            # Use normal controller states
-            main_branch_state = controller.main_branch
-            sub_branch_state = controller.sub_branch
+        # Use controller states
+        main_branch_state = controller.main_branch
+        sub_branch_state = controller.sub_branch
 
         # Alpha values (for merge preview)
         main_alpha = 1.0
         sub_alpha = 1.0
-        is_merge_preview = merge_preview_active or merge_preview_progress > 0 or merge_animation_progress > 0
+        is_merge_preview = merge_preview_active or merge_preview_progress > 0
 
         # Calculate positions and scales based on animation state
         if not has_branched:
@@ -185,11 +172,6 @@ class ViewModelBuilder:
             if merge_preview_swap_progress > 0:
                 main_x, main_y, sub_x, sub_y, main_alpha, sub_alpha = B._calc_merge_preview_swap(
                     focus, merge_preview_swap_progress, main_x, main_y, sub_x, sub_y, main_alpha, sub_alpha
-                )
-            # If merging, animate non-focused to center and fade in
-            if merge_animation_progress > 0:
-                main_x, main_y, sub_x, sub_y, main_alpha, sub_alpha = B._calc_merge_animation(
-                    focus, merge_animation_progress, main_x, main_y, sub_x, sub_y, main_alpha, sub_alpha
                 )
         else:
             # Two branches - focused centered (large), other on side (small)

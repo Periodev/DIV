@@ -615,6 +615,10 @@ class ArcadeRenderer:
             if spec.is_focused and spec.scale >= 1.0:
                 self._draw_shadow_connections(start_x, start_y, state, animation_frame, cell_size)
 
+            # Grounded object lock frame (only on focused, full-scale branch)
+            if spec.is_focused and spec.scale >= 1.0:
+                self._draw_grounded_object_lock(start_x, start_y, state, cell_size)
+
             # Inherited hold hint (merge preview only)
             if spec.is_merge_preview and spec.show_inherit_hint and hidden_main and hidden_sub:
                 self._draw_inherited_hold_hint(
@@ -986,6 +990,32 @@ class ArcadeRenderer:
                 self._draw_dashed_line(other_cx, other_cy, front_cx, front_cy,
                                        line_color, 3, 12, slow_offset)
 
+    def _draw_grounded_object_lock(self, start_x: int, start_y: int,
+                                    state: BranchState, cell_size: int):
+        """Draw lock frame around grounded objects in front of player."""
+        from timeline_system import Physics
+
+        player = state.player
+        px, py = player.pos
+        dx, dy = player.direction
+        front_pos = (px + dx, py + dy)
+
+        # Find grounded box at front position
+        target = state.find_box_at(front_pos)
+        if target is None:
+            return
+
+        # Draw lock corners around grounded object
+        scale = cell_size / CELL_SIZE
+        lock_color = (100, 100, 100)  # Gray lock frame
+        self._draw_lock_corners(
+            start_x, start_y, front_pos, lock_color,
+            cell_size,
+            size=int(20 * scale),
+            thickness=max(2, int(6 * scale)),  # Thicker
+            margin=-int(3 * scale)  # Negative margin = inset to avoid grid lines
+        )
+
     def _draw_merge_convergence_hints(self, focused_start_x: int, focused_start_y: int,
                                        other_start_x: int, other_start_y: int,
                                        focused_state: BranchState,
@@ -1141,7 +1171,7 @@ class ArcadeRenderer:
             self._draw_lock_corners(start_x, start_y, (other_px, other_py), lock_color,
                                    cell_size, size=int(24 * scale),
                                    thickness=max(1, int(8 * scale)),
-                                   margin=int(5 * scale))
+                                   margin=-int(3 * scale))  # Inset within grid
 
     def _draw_lock_corners(self, start_x: int, start_y: int, pos: Tuple[int, int],
                            color: Tuple, cell_size: int,
