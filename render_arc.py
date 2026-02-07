@@ -890,7 +890,7 @@ class ArcadeRenderer:
 
         scale = cell_size / CELL_SIZE
         inherit_line_color = ORANGE
-        converge_line_color = CYAN
+        converge_line_color = (50, 220, 50)
         slow_offset = animation_frame * 0.25
 
         for uid in inherited:
