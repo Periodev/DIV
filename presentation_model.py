@@ -73,6 +73,11 @@ class FrameViewSpec:
     # Falling animation (boxes falling into holes)
     falling_boxes: dict = None  # {(uid, pos): progress} where progress is 0.0-1.0
 
+    # Timeline hint (bottom bar)
+    branch_hint_active: bool = False  # True if player is on branch point
+    show_merge_preview_hint: bool = False  # Show "M 預覽" hint
+    show_merge_hint: bool = False  # Show "C 合併" hint
+
 
 class ViewModelBuilder:
     """Transforms game state into visual specifications."""
@@ -141,6 +146,15 @@ class ViewModelBuilder:
             progress = controller.get_falling_progress(uid, pos)
             if progress is not None:
                 falling_boxes[(uid, pos)] = progress
+
+        # Check if branch hint should be highlighted (player on branch point)
+        branch_hint_active = False
+        if not controller.has_branched:
+            active = controller.get_active_branch()
+            player_terrain = active.terrain.get(active.player.pos)
+            branch_terrains = {TerrainType.BRANCH1, TerrainType.BRANCH2,
+                             TerrainType.BRANCH3, TerrainType.BRANCH4}
+            branch_hint_active = player_terrain in branch_terrains
 
         # Goal active check
         preview = controller.get_merge_preview()
@@ -240,7 +254,10 @@ class ViewModelBuilder:
             input_sequence=controller.input_log,
             flash_pos=flash_pos,
             flash_intensity=flash_intensity,
-            falling_boxes=falling_boxes
+            falling_boxes=falling_boxes,
+            branch_hint_active=branch_hint_active,
+            show_merge_preview_hint=has_branched,
+            show_merge_hint=has_branched
         )
 
     @staticmethod

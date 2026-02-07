@@ -507,7 +507,22 @@ class ArcadeRenderer:
                     spec.flash_pos, spec.flash_intensity, cell_size
                 )
 
-        # 3. Draw debug info
+        # 3. Draw timeline hint (bottom bar)
+        if not spec.has_branched:
+            self._draw_timeline_hint_box(spec.branch_hint_active)
+
+        # 3.5. Draw Tab switch hint on focused branch
+        if spec.has_branched:
+            focused_branch = spec.main_branch if spec.current_focus == 0 else spec.sub_branch
+            self._draw_tab_switch_hint(focused_branch, spec.current_focus)
+
+        # 3.6. Draw merge operation hints in center
+        if spec.show_merge_preview_hint:
+            self._draw_merge_preview_hint()
+        if spec.show_merge_hint:
+            self._draw_merge_hint()
+
+        # 4. Draw debug info
         self._draw_debug_info(
             spec.step_count,
             spec.current_focus,
@@ -515,7 +530,7 @@ class ArcadeRenderer:
             spec.input_sequence
         )
 
-        # 4. Overlay (collapsed or victory)
+        # 5. Overlay (collapsed or victory)
         if spec.is_collapsed:
             self._draw_overlay("FALL DOWN!", (150, 0, 0))
         elif spec.is_victory:
@@ -1284,6 +1299,191 @@ class ArcadeRenderer:
                                    x + padding_inner + 20, screen_y,
                                    (220, 220, 220), font_size=12, anchor_x="left")
             item_y += line_height
+
+    def _draw_timeline_hint_box(self, is_active: bool):
+        """Draw timeline hint box at bottom center.
+
+        Args:
+            is_active: True if player is on branch point (green glow), False (gray)
+        """
+        # Position at bottom center
+        box_width = 150
+        box_height = 40
+        x = (WINDOW_WIDTH - box_width) // 2
+        y = WINDOW_HEIGHT - 60
+
+        # Colors
+        if is_active:
+            # Green glow when on branch point
+            bg_color = (50, 150, 50, 200)
+            border_color = (100, 255, 100)
+            text_color = (255, 255, 255)
+        else:
+            # Gray when not on branch point
+            bg_color = (60, 60, 60, 200)
+            border_color = (120, 120, 120)
+            text_color = (180, 180, 180)
+
+        # Background
+        self._draw_rect_filled(x, y, box_width, box_height, bg_color)
+
+        # Border
+        self._draw_rect_outline(x, y, box_width, box_height, border_color, 2)
+
+        # Text
+        text_x = x + box_width // 2
+        text_y = self._flip_y(y + box_height // 2)
+        cache_key = f'timeline_hint_{"active" if is_active else "inactive"}'
+        self._draw_cached_text(cache_key, 'V 分裂', text_x, text_y, text_color,
+                              font_size=16, anchor_x="center", anchor_y="center")
+
+    def _draw_tab_switch_hint(self, branch_spec: 'BranchViewSpec', current_focus: int):
+        """Draw both Tab switch hints, with inactive direction in grayscale.
+
+        Args:
+            branch_spec: The focused branch spec (used for scale only)
+            current_focus: 0 for DIV 0, 1 for DIV 1
+        """
+        # Use fixed static positions (not animated branch position)
+        from presentation_model import ViewModelBuilder
+        B = ViewModelBuilder
+
+        # Calculate static focused branch position
+        grid_px = CELL_SIZE * GRID_SIZE  # Always use full scale for hint position
+
+        # Position below the grid (outside map area)
+        box_width = 90
+        box_height = 40
+        y_offset = 15  # Distance below grid
+        arrow_size = 15
+
+        # Active colors (blue)
+        active_bg = (20, 20, 200, 200)
+        active_border = (0, 0, 255)
+        active_text = (255, 255, 255)
+
+        # Inactive colors (gray)
+        inactive_bg = (80, 80, 80, 200)
+        inactive_border = (120, 120, 120)
+        inactive_text = (160, 160, 160)
+
+        # Left Tab hint: "← Tab" (active if current_focus == 1, switch to DIV 0)
+        left_active = (current_focus == 1)
+        x_left = B.CENTER_X + 10
+        y_left = B.CENTER_Y + grid_px + y_offset
+
+        bg_color = active_bg if left_active else inactive_bg
+        border_color = active_border if left_active else inactive_border
+        text_color = active_text if left_active else inactive_text
+
+        # Background
+        self._draw_rect_filled(x_left, y_left, box_width, box_height, bg_color)
+        self._draw_rect_outline(x_left, y_left, box_width, box_height, border_color, 2)
+
+        # Left arrow
+        arrow_x = x_left + 15
+        arrow_y = self._flip_y(y_left + box_height // 2)
+        points_left = [
+            (arrow_x - arrow_size, arrow_y),  # Left point
+            (arrow_x, arrow_y - arrow_size // 2),  # Top right
+            (arrow_x, arrow_y + arrow_size // 2)   # Bottom right
+        ]
+        arcade.draw_polygon_filled(points_left, text_color)
+
+        # Text "Tab"
+        text_x = x_left + 35
+        text_y = self._flip_y(y_left + box_height // 2)
+        cache_key = 'tab_hint_left_active' if left_active else 'tab_hint_left_inactive'
+        self._draw_cached_text(cache_key, 'Tab', text_x, text_y, text_color,
+                              font_size=18, anchor_x="left", anchor_y="center")
+
+        # Right Tab hint: "Tab →" (active if current_focus == 0, switch to DIV 1)
+        right_active = (current_focus == 0)
+        x_right = B.CENTER_X + grid_px - box_width - 10
+        y_right = B.CENTER_Y + grid_px + y_offset
+
+        bg_color = active_bg if right_active else inactive_bg
+        border_color = active_border if right_active else inactive_border
+        text_color = active_text if right_active else inactive_text
+
+        # Background
+        self._draw_rect_filled(x_right, y_right, box_width, box_height, bg_color)
+        self._draw_rect_outline(x_right, y_right, box_width, box_height, border_color, 2)
+
+        # Text "Tab"
+        text_x = x_right + 15
+        text_y = self._flip_y(y_right + box_height // 2)
+        cache_key = 'tab_hint_right_active' if right_active else 'tab_hint_right_inactive'
+        self._draw_cached_text(cache_key, 'Tab', text_x, text_y, text_color,
+                              font_size=18, anchor_x="left", anchor_y="center")
+
+        # Right arrow
+        arrow_x = x_right + box_width - 20
+        arrow_y = self._flip_y(y_right + box_height // 2)
+        points_right = [
+            (arrow_x + arrow_size, arrow_y),  # Right point
+            (arrow_x, arrow_y - arrow_size // 2),  # Top left
+            (arrow_x, arrow_y + arrow_size // 2)   # Bottom left
+        ]
+        arcade.draw_polygon_filled(points_right, text_color)
+
+    def _draw_merge_preview_hint(self):
+        """Draw 'M 預覽' hint at center bottom."""
+        from presentation_model import ViewModelBuilder
+        B = ViewModelBuilder
+
+        grid_px = CELL_SIZE * GRID_SIZE
+        box_width = 90
+        box_height = 40
+        y_offset = 15
+
+        # Position: center bottom, left of center
+        x = B.CENTER_X + grid_px // 2 - box_width - 10
+        y = B.CENTER_Y + grid_px + y_offset
+
+        # Colors - cyan/blue hint
+        bg_color = (40, 80, 120, 200)
+        border_color = (100, 150, 200)
+        text_color = (200, 220, 255)
+
+        # Background
+        self._draw_rect_filled(x, y, box_width, box_height, bg_color)
+        self._draw_rect_outline(x, y, box_width, box_height, border_color, 2)
+
+        # Text "M 預覽"
+        text_x = x + box_width // 2
+        text_y = self._flip_y(y + box_height // 2)
+        self._draw_cached_text('merge_preview_hint', 'M 預覽', text_x, text_y, text_color,
+                              font_size=18, anchor_x="center", anchor_y="center")
+
+    def _draw_merge_hint(self):
+        """Draw 'C 合併' hint at center bottom."""
+        from presentation_model import ViewModelBuilder
+        B = ViewModelBuilder
+
+        grid_px = CELL_SIZE * GRID_SIZE
+        box_width = 90
+        box_height = 40
+        y_offset = 15
+
+        # Position: center bottom, right of center
+        x = B.CENTER_X + grid_px // 2 + 10
+        y = B.CENTER_Y + grid_px + y_offset
+
+        # Colors - cyan/blue hint
+        bg_color = (40, 80, 120, 200)
+        border_color = (100, 150, 200)
+        text_color = (200, 220, 255)
+
+        # Background
+        self._draw_rect_filled(x, y, box_width, box_height, bg_color)
+        self._draw_rect_outline(x, y, box_width, box_height, border_color, 2)
+
+        # Text "C 合併"
+        text_x = x + box_width // 2
+        text_y = self._flip_y(y + box_height // 2)
+        self._draw_cached_text('merge_hint', 'C 合併', text_x, text_y, text_color,
+                              font_size=18, anchor_x="center", anchor_y="center")
 
     def _draw_debug_info(self, step_count: int, focus: int,
                          has_branched: bool, input_log: List[str]):

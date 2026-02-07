@@ -255,22 +255,21 @@ def run_game(floor_map: str, object_map: str):
 
 
 # ===== Map Definition =====
-# ===== 地圖定義 =====
 floor_map = '''
 ######
-#cc###
-#Sc###
-##c###
-#VcSG#
+#....#
+#S..S#
+##.v##
+##G.##
 ######
 '''
 
 object_map = '''
 ......
-.P....
+...P..
 ..B...
 ......
-...B..
+......
 ......
 '''
 
