@@ -1352,7 +1352,7 @@ class ArcadeRenderer:
         grid_px = CELL_SIZE * GRID_SIZE  # Always use full scale for hint position
 
         # Position below the grid (outside map area)
-        box_width = 90
+        box_width = 75
         box_height = 40
         y_offset = 15  # Distance below grid
         arrow_size = 15
@@ -1369,8 +1369,8 @@ class ArcadeRenderer:
 
         # Left Tab hint: "← Tab" (active if current_focus == 1, switch to DIV 0)
         left_active = (current_focus == 1)
-        x_left = B.CENTER_X + 10
-        y_left = B.CENTER_Y + grid_px + y_offset
+        x_left = B.CENTER_X - box_width - 10
+        y_left = B.CENTER_Y + grid_px - CELL_SIZE // 2 - box_height // 2
 
         bg_color = active_bg if left_active else inactive_bg
         border_color = active_border if left_active else inactive_border
@@ -1381,7 +1381,7 @@ class ArcadeRenderer:
         self._draw_rect_outline(x_left, y_left, box_width, box_height, border_color, 2)
 
         # Left arrow
-        arrow_x = x_left + 15
+        arrow_x = x_left + 20
         arrow_y = self._flip_y(y_left + box_height // 2)
         points_left = [
             (arrow_x - arrow_size, arrow_y),  # Left point
@@ -1391,7 +1391,7 @@ class ArcadeRenderer:
         arcade.draw_polygon_filled(points_left, text_color)
 
         # Text "Tab"
-        text_x = x_left + 35
+        text_x = x_left + 25
         text_y = self._flip_y(y_left + box_height // 2)
         cache_key = 'tab_hint_left_active' if left_active else 'tab_hint_left_inactive'
         self._draw_cached_text(cache_key, 'Tab', text_x, text_y, text_color,
@@ -1399,8 +1399,8 @@ class ArcadeRenderer:
 
         # Right Tab hint: "Tab →" (active if current_focus == 0, switch to DIV 1)
         right_active = (current_focus == 0)
-        x_right = B.CENTER_X + grid_px - box_width - 10
-        y_right = B.CENTER_Y + grid_px + y_offset
+        x_right = B.CENTER_X + grid_px + 10
+        y_right = B.CENTER_Y + grid_px - CELL_SIZE // 2 - box_height // 2
 
         bg_color = active_bg if right_active else inactive_bg
         border_color = active_border if right_active else inactive_border
@@ -1437,14 +1437,14 @@ class ArcadeRenderer:
         box_height = 40
         y_offset = 15
 
-        # Position: center bottom, left of center
-        x = B.CENTER_X + grid_px // 2 - box_width - 10
+        # Position: center bottom, right of center
+        x = B.CENTER_X + grid_px // 2 + 10
         y = B.CENTER_Y + grid_px + y_offset
 
         # Colors - cyan/blue hint
         bg_color = (40, 80, 120, 200)
         border_color = (100, 150, 200)
-        text_color = (200, 220, 255)
+        text_color = (255, 255, 255)
 
         # Background
         self._draw_rect_filled(x, y, box_width, box_height, bg_color)
@@ -1466,14 +1466,14 @@ class ArcadeRenderer:
         box_height = 40
         y_offset = 15
 
-        # Position: center bottom, right of center
-        x = B.CENTER_X + grid_px // 2 + 10
+        # Position: center bottom, left of center
+        x = B.CENTER_X + grid_px // 2 - box_width - 10
         y = B.CENTER_Y + grid_px + y_offset
 
         # Colors - cyan/blue hint
         bg_color = (40, 80, 120, 200)
         border_color = (100, 150, 200)
-        text_color = (200, 220, 255)
+        text_color = (255, 255, 255)
 
         # Background
         self._draw_rect_filled(x, y, box_width, box_height, bg_color)
