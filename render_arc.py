@@ -457,6 +457,16 @@ class ArcadeRenderer:
                 hidden_sub=hidden_sub,
                 current_focus=spec.current_focus
             )
+
+            # Layer 4: Merge convergence hints (when focused is holding)
+            # Shows where other branch's items will converge to focused position
+            cell_size = int(CELL_SIZE * focused_branch.scale)
+            self._draw_merge_convergence_hints(
+                focused_branch.pos_x, focused_branch.pos_y,  # Focused branch screen position
+                non_focused_branch.pos_x, non_focused_branch.pos_y,  # Other branch screen position
+                focused_branch.state, non_focused_branch.state,
+                spec.animation_frame, cell_size
+            )
         else:
             # Normal mode: draw in standard order
             if spec.sub_branch and -500 < spec.sub_branch.pos_x < WINDOW_WIDTH + 100:
@@ -917,6 +927,53 @@ class ArcadeRenderer:
                 self._draw_dashed_line(other_cx, other_cy, front_cx, front_cy,
                                        line_color, 3, 12, slow_offset)
 
+    def _draw_merge_convergence_hints(self, focused_start_x: int, focused_start_y: int,
+                                       other_start_x: int, other_start_y: int,
+                                       focused_state: BranchState,
+                                       other_state: BranchState,
+                                       animation_frame: int,
+                                       cell_size: int):
+        """Draw convergence hints showing where other branch's items will converge.
+
+        Only shows hints when focused player is holding items.
+        Lines show where corresponding items in other branch will converge to focused position.
+
+        Args:
+            focused_start_x, focused_start_y: Screen position of focused branch
+            other_start_x, other_start_y: Screen position of other branch
+        """
+        from timeline_system import Physics
+
+        # Only show hints if focused is holding
+        focused_held = set(focused_state.get_held_items())
+        if not focused_held:
+            return
+
+        # Get focused player position (convergence target)
+        focused_pos = focused_state.player.pos
+        focused_cx, focused_cy = self._grid_to_screen(focused_start_x, focused_start_y,
+                                                       focused_pos[0], focused_pos[1], cell_size)
+
+        line_color = (50, 220, 50)  # Green for convergence
+        slow_offset = animation_frame * 0.25
+
+        # For each held item, find instances in other branch
+        for uid in focused_held:
+            # Include both grounded (z==0) and in-hole (z==-1) objects
+            other_instances = [e for e in other_state.entities
+                             if e.uid == uid and e.z >= -1 and e.holder is None]
+
+            # Draw convergence lines from other instances to focused position
+            for instance in other_instances:
+                ox, oy = instance.pos
+                # Use OTHER branch's screen position for other instances
+                other_cx, other_cy = self._grid_to_screen(other_start_x, other_start_y,
+                                                          ox, oy, cell_size)
+
+                # Draw dashed line showing convergence
+                self._draw_dashed_line(other_cx, other_cy, focused_cx, focused_cy,
+                                      line_color, 3, 12, slow_offset)
+
     def _draw_dashed_line(self, x1: int, y1: int, x2: int, y2: int,
                           color: Tuple, width: int = 3, dash_length: int = 9,
                           offset: float = 0):
@@ -1084,19 +1141,25 @@ class ArcadeRenderer:
     def _draw_text_with_outline(self, text: str, x: int, y: int,
                                  text_color: Tuple, outline_color: Tuple,
                                  font_size: int, outline_width: int = 2):
-        """Draw text with outline for readability."""
-        # Outline (8 directions)
+        """Draw text with outline for readability using cached Text objects."""
+        # Outline (8 directions) - use cached text objects
+        outline_positions = []
         for dx in [-outline_width, 0, outline_width]:
             for dy in [-outline_width, 0, outline_width]:
                 if dx == 0 and dy == 0:
                     continue
-                arcade.draw_text(text, x + dx, y + dy, outline_color,
-                               font_size=font_size,
-                               anchor_x="center", anchor_y="center")
+                outline_positions.append((dx, dy))
+
+        # Draw outline
+        for i, (dx, dy) in enumerate(outline_positions):
+            cache_key = f'outline_{text}_{font_size}_{i}'
+            self._draw_cached_text(cache_key, text, x + dx, y + dy, outline_color,
+                                  font_size=font_size, anchor_x="center", anchor_y="center")
+
         # Main text
-        arcade.draw_text(text, x, y, text_color,
-                        font_size=font_size,
-                        anchor_x="center", anchor_y="center")
+        cache_key = f'main_{text}_{font_size}'
+        self._draw_cached_text(cache_key, text, x, y, text_color,
+                              font_size=font_size, anchor_x="center", anchor_y="center")
 
     def _draw_tutorial(self, tutorial):
         """Draw tutorial box."""
