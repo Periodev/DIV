@@ -55,7 +55,7 @@ class GameWindow(arcade.Window):
 
         # Track held keys for continuous movement
         self.held_keys = set()
-        self.shift_held = False
+        self.alt_held = False
 
         arcade.set_background_color(arcade.color.WHITE)
 
@@ -132,8 +132,8 @@ class GameWindow(arcade.Window):
 
     def on_key_press(self, key: int, modifiers: int):
         """Handle key press events."""
-        if key in (arcade.key.LSHIFT, arcade.key.RSHIFT):
-            self.shift_held = True
+        if key in (arcade.key.LALT, arcade.key.RALT):
+            self.alt_held = True
             return
         # Movement keys - add to held set
         if key in (arcade.key.UP, arcade.key.DOWN, arcade.key.LEFT, arcade.key.RIGHT,
@@ -189,8 +189,8 @@ class GameWindow(arcade.Window):
         # Merge (C key) or Inherit Merge (Shift+C)
         elif key == arcade.key.C:
             if self.controller.has_branched:
-                # Check for Shift modifier
-                is_inherit = modifiers & arcade.key.MOD_SHIFT
+                # Check for Alt modifier
+                is_inherit = modifiers & arcade.key.MOD_ALT
 
                 if self.merge_preview_active:
                     # In preview mode: store states, execute merge, then animate
@@ -232,8 +232,8 @@ class GameWindow(arcade.Window):
 
     def on_key_release(self, key: int, modifiers: int):
         """Handle key release events."""
-        if key in (arcade.key.LSHIFT, arcade.key.RSHIFT):
-            self.shift_held = False
+        if key in (arcade.key.LALT, arcade.key.RALT):
+            self.alt_held = False
             return
         if key in self.held_keys:
             self.held_keys.discard(key)
@@ -273,7 +273,7 @@ class GameWindow(arcade.Window):
             slide_progress,
             self.slide_direction,
             self.merge_preview_active,
-            self.merge_preview_active and self.shift_held and self.controller.can_show_inherit_hint(),
+            self.merge_preview_active and self.alt_held and self.controller.can_show_inherit_hint(),
             merge_preview_progress,
             merge_preview_swap_progress,
             merge_animation_progress,
@@ -293,12 +293,13 @@ def run_game(floor_map: str, object_map: str):
 
 
 # ===== Map Definition =====
+# Floor Map
 floor_map = '''
-##SG##
-##..##
+##.G##
 ##HH##
 ##HH##
-##.v##
+##HH##
+##.V##
 ##.S##
 '''
 
