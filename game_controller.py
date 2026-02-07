@@ -29,6 +29,10 @@ class GameController:
         self.history: List[GameSnapshot] = []
         self.input_log: List[str] = []  # Key sequence for replay/validation
 
+        # Flash effect tracking
+        self.failed_action_pos: Optional[tuple] = None
+        self.failed_action_time: float = 0.0
+
         self.reset()
 
     def reset(self):
@@ -42,7 +46,15 @@ class GameController:
         self.victory = False
         self.history.clear()
         self.input_log.clear()
+        self.failed_action_pos = None
+        self.failed_action_time = 0.0
         self._save_snapshot()  # Save initial state
+
+    def _trigger_flash(self, pos: tuple):
+        """Trigger flash effect at given position."""
+        import time
+        self.failed_action_pos = pos
+        self.failed_action_time = time.time()
 
     def _save_snapshot(self):
         """Save current state to history."""
@@ -256,15 +268,32 @@ class GameController:
             self.input_log.append(dir_key)
             self._save_snapshot()
             return True
-        return False
+        else:
+            # Move blocked - check if it's because of NO_CARRY restriction
+            if is_holding and active.terrain.get(target_pos) == TerrainType.NO_CARRY:
+                self._trigger_flash(target_pos)
+            return False
 
     def handle_pickup(self) -> bool:
         """Handle pickup action"""
         active = self.get_active_branch()
+
+        # Check if player is on NO_CARRY before attempting pickup
+        player_on_no_carry = active.terrain.get(active.player.pos) == TerrainType.NO_CARRY
+
         result = GameLogic.try_pickup(active)
         if result:
             self.input_log.append('P')
             self._save_snapshot()
+        else:
+            # Pickup failed - flash if it's because of NO_CARRY restriction
+            if player_on_no_carry and not active.get_held_items():
+                # Check if there's a box in front that we're trying to pick up
+                px, py = active.player.pos
+                dx, dy = active.player.direction
+                front_pos = (px + dx, py + dy)
+                if active.find_box_at(front_pos):
+                    self._trigger_flash(active.player.pos)
         return result
 
     def handle_drop(self) -> bool:

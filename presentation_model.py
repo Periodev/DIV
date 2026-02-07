@@ -66,6 +66,10 @@ class FrameViewSpec:
     step_count: int
     input_sequence: List[str]
 
+    # Flash effect (NO_CARRY violation)
+    flash_pos: Optional[Position] = None
+    flash_intensity: float = 0.0  # 0.0-1.0, for fade-out
+
 
 class ViewModelBuilder:
     """Transforms game state into visual specifications."""
@@ -114,11 +118,23 @@ class ViewModelBuilder:
               merge_animation_stored_main = None,
               merge_animation_stored_sub = None) -> FrameViewSpec:
         """Build frame specification with slide animation and merge preview support."""
+        import time
         B = ViewModelBuilder
 
         # Get hints
         timeline_hint = controller.get_timeline_hint()
         interaction_hint = B._extract_interaction_hint(controller)
+
+        # Calculate flash effect (NO_CARRY violation)
+        flash_pos = None
+        flash_intensity = 0.0
+        if controller.failed_action_pos is not None:
+            elapsed = time.time() - controller.failed_action_time
+            flash_duration = 0.3  # 300ms flash
+            if elapsed < flash_duration:
+                # Linear fade-out
+                flash_intensity = 1.0 - (elapsed / flash_duration)
+                flash_pos = controller.failed_action_pos
 
         # Goal active check
         preview = controller.get_merge_preview()
@@ -229,7 +245,9 @@ class ViewModelBuilder:
             is_collapsed=controller.collapsed,
             is_victory=controller.victory,
             step_count=len(controller.history) - 1,
-            input_sequence=controller.input_log
+            input_sequence=controller.input_log,
+            flash_pos=flash_pos,
+            flash_intensity=flash_intensity
         )
 
     @staticmethod

@@ -491,6 +491,16 @@ class ArcadeRenderer:
                     animation_frame=spec.animation_frame
                 )
 
+        # 2.5. Draw flash effect on focused branch
+        if spec.flash_pos and spec.flash_intensity > 0:
+            focused_branch = spec.main_branch if spec.current_focus == 0 else spec.sub_branch
+            if focused_branch:
+                cell_size = int(CELL_SIZE * focused_branch.scale)
+                self._draw_flash_effect(
+                    focused_branch.pos_x, focused_branch.pos_y,
+                    spec.flash_pos, spec.flash_intensity, cell_size
+                )
+
         # 3. Draw debug info
         self._draw_debug_info(
             spec.step_count,
@@ -628,6 +638,22 @@ class ArcadeRenderer:
         # Grid lines (skip if terrain is skipped)
         if not skip_terrain:
             self._draw_grid_lines(start_x, start_y, state, cell_size, spec.alpha)
+
+    def _draw_flash_effect(self, start_x: int, start_y: int, flash_pos: tuple,
+                           flash_intensity: float, cell_size: int):
+        """Draw red flash effect on a cell (NO_CARRY violation feedback)."""
+        if flash_intensity <= 0:
+            return
+
+        gx, gy = flash_pos
+        cell_x = start_x + gx * cell_size
+        cell_y = start_y + gy * cell_size
+
+        # Red overlay with fade-out
+        alpha = int(180 * flash_intensity)  # Max 180 alpha for visibility
+        flash_color = (255, 50, 50, alpha)
+
+        self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, flash_color)
 
     def _draw_rect_outline(self, x: int, y: int, w: int, h: int,
                            color: Tuple, thickness: int):
