@@ -34,10 +34,15 @@ YELLOW = (255, 200, 0)
 ORANGE = (255, 150, 50)
 LIGHT_ORANGE = (255, 200, 150)
 CYAN = (0, 220, 220)
+RED = (220, 0, 0)
+LIGHT_RED = (255, 100, 100)
+
+SWITCH_OFF_COLOR = (255, 200, 0)
+SWITCH_OFF_BORDER = (160, 80, 0)
 
 # Box colors (colorblind-friendly)
 BOX_COLORS = [
-    (230, 80, 80),    # Red
+    RED,    # Red
     (70, 130, 180),   # Steel Blue
     (255, 180, 0),    # Orange
 ]
@@ -80,9 +85,9 @@ class ArcadeRenderer:
             'gray': arcade.make_soft_square_texture(CELL_SIZE, GRAY, outer_alpha=255),
             'yellow': arcade.make_soft_square_texture(CELL_SIZE, YELLOW, outer_alpha=255),
             'light_orange': arcade.make_soft_square_texture(CELL_SIZE, LIGHT_ORANGE, outer_alpha=255),
-            'no_carry_bg': arcade.make_soft_square_texture(CELL_SIZE, (255, 240, 220), outer_alpha=255),
+            'no_carry_bg': arcade.make_soft_square_texture(CELL_SIZE, LIGHT_RED, outer_alpha=255),
             'switch_on': arcade.make_soft_square_texture(CELL_SIZE, (200, 255, 200), outer_alpha=255),
-            'switch_off': arcade.make_soft_square_texture(CELL_SIZE, (255, 200, 200), outer_alpha=255),
+            'switch_off': arcade.make_soft_square_texture(CELL_SIZE, SWITCH_OFF_COLOR, outer_alpha=255),
             'hole_filled': arcade.make_soft_square_texture(CELL_SIZE, (160, 120, 60), outer_alpha=255),
             'hole_empty': arcade.make_soft_square_texture(CELL_SIZE, (60, 40, 20), outer_alpha=255),
             'branch_highlight': arcade.make_soft_square_texture(CELL_SIZE, (150, 255, 150), outer_alpha=255),
@@ -172,7 +177,7 @@ class ArcadeRenderer:
                     'white': WHITE, 'black': BLACK, 'gray': GRAY,
                     'yellow': YELLOW, 'light_orange': LIGHT_ORANGE,
                     'no_carry_bg': (255, 240, 220),
-                    'switch_on': (200, 255, 200), 'switch_off': (255, 200, 200),
+                    'switch_on': (200, 255, 200), 'switch_off': SWITCH_OFF_COLOR,
                     'hole_filled': (160, 120, 60), 'hole_empty': (60, 40, 20),
                     'branch_highlight': (150, 255, 150),
                 }
@@ -331,7 +336,10 @@ class ArcadeRenderer:
             elif terrain == TerrainType.SWITCH:
                 # Diff-only switch overlay: outline only
                 is_active = bool(extra)
-                color = (0, 200, 0, int(alpha * 255)) if is_active else (150, 0, 0, int(alpha * 255))
+                if is_active:
+                    color = (0, 200, 0, int(alpha * 255))
+                else:
+                    color = (*SWITCH_OFF_BORDER, int(alpha * 255))
                 inset = max(1, int(3 * scale))
                 self._draw_rect_outline(
                     cell_x + inset, cell_y + inset,
@@ -661,7 +669,7 @@ class ArcadeRenderer:
                     self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, BLACK)
                 elif terrain == TerrainType.SWITCH:
                     activated = state.switch_activated(pos)
-                    color = (200, 255, 200) if activated else (255, 200, 200)
+                    color = (200, 255, 200) if activated else SWITCH_OFF_COLOR
                     self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, color)
                 elif terrain == TerrainType.NO_CARRY:
                     # Light orange background
@@ -872,7 +880,10 @@ class ArcadeRenderer:
 
                 if terrain == TerrainType.SWITCH:
                     activated = state.switch_activated(pos)
-                    color = (0, 200, 0, int(alpha * 255)) if activated else (150, 0, 0, int(alpha * 255))
+                    if activated:
+                        color = (0, 200, 0, int(alpha * 255))
+                    else:
+                        color = (*SWITCH_OFF_BORDER, int(alpha * 255))
                     inset = max(1, int(3 * scale))
                     self._draw_rect_outline(
                         cell_x + inset, cell_y + inset,
