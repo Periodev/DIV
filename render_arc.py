@@ -1025,8 +1025,16 @@ class ArcadeRenderer:
         slow_offset = animation_frame * 0.25
 
         for uid in inherited:
-            ghost_pos = other.player.pos
+            ghost_pos = preview_state.player.pos
             gx, gy = ghost_pos
+
+            # Inherit line: other branch player -> focused ghost position
+            other_px, other_py = other.player.pos
+            other_cx, other_cy = self._grid_to_screen(start_x, start_y, other_px, other_py, cell_size)
+            ghost_cx, ghost_cy = self._grid_to_screen(start_x, start_y, gx, gy, cell_size)
+            self._draw_dashed_line(other_cx, other_cy, ghost_cx, ghost_cy,
+                                   inherit_line_color, max(1, int(3 * scale)),
+                                   int(12 * scale), slow_offset)
 
             # Ghost box
             pad = int(6 * scale)
@@ -1064,15 +1072,6 @@ class ArcadeRenderer:
                     self._draw_dashed_line(focused_cx, focused_cy, ghost_cx, ghost_cy,
                                            converge_line_color, max(1, int(2 * scale)),
                                            int(10 * scale), slow_offset)
-
-            # Dashed line
-            ghost_cx, ghost_cy = self._grid_to_screen(start_x, start_y, gx, gy, cell_size)
-            px, py = preview_state.player.pos
-            player_cx, player_cy = self._grid_to_screen(start_x, start_y, px, py, cell_size)
-
-            self._draw_dashed_line(ghost_cx, ghost_cy, player_cx, player_cy,
-                                   inherit_line_color, max(1, int(3 * scale)),
-                                   int(12 * scale), slow_offset)
 
             # Pulsing lock corners
             pulse = math.sin(animation_frame / 20) * 0.3 + 0.7
