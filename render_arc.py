@@ -465,7 +465,8 @@ class ArcadeRenderer:
                 hidden_main=hidden_main,
                 hidden_sub=hidden_sub,
                 current_focus=spec.current_focus,
-                falling_boxes=spec.falling_boxes
+                falling_boxes=spec.falling_boxes,
+                show_inherit_ring=spec.show_alt_hint
             )
 
             # Layer 4: Merge convergence hints (when focused is holding)
@@ -485,7 +486,8 @@ class ArcadeRenderer:
                     goal_active=spec.goal_active,
                     has_branched=spec.has_branched,
                     animation_frame=spec.animation_frame,
-                    falling_boxes=spec.falling_boxes
+                    falling_boxes=spec.falling_boxes,
+                    show_inherit_ring=spec.show_alt_hint and spec.current_focus == 1
                 )
 
             if -500 < spec.main_branch.pos_x < WINDOW_WIDTH + 100:
@@ -494,7 +496,8 @@ class ArcadeRenderer:
                     goal_active=spec.goal_active,
                     has_branched=spec.has_branched,
                     animation_frame=spec.animation_frame,
-                    falling_boxes=spec.falling_boxes
+                    falling_boxes=spec.falling_boxes,
+                    show_inherit_ring=spec.show_alt_hint and spec.current_focus == 0
                 )
 
         # 2.5. Draw flash effect on focused branch
@@ -520,7 +523,8 @@ class ArcadeRenderer:
         if spec.show_merge_preview_hint:
             self._draw_merge_preview_hint()
         if spec.show_merge_hint:
-            self._draw_merge_hint()
+            # Only change to inherit merge hint if alt is valid (show_alt_hint is True)
+            self._draw_merge_hint(spec.alt_pressed and spec.show_alt_hint)
 
         # 4. Draw debug info
         self._draw_debug_info(
@@ -558,7 +562,8 @@ class ArcadeRenderer:
                      terrain_diff_reference: Optional[BranchState] = None,
                      terrain_type_filter: Optional[str] = None,
                      override_pos: Optional[Tuple[int, int]] = None,
-                     falling_boxes: dict = None):
+                     falling_boxes: dict = None,
+                     show_inherit_ring: bool = False):
         """Draw a single branch panel.
 
         Args:
@@ -655,7 +660,8 @@ class ArcadeRenderer:
                     player_color = BLUE if spec.is_focused else GRAY
             self._draw_player(start_x, start_y, state.player, player_color, held_uid,
                               cell_size, spec.alpha,
-                              show_border=not (spec.is_merge_preview and not spec.is_focused))
+                              show_border=not (spec.is_merge_preview and not spec.is_focused),
+                              show_inherit_ring=show_inherit_ring)
 
         # Cell hint (only for focused, full-scale)
         if spec.interaction_hint and spec.scale >= 1.0:
@@ -879,8 +885,12 @@ class ArcadeRenderer:
 
     def _draw_player(self, start_x: int, start_y: int, player,
                      color: Tuple, held_uid: Optional[int], cell_size: int, alpha: float = 1.0,
-                     show_border: bool = True):
-        """Draw the player."""
+                     show_border: bool = True, show_inherit_ring: bool = False):
+        """Draw the player.
+
+        Args:
+            show_inherit_ring: If True, draw player in orange (inherit available)
+        """
         scale = cell_size / CELL_SIZE
         gx, gy = player.pos
         center_x, center_y = self._grid_to_screen(start_x, start_y, gx, gy, cell_size)
@@ -889,6 +899,10 @@ class ArcadeRenderer:
         offset = int(8 * scale)
         arrow_cx = center_x + dx * offset
         arrow_cy = center_y - dy * offset  # Flip Y for arrow
+
+        # Override color to orange if inherit available
+        if show_inherit_ring:
+            color = (255, 140, 0)  # Orange
 
         player_color = (*color, int(alpha * 255)) if len(color) == 3 else color
 
@@ -1456,33 +1470,87 @@ class ArcadeRenderer:
         self._draw_cached_text('merge_preview_hint', 'M 預覽', text_x, text_y, text_color,
                               font_size=18, anchor_x="center", anchor_y="center")
 
-    def _draw_merge_hint(self):
-        """Draw 'C 合併' hint at center bottom."""
+    def _draw_merge_hint(self, alt_pressed: bool = False):
+        """Draw 'C 合併' or 'C 繼承合併' hint at center bottom.
+
+        Args:
+            alt_pressed: If True, show orange "C 繼承合併" instead of blue "C 合併"
+        """
         from presentation_model import ViewModelBuilder
         B = ViewModelBuilder
 
         grid_px = CELL_SIZE * GRID_SIZE
-        box_width = 90
-        box_height = 40
         y_offset = 15
 
         # Position: center bottom, left of center
-        x = B.CENTER_X + grid_px // 2 - box_width - 10
+        x = B.CENTER_X + grid_px // 2 - 10
         y = B.CENTER_Y + grid_px + y_offset
 
-        # Colors - cyan/blue hint
-        bg_color = (40, 80, 120, 200)
-        border_color = (100, 150, 200)
+        if alt_pressed:
+            # Orange inherit merge hint
+            box_width = 120
+            box_height = 40
+            x = x - box_width  # Adjust x for wider box
+            bg_color = (200, 100, 20, 200)
+            border_color = (255, 140, 0)
+            text_color = (255, 255, 255)
+            text = 'C 繼承合併'
+            cache_key = 'inherit_merge_hint'
+        else:
+            # Blue normal merge hint
+            box_width = 90
+            box_height = 40
+            x = x - box_width
+            bg_color = (40, 80, 120, 200)
+            border_color = (100, 150, 200)
+            text_color = (255, 255, 255)
+            text = 'C 合併'
+            cache_key = 'merge_hint'
+
+        # Background
+        self._draw_rect_filled(x, y, box_width, box_height, bg_color)
+        self._draw_rect_outline(x, y, box_width, box_height, border_color, 2)
+
+        # Text
+        text_x = x + box_width // 2
+        text_y = self._flip_y(y + box_height // 2)
+        self._draw_cached_text(cache_key, text, text_x, text_y, text_color,
+                              font_size=18, anchor_x="center", anchor_y="center")
+
+    def _draw_alt_hint(self, alt_pressed: bool = False):
+        """Draw orange 'Alt' or 'Alt+' hint left of merge hint.
+
+        Args:
+            alt_pressed: If True, show "Alt+" instead of "Alt"
+        """
+        from presentation_model import ViewModelBuilder
+        B = ViewModelBuilder
+
+        grid_px = CELL_SIZE * GRID_SIZE
+        box_width = 60
+        box_height = 40
+        y_offset = 15
+
+        # Position: right edge aligns with left edge of "C 繼承合併" (width 120)
+        inherit_merge_left = B.CENTER_X + grid_px // 2 - 10 - 120
+        x = inherit_merge_left - box_width  # Alt box right edge aligns with inherit merge left edge
+        y = B.CENTER_Y + grid_px + y_offset
+
+        # Colors - orange
+        bg_color = (200, 100, 20, 200)
+        border_color = (255, 140, 0)
         text_color = (255, 255, 255)
 
         # Background
         self._draw_rect_filled(x, y, box_width, box_height, bg_color)
         self._draw_rect_outline(x, y, box_width, box_height, border_color, 2)
 
-        # Text "C 合併"
+        # Text "Alt" or "Alt+"
+        text = 'Alt+' if alt_pressed else 'Alt'
+        cache_key = 'alt_hint_pressed' if alt_pressed else 'alt_hint'
         text_x = x + box_width // 2
         text_y = self._flip_y(y + box_height // 2)
-        self._draw_cached_text('merge_hint', 'C 合併', text_x, text_y, text_color,
+        self._draw_cached_text(cache_key, text, text_x, text_y, text_color,
                               font_size=18, anchor_x="center", anchor_y="center")
 
     def _draw_debug_info(self, step_count: int, focus: int,

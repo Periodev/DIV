@@ -241,7 +241,8 @@ class GameWindow(arcade.Window):
             self.merge_preview_active,
             self.merge_preview_active and self.alt_held and self.controller.can_show_inherit_hint(),
             merge_preview_progress,
-            merge_preview_swap_progress
+            merge_preview_swap_progress,
+            self.alt_held
         )
 
         # Render
@@ -257,17 +258,17 @@ def run_game(floor_map: str, object_map: str):
 # ===== Map Definition =====
 floor_map = '''
 ######
-#....#
-#S..S#
-##.v##
-##G.##
+#c####
+#vccG#
+####S#
+######
 ######
 '''
 
 object_map = '''
 ......
-...P..
-..B...
+......
+.PB...
 ......
 ......
 ......
