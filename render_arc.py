@@ -37,8 +37,8 @@ CYAN = (0, 220, 220)
 RED = (220, 0, 0)
 LIGHT_RED = (255, 100, 100)
 
-SWITCH_OFF_COLOR = (255, 200, 0)
-SWITCH_OFF_BORDER = (160, 80, 0)
+SWITCH_OFF_COLOR = (200, 200, 200)
+SWITCH_OFF_BORDER = (160, 160, 160)
 
 # Box colors (colorblind-friendly)
 BOX_COLORS = [
@@ -1134,17 +1134,19 @@ class ArcadeRenderer:
         if hint.is_inset:
             # Inset dashed frame
             margin = 8
+            frame_color = (*GRAY, int(alpha * 255))
             self._draw_dashed_rect(
                 cell_x + margin, cell_y + margin,
                 cell_size - margin * 2, cell_size - margin * 2,
-                (*hint.color, int(alpha * 255)), 2
+                frame_color, 2
             )
 
         # Text with outline
         white_alpha = (*WHITE, int(alpha * 255))
         black_alpha = (*BLACK, int(alpha * 255))
-        self._draw_text_with_outline('[X]', center_x, center_y + 8, white_alpha, black_alpha, 12)
-        self._draw_text_with_outline(hint.text, center_x, center_y - 12, white_alpha, black_alpha, 12)
+        hint_font = int(12 * 1.44)
+        self._draw_text_with_outline('[X]', center_x, center_y + 8, white_alpha, black_alpha, hint_font)
+        self._draw_text_with_outline(hint.text, center_x, center_y - 12, white_alpha, black_alpha, hint_font)
 
     def _draw_text_with_outline(self, text: str, x: int, y: int,
                                  text_color: Tuple, outline_color: Tuple,
