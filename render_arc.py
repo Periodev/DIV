@@ -381,7 +381,8 @@ class ArcadeRenderer:
                 terrain_diff_reference=focused_branch.state,  # Only show differences
                 hidden_main=hidden_main,
                 hidden_sub=hidden_sub,
-                current_focus=spec.current_focus
+                current_focus=spec.current_focus,
+                override_pos=(focused_branch.pos_x, focused_branch.pos_y)
             )
 
             # Layer 3: Non-focused branch entities only (transparent overlay)
@@ -459,15 +460,19 @@ class ArcadeRenderer:
                      current_focus: int = 0,
                      skip_terrain: bool = False,
                      skip_entities: bool = False,
-                     terrain_diff_reference: Optional[BranchState] = None):
+                     terrain_diff_reference: Optional[BranchState] = None,
+                     override_pos: Optional[Tuple[int, int]] = None):
         """Draw a single branch panel.
 
         Args:
             terrain_diff_reference: If provided, only draw terrain cells that differ from this reference.
         """
         state = spec.state
-        start_x = spec.pos_x
-        start_y = spec.pos_y
+        if override_pos is None:
+            start_x = spec.pos_x
+            start_y = spec.pos_y
+        else:
+            start_x, start_y = override_pos
         cell_size = int(CELL_SIZE * spec.scale)
         grid_width = cell_size * GRID_SIZE
         grid_height = cell_size * GRID_SIZE
@@ -526,7 +531,10 @@ class ArcadeRenderer:
                 color_index = (held_uid - 1) % len(BOX_COLORS)
                 player_color = BOX_COLORS[color_index]
             else:
-                player_color = BLUE if (spec.is_focused or spec.is_merge_preview) else GRAY
+                if spec.is_merge_preview and not spec.is_focused:
+                    player_color = GRAY
+                else:
+                    player_color = BLUE if spec.is_focused else GRAY
             self._draw_player(start_x, start_y, state.player, player_color, held_uid,
                               cell_size, spec.alpha,
                               show_border=not (spec.is_merge_preview and not spec.is_focused))
