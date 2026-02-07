@@ -1,4 +1,4 @@
-# presentation_model.py - Presentation Model Layer (Layer 2)
+﻿# presentation_model.py - Presentation Model Layer (Layer 2)
 #
 # Transforms game state into visual specifications.
 # This layer decides WHAT to display, not HOW to display it.
@@ -75,8 +75,9 @@ class FrameViewSpec:
 
     # Timeline hint (bottom bar)
     branch_hint_active: bool = False  # True if player is on branch point
-    show_merge_preview_hint: bool = False  # Show "M 預覽" hint
-    show_merge_hint: bool = False  # Show "V 合併" hint
+    show_merge_preview_hint: bool = False  # Show "M ?汗" hint
+    merge_preview_active: bool = False  # True when M preview mode is toggled on
+    show_merge_hint: bool = False  # Show "V ?蔥" hint
     show_inherit_indicator: bool = False  # Show orange player when inherit available
     inherit_mode_enabled: bool = False  # Global inherit mode toggle (Shift key)
 
@@ -260,6 +261,7 @@ class ViewModelBuilder:
             falling_boxes=falling_boxes,
             branch_hint_active=branch_hint_active,
             show_merge_preview_hint=has_branched,
+            merge_preview_active=merge_preview_active,
             show_merge_hint=has_branched,
             show_inherit_indicator=has_branched and controller.can_show_inherit_hint(),
             inherit_mode_enabled=inherit_mode_enabled
@@ -377,18 +379,18 @@ class ViewModelBuilder:
 
         if focus == 0:
             # Currently DIV 0 focused: swap positions only
-            # DIV 0: center → offset (alpha stays 1.0)
+            # DIV 0: center ??offset (alpha stays 1.0)
             main_x = int(lerp(B.CENTER_X, B.CENTER_X + OFFSET_X, t))
             main_y = int(lerp(B.CENTER_Y, B.CENTER_Y + OFFSET_Y, t))
-            # DIV 1: offset → center (alpha stays 0.7)
+            # DIV 1: offset ??center (alpha stays 0.7)
             sub_x = int(lerp(B.CENTER_X + OFFSET_X, B.CENTER_X, t))
             sub_y = int(lerp(B.CENTER_Y + OFFSET_Y, B.CENTER_Y, t))
         else:
             # Currently DIV 1 focused: swap positions only
-            # DIV 0: offset → center (alpha stays 0.7)
+            # DIV 0: offset ??center (alpha stays 0.7)
             main_x = int(lerp(B.CENTER_X + OFFSET_X, B.CENTER_X, t))
             main_y = int(lerp(B.CENTER_Y + OFFSET_Y, B.CENTER_Y, t))
-            # DIV 1: center → offset (alpha stays 1.0)
+            # DIV 1: center ??offset (alpha stays 1.0)
             sub_x = int(lerp(B.CENTER_X, B.CENTER_X + OFFSET_X, t))
             sub_y = int(lerp(B.CENTER_Y, B.CENTER_Y + OFFSET_Y, t))
 
@@ -418,14 +420,14 @@ class ViewModelBuilder:
         if focus == 0:
             # DIV 0 focused: DIV 1 moves from offset to center and fades in
             # DIV 0: stays at center (alpha 1.0)
-            # DIV 1: offset → center, alpha 0.0 → 1.0
+            # DIV 1: offset ??center, alpha 0.0 ??1.0
             sub_x = int(lerp(B.CENTER_X + OFFSET_X, B.CENTER_X, t))
             sub_y = int(lerp(B.CENTER_Y + OFFSET_Y, B.CENTER_Y, t))
             sub_alpha = lerp(0.0, 1.0, t)
         else:
             # DIV 1 focused: DIV 0 moves from offset to center and fades in
             # DIV 1: stays at center (alpha 1.0)
-            # DIV 0: offset → center, alpha 0.0 → 1.0
+            # DIV 0: offset ??center, alpha 0.0 ??1.0
             main_x = int(lerp(B.CENTER_X + OFFSET_X, B.CENTER_X, t))
             main_y = int(lerp(B.CENTER_Y + OFFSET_Y, B.CENTER_Y, t))
             main_alpha = lerp(0.0, 1.0, t)
@@ -491,3 +493,5 @@ class ViewModelBuilder:
         player_pos = state.player.pos
         terrain = state.terrain.get(player_pos)
         return terrain in ViewModelBuilder.BRANCH_TERRAINS
+
+

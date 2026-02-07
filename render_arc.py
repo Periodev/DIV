@@ -522,7 +522,7 @@ class ArcadeRenderer:
 
         # 3.6. Draw merge operation hints in center
         if spec.show_merge_preview_hint:
-            self._draw_merge_preview_hint()
+            self._draw_merge_preview_hint(spec.merge_preview_active)
         if spec.show_merge_hint:
             # Show inherit hint if inherit mode enabled and inherit is available
             self._draw_merge_hint(spec.inherit_mode_enabled and spec.show_inherit_indicator)
@@ -1445,13 +1445,13 @@ class ArcadeRenderer:
         ]
         arcade.draw_polygon_filled(points_right, text_color)
 
-    def _draw_merge_preview_hint(self):
+    def _draw_merge_preview_hint(self, is_active: bool = False):
         """Draw 'M 預覽' hint at center bottom."""
         from presentation_model import ViewModelBuilder
         B = ViewModelBuilder
 
         grid_px = CELL_SIZE * GRID_SIZE
-        box_width = 90
+        box_width = 130
         box_height = 40
         y_offset = 15
 
@@ -1468,10 +1468,12 @@ class ArcadeRenderer:
         self._draw_rect_filled(x, y, box_width, box_height, bg_color)
         self._draw_rect_outline(x, y, box_width, box_height, border_color, 2)
 
-        # Text "M 預覽"
+        # Text
+        text = 'M 退出預覽' if is_active else 'M 預覽'
+        cache_key = 'merge_preview_hint_cancel' if is_active else 'merge_preview_hint'
         text_x = x + box_width // 2
         text_y = self._flip_y(y + box_height // 2)
-        self._draw_cached_text('merge_preview_hint', 'M 預覽', text_x, text_y, text_color,
+        self._draw_cached_text(cache_key, text, text_x, text_y, text_color,
                               font_size=18, anchor_x="center", anchor_y="center")
 
     def _draw_merge_hint(self, alt_pressed: bool = False):
