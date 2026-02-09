@@ -6,7 +6,7 @@
 import math
 import time
 import arcade
-from typing import Optional, Tuple, List, TYPE_CHECKING
+from typing import Optional, Tuple, TYPE_CHECKING
 from timeline_system import BranchState, TerrainType, EntityType
 from presentation_model import ViewModelBuilder
 
@@ -30,7 +30,6 @@ GRAY = (200, 200, 200)
 LIGHT_GRAY = (220, 220, 220)
 BLUE = (0, 100, 200)
 GREEN = (50, 150, 50)
-DARK_GRAY = (100, 100, 100)
 YELLOW = (255, 200, 0)
 ORANGE = (255, 150, 50)
 LIGHT_ORANGE = (255, 200, 150)
@@ -71,9 +70,6 @@ class ArcadeRenderer:
     """Arcade-based renderer for the game."""
 
     def __init__(self):
-        # Text objects (cached for performance)
-        self.debug_text: Optional[arcade.Text] = None
-
         # Font path for Chinese characters
         self.chinese_font = "Microsoft YaHei"
 
@@ -141,10 +137,6 @@ class ArcadeRenderer:
             'ready': arcade.Text("合併", 0, 0, (150, 50, 150), font_size=14,
                                 anchor_x="left", anchor_y="center"),
         }
-
-        # Debug text (single object, content updated each frame)
-        self._debug_text = arcade.Text("", PADDING, 0, DARK_GRAY, font_size=14,
-                                       anchor_x="left", anchor_y="center")
 
     def _get_text(self, key: str, text: str, x: int, y: int, color: tuple,
                   font_size: int = 14, anchor_x: str = "center", anchor_y: str = "center") -> arcade.Text:
@@ -1505,18 +1497,6 @@ class ArcadeRenderer:
         text_y = self._flip_y(y + box_height // 2)
         self._draw_cached_text(cache_key, text, text_x, text_y, text_color,
                               font_size=16, anchor_x="center", anchor_y="center")
-
-    def _draw_debug_info(self, step_count: int, focus: int,
-                         has_branched: bool, input_log: List[str]):
-        """Draw debug info at bottom."""
-        # Adjusted Y to avoid overlap with inherit mode indicator
-        y = self._flip_y(WINDOW_HEIGHT - 100) # Moved further up
-        keys = ''.join(input_log[-30:])
-        info = f"Step: {step_count}  |  Keys: {keys}"
-        # Update cached text object
-        self._debug_text.text = info
-        self._debug_text.y = y
-        self._debug_text.draw()
 
     def _draw_merge_progress(self, progress: float):
         """Draw V-key hold progress bar (top-left corner)."""

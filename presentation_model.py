@@ -62,10 +62,6 @@ class FrameViewSpec:
     is_collapsed: bool
     is_victory: bool
 
-    # Debug info
-    step_count: int
-    input_sequence: List[str]
-
     # Flash effect (NO_CARRY violation)
     flash_pos: Optional[Position] = None
     flash_intensity: float = 0.0  # 0.0-1.0, for fade-out
@@ -254,8 +250,6 @@ class ViewModelBuilder:
             current_focus=focus,
             is_collapsed=controller.collapsed,
             is_victory=controller.victory,
-            step_count=len(controller.history) - 1,
-            input_sequence=controller.input_log,
             flash_pos=flash_pos,
             flash_intensity=flash_intensity,
             falling_boxes=falling_boxes,

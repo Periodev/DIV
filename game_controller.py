@@ -365,7 +365,7 @@ class GameController:
         active = self.get_active_branch()
         result = GameLogic.try_drop(active)
         if result:
-            self.input_log.append('D')
+            self.input_log.append('O')
             self._save_snapshot()
         return result
 
