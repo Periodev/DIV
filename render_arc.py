@@ -527,22 +527,16 @@ class ArcadeRenderer:
             # Show inherit hint if inherit mode enabled and inherit is available
             self._draw_merge_hint(spec.inherit_mode_enabled and spec.show_inherit_indicator)
 
-        # 4. Draw debug info
-        self._draw_debug_info(
-            spec.step_count,
-            spec.current_focus,
-            spec.has_branched,
-            spec.input_sequence
-        )
+        # 4. Debug info hidden by request.
 
-        # 5. Overlay (collapsed or victory)
+        # 5. Draw inherit mode indicator
+        self._draw_inherit_mode_indicator(spec.inherit_mode_enabled)
+
+        # 6. Overlay (collapsed or victory)
         if spec.is_collapsed:
             self._draw_overlay("FALL DOWN!", (150, 0, 0))
         elif spec.is_victory:
             self._draw_overlay("LEVEL COMPLETE!", (0, 0, 0))
-
-        # 6. Draw inherit mode indicator
-        self._draw_inherit_mode_indicator(spec.inherit_mode_enabled)
 
     def _flip_y(self, y: int) -> int:
         """Convert top-down Y to arcade's bottom-up Y."""
@@ -893,7 +887,7 @@ class ArcadeRenderer:
         """Draw the player.
 
         Args:
-            show_inherit_ring: If True, draw player in orange (inherit available)
+            show_inherit_ring: Reserved for inherit-state visual effects.
         """
         scale = cell_size / CELL_SIZE
         gx, gy = player.pos
@@ -903,10 +897,6 @@ class ArcadeRenderer:
         offset = int(8 * scale)
         arrow_cx = center_x + dx * offset
         arrow_cy = center_y - dy * offset  # Flip Y for arrow
-
-        # Override color to orange if inherit available
-        if show_inherit_ring:
-            color = (255, 140, 0)  # Orange
 
         player_color = (*color, int(alpha * 255)) if len(color) == 3 else color
 
