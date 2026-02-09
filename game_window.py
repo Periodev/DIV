@@ -1,6 +1,7 @@
-# game_main_arc.py - Arcade Main Loop
+# game_window.py - Arcade Game Window
 #
-# Arcade-based game window with slide animation for focus switching.
+# Main game window with arcade rendering and input handling.
+# Handles slide animations for timeline focus switching.
 
 import time
 import arcade
@@ -251,27 +252,3 @@ def run_game(floor_map: str, object_map: str):
     """Main entry point - creates window and runs game loop."""
     window = GameWindow(floor_map, object_map)
     arcade.run()
-
-
-# ===== Map Definition =====
-floor_map = '''
-######
-#c####
-#vccG#
-####S#
-######
-######
-'''
-
-object_map = '''
-......
-......
-.PB...
-......
-......
-......
-'''
-
-
-if __name__ == "__main__":
-    run_game(floor_map, object_map)
