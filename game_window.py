@@ -17,7 +17,7 @@ class GameWindow(arcade.Window):
     # Animation settings
     SLIDE_DURATION = 0.25  # seconds for slide animation
 
-    def __init__(self, floor_map: str, object_map: str, hints: dict = None, tutorial: dict = None):
+    def __init__(self, floor_map: str, object_map: str, hints: dict = None, tutorial: dict = None, first_time: bool = False):
         super().__init__(WINDOW_WIDTH, WINDOW_HEIGHT, "div - Timeline Puzzle")
 
         self.set_update_rate(1/60)  # 60 FPS
@@ -40,7 +40,8 @@ class GameWindow(arcade.Window):
 
         # Tutorial overlay state
         self.tutorial = tutorial  # {'title': str, 'items': [str, ...]}
-        self.show_tutorial = False  # Toggle with H key
+        # Auto-show tutorial on first-time entry
+        self.show_tutorial = first_time and tutorial is not None
 
         # Input state
         self.move_cooldown = 0
@@ -281,7 +282,7 @@ class GameWindow(arcade.Window):
             self.renderer._draw_tutorial(self.tutorial)
 
 
-def run_game(floor_map: str, object_map: str, hints: dict = None, tutorial: dict = None):
+def run_game(floor_map: str, object_map: str, hints: dict = None, tutorial: dict = None, first_time: bool = False):
     """Main entry point - creates window and runs game loop."""
-    window = GameWindow(floor_map, object_map, hints, tutorial)
+    window = GameWindow(floor_map, object_map, hints, tutorial, first_time)
     arcade.run()

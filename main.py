@@ -2,7 +2,39 @@
 #
 # Level selection and game launcher for DIV Timeline Puzzle
 
+import json
+import os
 from game_window import run_game
+
+# Progress tracking file
+PROGRESS_FILE = os.path.join(os.path.dirname(__file__), 'progress.json')
+
+def load_progress():
+    """Load played levels from progress file."""
+    if os.path.exists(PROGRESS_FILE):
+        try:
+            with open(PROGRESS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return {'played': []}
+    return {'played': []}
+
+def save_progress(progress):
+    """Save played levels to progress file."""
+    with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(progress, f, ensure_ascii=False, indent=2)
+
+def mark_as_played(level_id):
+    """Mark a level as played (no longer first-time)."""
+    progress = load_progress()
+    if level_id not in progress['played']:
+        progress['played'].append(level_id)
+        save_progress(progress)
+
+def is_first_time(level_id):
+    """Check if this is the first time playing this level."""
+    progress = load_progress()
+    return level_id not in progress['played']
 
 
 # ===== Level Definitions =====
@@ -467,11 +499,14 @@ L2_1 = {
         'title': '關卡 2-1：繼承',
         'items': [
             '按 C 鍵可以切換「繼承模式」',
-            '開啟繼承模式後，按 M 鍵預覽合併',
-            '會顯示綠色提示：可以繼承物品',
-            '在繼承模式下按 V 鍵執行繼承合併',
-            '合併後會保留兩條時間線的物品',
-            '這個關卡需要繼承方塊來填補洞口',
+            '繼承條件：當前視角空手，另一分支持有方塊',
+            '主視角可繼承另一分支的持有狀態',
+            '按 M 預覽會顯示橘色連線，表示可繼承',
+            '在繼承模式下按 V 鍵執行 繼承合併',
+            '合併後將方塊收束回主視角玩家手上',
+            '',
+            '提示：手持方塊時合併會自動收束',
+
         ]
     }
 }
@@ -504,13 +539,9 @@ L2_2 = {
     'tutorial': {
         'title': '關卡 2-2：橋樑',
         'items': [
-            '目標前方有多個洞需要填補',
-            '地圖上只有兩個方塊',
-            '利用繼承合併來複製方塊',
-            '一條時間線拿方塊填洞',
-            '另一條時間線保留方塊',
-            '繼承合併後兩個方塊都會保留',
-            '重複此過程來獲得足夠的方塊',
+            '提示：一個坑洞可同時存在多個殘影',
+            '提示：填補坑洞殘影若被其它殘影位置收束，將回復坑洞狀態',
+
         ]
     }
 }
@@ -536,16 +567,25 @@ def launch(level):
         print(f"Error: Invalid level. Expected level dict (e.g., L0_0), got {type(level)}")
         return
 
-    print(f"Starting: {level['name']} ({level['id']})")
+    level_id = level['id']
+    first_time = is_first_time(level_id)
+
+    print(f"Starting: {level['name']} ({level_id})")
     print(f"Hints enabled: {[k for k, v in level['hints'].items() if v]}")
 
     # Get tutorial if available
     tutorial = level.get('tutorial')
     if tutorial:
-        print(f"Tutorial available: Press H to view")
+        if first_time:
+            print(f"First time playing - Tutorial will auto-show (Press H to toggle)")
+        else:
+            print(f"Tutorial available: Press H to view")
+
+    # Mark as played after launching
+    mark_as_played(level_id)
 
     run_game(level['floor_map'], level['object_map'],
-             hints=level['hints'], tutorial=tutorial)
+             hints=level['hints'], tutorial=tutorial, first_time=first_time)
 
 
 def launch_tutorial(level_index: int = 0):
@@ -579,19 +619,82 @@ def launch_by_id(level_id: str):
         return
 
     level = all_levels[level_id]
-    print(f"Starting: {level['name']} ({level['id']})")
-    print(f"Hints enabled: {[k for k, v in level['hints'].items() if v]}")
-    run_game(level['floor_map'], level['object_map'], hints=level['hints'])
+    launch(level)
+
+
+def level_selector():
+    """Interactive level selector - shows all levels and lets user choose."""
+    all_levels = TUTORIAL_LEVELS + MAIN_LEVELS
+    progress = load_progress()
+    played_set = set(progress['played'])
+
+    print("\n" + "="*60)
+    print("DIV - Timeline Puzzle | Level Selector")
+    print("="*60)
+
+    # Show tutorial levels
+    print("\n[World 0 - Basic Mechanics]")
+    for i, level in enumerate(TUTORIAL_LEVELS[:6]):
+        marker = "✓" if level['id'] in played_set else " "
+        print(f"  [{marker}] {i+1:2d}. {level['id']} - {level['name']}")
+
+    print("\n[World 1 - Timeline Mechanics]")
+    for i, level in enumerate(TUTORIAL_LEVELS[6:], start=6):
+        marker = "✓" if level['id'] in played_set else " "
+        print(f"  [{marker}] {i+1:2d}. {level['id']} - {level['name']}")
+
+    print("\n[World 2 - Advanced Mechanics]")
+    for i, level in enumerate(MAIN_LEVELS, start=len(TUTORIAL_LEVELS)):
+        marker = "✓" if level['id'] in played_set else " "
+        print(f"  [{marker}] {i+1:2d}. {level['id']} - {level['name']}")
+
+    print("\n" + "-"*60)
+    print("Enter level number (1-{}), level ID (e.g., '0-0'), or 'q' to quit".format(len(all_levels)))
+    print("-"*60)
+
+    while True:
+        choice = input("\nSelect level: ").strip()
+
+        if choice.lower() == 'q':
+            print("Goodbye!")
+            break
+
+        # Try as level number
+        try:
+            level_num = int(choice)
+            if 1 <= level_num <= len(all_levels):
+                launch(all_levels[level_num - 1])
+                continue
+            else:
+                print(f"Invalid level number. Please enter 1-{len(all_levels)}")
+                continue
+        except ValueError:
+            pass
+
+        # Try as level ID
+        level_dict = {level['id']: level for level in all_levels}
+        if choice in level_dict:
+            launch(level_dict[choice])
+            continue
+
+        print("Invalid input. Please enter a level number, ID, or 'q' to quit")
 
 
 if __name__ == "__main__":
-    # Method 1: Launch by level variable (recommended)
-    launch(L1_5)  # Test tutorial overlay
+    # Graphical level selector (default)
+    from level_selector import run_level_selector
+    run_level_selector()
+
+    # Alternative launch methods:
+    # Method 1: Launch by level variable
+    # launch(L0_0)
 
     # Method 2: Launch by index
     # launch_tutorial(0)  # L0_0
-    # launch_tutorial(5)  # L1_1
+    # launch_level(0)     # L2_1
 
     # Method 3: Launch by ID
     # launch_by_id('0-0')
-    # launch_by_id('1-3')
+
+    # Method 4: Text-based selector
+    # level_selector()
