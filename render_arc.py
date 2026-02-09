@@ -1335,7 +1335,7 @@ class ArcadeRenderer:
             # Green glow when on branch point
             bg_color = (50, 150, 50, 200)
             border_color = (100, 255, 100)
-            text_color = (255, 255, 255)
+            text_color = (60,30,0)
         else:
             # Gray when not on branch point
             bg_color = (60, 60, 60, 200)
@@ -1460,8 +1460,8 @@ class ArcadeRenderer:
         y = B.CENTER_Y + grid_px + y_offset
 
         # Colors - cyan/blue hint
-        bg_color = (40, 80, 120, 200)
-        border_color = (100, 150, 200)
+        bg_color = (110, 50, 110, 200)
+        border_color = (110, 50, 200)
         text_color = (255, 255, 255)
 
         # Background
@@ -1469,18 +1469,18 @@ class ArcadeRenderer:
         self._draw_rect_outline(x, y, box_width, box_height, border_color, 2)
 
         # Text
-        text = 'M 退出預覽' if is_active else 'M 預覽'
+        text = 'M 退出預覽' if is_active else 'M 預覽合併'
         cache_key = 'merge_preview_hint_cancel' if is_active else 'merge_preview_hint'
         text_x = x + box_width // 2
         text_y = self._flip_y(y + box_height // 2)
         self._draw_cached_text(cache_key, text, text_x, text_y, text_color,
-                              font_size=18, anchor_x="center", anchor_y="center")
+                              font_size=16, anchor_x="center", anchor_y="center")
 
-    def _draw_merge_hint(self, alt_pressed: bool = False):
+    def _draw_merge_hint(self, can_inherit: bool = False):
         """Draw 'V 合併' or 'V 繼承合併' hint at center bottom.
 
         Args:
-            alt_pressed: If True, show orange "V 繼承合併" instead of blue "V 合併"
+            can_inherit: If True, show orange "V 繼承合併" instead of blue "V 合併"
         """
         from presentation_model import ViewModelBuilder
         B = ViewModelBuilder
@@ -1491,17 +1491,17 @@ class ArcadeRenderer:
         x = (WINDOW_WIDTH - box_width) // 2
         y = WINDOW_HEIGHT - 60
 
-        if alt_pressed:
+        if can_inherit:
             # Orange inherit merge hint
-            bg_color = (200, 100, 20, 200)
-            border_color = (255, 140, 0)
-            text_color = (255, 255, 255)
+            bg_color = (255, 140, 0, 200)
+            border_color = (255, 180, 0)
+            text_color = (60,30,0)
             text = 'V 繼承合併'
             cache_key = 'inherit_merge_hint'
         else:
             # Blue normal merge hint
             bg_color = (40, 80, 120, 200)
-            border_color = (100, 150, 200)
+            border_color = (75, 150, 200)
             text_color = (255, 255, 255)
             text = 'V 合併'
             cache_key = 'merge_hint'
@@ -1609,7 +1609,7 @@ class ArcadeRenderer:
 
         if enabled:
             bg_color = (255, 140, 0, 200) # Orange background when enabled
-            text_color = WHITE
+            text_color = (60,30,0)
             border_color = (255, 180, 0) # Lighter orange border
 
         # Background
