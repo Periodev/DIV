@@ -127,8 +127,10 @@ class ArcadeRenderer:
                                YELLOW, font_size=48, anchor_x="center", anchor_y="center"),
             'victory': arcade.Text("LEVEL COMPLETE!", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 40,
                                   YELLOW, font_size=36, anchor_x="center", anchor_y="center"),
-            'hint': arcade.Text("F5 restart Z undo", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 20,
+            'hint': arcade.Text("F5 restart  Z undo", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 20,
                                WHITE, font_size=14, anchor_x="center", anchor_y="center"),
+            'victory_hint': arcade.Text("SPACE 回到選單", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 50,
+                                       WHITE, font_size=16, anchor_x="center", anchor_y="center"),
         }
 
         # Merge progress labels
@@ -1597,13 +1599,18 @@ class ArcadeRenderer:
         )
 
         # Main text (cached)
-        if "FALL" in text:
-            self._overlay_texts['fall'].draw()
-        else:
+        is_victory = "FALL" not in text
+        if is_victory:
             self._overlay_texts['victory'].draw()
+        else:
+            self._overlay_texts['fall'].draw()
 
         # Hint text (cached)
         self._overlay_texts['hint'].draw()
+
+        # Victory-specific hint
+        if is_victory:
+            self._overlay_texts['victory_hint'].draw()
 
     def _draw_inherit_mode_indicator(self, enabled: bool):
         """Draw the inherit mode indicator, fixed at the bottom and aligned with the main view's static left edge."""

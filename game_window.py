@@ -169,6 +169,14 @@ class GameWindow(arcade.Window):
             self.controller.undo()
             return
 
+        # Return to menu on victory (SPACE key)
+        if self.controller.victory and key == arcade.key.SPACE:
+            self.close()
+            # Re-open level selector
+            from level_selector import run_level_selector
+            run_level_selector()
+            return
+
         # Skip actions if collapsed or victory
         if self.controller.collapsed or self.controller.victory:
             return
