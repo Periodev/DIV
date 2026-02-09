@@ -76,6 +76,8 @@ class FrameViewSpec:
     show_merge_hint: bool = False  # Show "V ?蔥" hint
     show_inherit_indicator: bool = False  # Show orange player when inherit available
     inherit_mode_enabled: bool = False  # Global inherit mode toggle (Shift key)
+    # Tutorial hint configuration (progressive unlock)
+    hints: dict = None  # {'movement': bool, 'pickup': bool, 'diverge': bool, 'merge': bool, 'inherit': bool}
 
 
 class ViewModelBuilder:
@@ -120,7 +122,8 @@ class ViewModelBuilder:
               show_inherit_hint: bool = False,
               merge_preview_progress: float = 0.0,
               merge_preview_swap_progress: float = 0.0,
-              inherit_mode_enabled: bool = False) -> FrameViewSpec:
+              inherit_mode_enabled: bool = False,
+              hints: dict = None) -> FrameViewSpec:
         """Build frame specification with slide animation and merge preview support."""
         import time
         B = ViewModelBuilder
@@ -258,7 +261,8 @@ class ViewModelBuilder:
             merge_preview_active=merge_preview_active,
             show_merge_hint=has_branched,
             show_inherit_indicator=has_branched and controller.can_show_inherit_hint(),
-            inherit_mode_enabled=inherit_mode_enabled
+            inherit_mode_enabled=inherit_mode_enabled,
+            hints=hints
         )
 
     @staticmethod

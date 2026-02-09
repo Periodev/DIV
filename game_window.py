@@ -33,7 +33,7 @@ class GameWindow(arcade.Window):
         self.hints = hints or {
             'movement': True,
             'pickup': True,
-            'branch': True,
+            'diverge': True,
             'merge': True,
             'inherit': True,
         }
@@ -250,7 +250,8 @@ class GameWindow(arcade.Window):
             self.merge_preview_active and self.inherit_mode_enabled and self.controller.can_show_inherit_hint(),
             merge_preview_progress,
             merge_preview_swap_progress,
-            self.inherit_mode_enabled
+            self.inherit_mode_enabled,
+            self.hints
         )
 
         # Render

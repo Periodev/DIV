@@ -373,6 +373,15 @@ class ArcadeRenderer:
 
         Layout: Single focused branch centered, other branch slides in/out
         """
+        # Store hints configuration for this frame (used by all hint rendering methods)
+        self.current_hints = spec.hints or {
+            'movement': True,
+            'pickup': True,
+            'diverge': True,
+            'merge': True,
+            'inherit': True,
+        }
+
         # 1. Clear screen
         arcade.draw_lrbt_rectangle_filled(
             0, WINDOW_WIDTH, 0, WINDOW_HEIGHT, WHITE
@@ -504,26 +513,27 @@ class ArcadeRenderer:
                     spec.flash_pos, spec.flash_intensity, cell_size
                 )
 
-        # 3. Draw timeline hint (bottom bar)
-        if not spec.has_branched:
+        # 3. Draw timeline hint (bottom bar - V diverge hint)
+        if not spec.has_branched and self.current_hints.get('diverge', True):
             self._draw_timeline_hint_box(spec.branch_hint_active)
 
-        # 3.5. Draw Tab switch hint on focused branch
-        if spec.has_branched:
+        # 3.5. Draw Tab switch hint on focused branch (movement hints)
+        if spec.has_branched and self.current_hints.get('movement', True):
             focused_branch = spec.main_branch if spec.current_focus == 0 else spec.sub_branch
             self._draw_tab_switch_hint(focused_branch, spec.current_focus)
 
-        # 3.6. Draw merge operation hints in center
-        if spec.show_merge_preview_hint:
+        # 3.6. Draw merge operation hints in center (merge hints)
+        if spec.show_merge_preview_hint and self.current_hints.get('merge', True):
             self._draw_merge_preview_hint(spec.merge_preview_active)
-        if spec.show_merge_hint:
+        if spec.show_merge_hint and self.current_hints.get('merge', True):
             # Show inherit hint if inherit mode enabled and inherit is available
             self._draw_merge_hint(spec.inherit_mode_enabled and spec.show_inherit_indicator)
 
         # 4. Debug info hidden by request.
 
-        # 5. Draw inherit mode indicator
-        self._draw_inherit_mode_indicator(spec.inherit_mode_enabled)
+        # 5. Draw inherit mode indicator (inherit hints)
+        if self.current_hints.get('inherit', True):
+            self._draw_inherit_mode_indicator(spec.inherit_mode_enabled)
 
         # 6. Overlay (collapsed or victory)
         if spec.is_collapsed:
@@ -630,8 +640,9 @@ class ArcadeRenderer:
             if spec.is_focused and spec.scale >= 1.0:
                 self._draw_grounded_object_lock(start_x, start_y, state, cell_size)
 
-            # Inherited hold hint (merge preview only)
-            if spec.is_merge_preview and spec.show_inherit_hint and hidden_main and hidden_sub:
+            # Inherited hold hint (merge preview only, inherit hints unlocked)
+            if (spec.is_merge_preview and spec.show_inherit_hint and hidden_main and hidden_sub
+                and self.current_hints.get('inherit', True)):
                 self._draw_inherited_hold_hint(
                     start_x, start_y, state,
                     hidden_main, hidden_sub,
@@ -654,8 +665,9 @@ class ArcadeRenderer:
                               show_border=not (spec.is_merge_preview and not spec.is_focused),
                               show_inherit_ring=show_inherit_ring)
 
-        # Cell hint (only for focused, full-scale)
-        if spec.interaction_hint and spec.scale >= 1.0:
+        # Cell hint (only for focused, full-scale, pickup hints unlocked)
+        if (spec.interaction_hint and spec.scale >= 1.0
+            and self.current_hints.get('pickup', True)):
             self._draw_cell_hint(start_x, start_y, spec.interaction_hint, cell_size, spec.alpha)
 
         # Grid lines (skip if terrain is skipped)
