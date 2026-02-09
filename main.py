@@ -94,22 +94,22 @@ L0_2 = {
 }
 
 L0_3 = {
-    'id': '0-2',
+    'id': '0-3',
     'name': 'Tutorial - Pick',
     'floor_map': '''
-######
-#c####
-#vccG#
-####S#
-######
-######
+#....#
+..##..
+.#####
+.#####
+..##.G
+#....#
 ''',
     'object_map': '''
 ......
+.B..BP
 ......
-.PB...
 ......
-......
+.B..B.
 ......
 ''',
     'hints': {
@@ -122,22 +122,22 @@ L0_3 = {
 }
 
 L0_4 = {
-    'id': '0-3',
+    'id': '0-4',
     'name': 'Tutorial - Limit',
     'floor_map': '''
-######
-#c####
-#vccG#
-####S#
-######
-######
+cS####
+cc####
+c.####
+cc####
+S.ccG#
+cc.cS#
 ''',
     'object_map': '''
+P.....
+B.....
 ......
 ......
-.PB...
-......
-......
+.BB...
 ......
 ''',
     'hints': {
@@ -151,23 +151,23 @@ L0_4 = {
 
 
 L0_5 = {
-    'id': '0-4',
+    'id': '0-5',
     'name': 'Tutorial - Hole',
     'floor_map': '''
-######
-#c####
-#vccG#
-####S#
-######
-######
+..##..
+H.##..
+H.HH..
+HH.H.H
+H.##HH
+H.##HG
 ''',
     'object_map': '''
+P.....
+....BB
+.B....
 ......
 ......
-.PB...
-......
-......
-......
+.B....
 ''',
     'hints': {
         'movement': True,
@@ -184,16 +184,16 @@ L1_1 = {
     'name': 'Tutorial - Split',
     'floor_map': '''
 ######
-#c####
-#vccG#
-####S#
-######
+#....#
+#S..S#
+##.v##
+##G.##
 ######
 ''',
     'object_map': '''
 ......
-......
-.PB...
+...P..
+..B...
 ......
 ......
 ......
@@ -212,9 +212,9 @@ L1_2 = {
     'name': 'Tutorial - Converge',
     'floor_map': '''
 ######
-#c####
-#vccG#
-####S#
+######
+VccccG
+######
 ######
 ######
 ''',
@@ -237,12 +237,12 @@ L1_2 = {
 
 L1_3 = {
     'id': '1-3',
-    'name': 'Tutorial - Pass',
+    'name': 'Pass',
     'floor_map': '''
 ######
-#c####
-#vccG#
-####S#
+###.##
+vcccG#
+###S##
 ######
 ######
 ''',
@@ -265,20 +265,20 @@ L1_3 = {
 
 L1_4 = {
     'id': '1-4',
-    'name': 'Tutorial - Cross',
+    'name': 'Cross',
     'floor_map': '''
 ######
-#c####
-#vccG#
-####S#
-######
-######
+###c##
+#vcccG
+###c##
+###S##
+###v##
 ''',
     'object_map': '''
 ......
 ......
-.PB...
-......
+...B..
+...P..
 ......
 ......
 ''',
@@ -296,8 +296,8 @@ L1_5 = {
     'name': 'Tutorial - Divergences',
     'floor_map': '''
 ######
-#c####
-#vccG#
+#S####
+#G.cV#
 ####S#
 ######
 ######
@@ -308,8 +308,7 @@ L1_5 = {
 .PB...
 ......
 ......
-......
-''',
+......''',
     'hints': {
         'movement': True,
         'pickup': True,
@@ -325,18 +324,18 @@ L2_1 = {
     'name': 'Level - Inherit',
     'floor_map': '''
 ######
-#c####
-#vccG#
-####S#
-######
+##SG##
+##HH##
+##.v##
+##..##
 ######
 ''',
     'object_map': '''
 ......
 ......
-.PB...
 ......
 ......
+..BP..
 ......
 ''',
     'hints': {
@@ -352,21 +351,20 @@ L2_2 = {
     'id': '2-2',
     'name': 'Level - Bridge',
     'floor_map': '''
-######
-#c####
-#vccG#
-####S#
-######
-######
+##.G##
+##HH##
+##HH##
+##HH##
+##..##
+##.v##
 ''',
     'object_map': '''
 ......
 ......
-.PB...
 ......
 ......
-......
-''',
+..BP..
+..B...''',
     'hints': {
         'movement': True,
         'pickup': True,
@@ -380,7 +378,7 @@ L2_2 = {
 # ===== Level Collections =====
 
 TUTORIAL_LEVELS = [
-    L0_0, L0_1, L0_2, L0_3, L0_4,  # World 0: Basic mechanics
+    L0_0, L0_1, L0_2, L0_3, L0_4, L0_5,  # World 0: Basic mechanics
     L1_1, L1_2, L1_3, L1_4, L1_5,  # World 1: Timeline mechanics
 ]
 
@@ -440,7 +438,7 @@ def launch_by_id(level_id: str):
 
 if __name__ == "__main__":
     # Method 1: Launch by level variable (recommended)
-    launch(L0_2)
+    launch(L2_2)
 
     # Method 2: Launch by index
     # launch_tutorial(0)  # L0_0
