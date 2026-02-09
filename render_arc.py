@@ -36,6 +36,7 @@ LIGHT_ORANGE = (255, 200, 150)
 CYAN = (0, 220, 220)
 RED = (220, 0, 0)
 LIGHT_RED = (255, 100, 100)
+PLAYER_RING_BLUE_GRAY = (120, 145, 170)
 
 SWITCH_OFF_COLOR = (200, 200, 200)
 SWITCH_OFF_BORDER = (160, 160, 160)
@@ -914,7 +915,13 @@ class ArcadeRenderer:
         else:
             # Draw circle player
             radius = cell_size // 5
-            arcade.draw_circle_filled(center_x, center_y, radius, player_color)
+            if tuple(color[:3]) == GRAY:
+                # Inactive branch player: use blue-gray ring to avoid blending with gray switch tiles.
+                ring_color = (*PLAYER_RING_BLUE_GRAY, int(alpha * 255))
+                ring_width = max(2, int(3 * scale))
+                arcade.draw_circle_outline(center_x, center_y, radius, ring_color, ring_width)
+            else:
+                arcade.draw_circle_filled(center_x, center_y, radius, player_color)
 
             arrow_size = int(21 * scale)
             self._draw_arrow(arrow_cx, arrow_cy, dx, -dy, arrow_size, (*BLACK, int(alpha * 255)))
