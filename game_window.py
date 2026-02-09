@@ -17,7 +17,7 @@ class GameWindow(arcade.Window):
     # Animation settings
     SLIDE_DURATION = 0.25  # seconds for slide animation
 
-    def __init__(self, floor_map: str, object_map: str, hints: dict = None):
+    def __init__(self, floor_map: str, object_map: str, hints: dict = None, tutorial: dict = None):
         super().__init__(WINDOW_WIDTH, WINDOW_HEIGHT, "div - Timeline Puzzle")
 
         self.set_update_rate(1/60)  # 60 FPS
@@ -37,6 +37,10 @@ class GameWindow(arcade.Window):
             'merge': True,
             'inherit': True,
         }
+
+        # Tutorial overlay state
+        self.tutorial = tutorial  # {'title': str, 'items': [str, ...]}
+        self.show_tutorial = False  # Toggle with H key
 
         # Input state
         self.move_cooldown = 0
@@ -126,6 +130,21 @@ class GameWindow(arcade.Window):
 
     def on_key_press(self, key: int, modifiers: int):
         """Handle key press events."""
+        # Toggle tutorial overlay (H key or ESC when tutorial is shown)
+        if key == arcade.key.H:
+            if self.tutorial:
+                self.show_tutorial = not self.show_tutorial
+            return
+        elif key == arcade.key.ESCAPE:
+            if self.show_tutorial:
+                self.show_tutorial = False
+                return
+            # ESC can have other functions when tutorial is not shown
+
+        # Block game input when tutorial is shown
+        if self.show_tutorial:
+            return
+
         if key in (arcade.key.LALT, arcade.key.RALT):
             self.alt_held = True
             return
@@ -257,8 +276,12 @@ class GameWindow(arcade.Window):
         # Render
         self.renderer.draw_frame(frame_spec)
 
+        # Draw tutorial overlay if active
+        if self.show_tutorial and self.tutorial:
+            self.renderer._draw_tutorial(self.tutorial)
 
-def run_game(floor_map: str, object_map: str, hints: dict = None):
+
+def run_game(floor_map: str, object_map: str, hints: dict = None, tutorial: dict = None):
     """Main entry point - creates window and runs game loop."""
-    window = GameWindow(floor_map, object_map, hints)
+    window = GameWindow(floor_map, object_map, hints, tutorial)
     arcade.run()

@@ -20,7 +20,7 @@ GRID_WIDTH = GRID_SIZE * CELL_SIZE  # 450
 GRID_HEIGHT = GRID_SIZE * CELL_SIZE
 
 WINDOW_WIDTH = 1150
-WINDOW_HEIGHT = 600
+WINDOW_HEIGHT = 600  # Original size
 PADDING = 30
 
 # === Colors (RGBA for arcade) ===
@@ -1285,39 +1285,64 @@ class ArcadeRenderer:
                               font_size=font_size, anchor_x="center", anchor_y="center")
 
     def _draw_tutorial(self, tutorial):
-        """Draw tutorial box."""
-        x, y = PADDING, 40
-        width = 450
-        padding_inner = 10
+        """Draw tutorial overlay (covers entire screen with semi-transparent background)."""
+        # Full-screen semi-transparent dark background
+        arcade.draw_lrbt_rectangle_filled(
+            0, WINDOW_WIDTH, 0, WINDOW_HEIGHT,
+            (0, 0, 0, 180)  # Dark overlay
+        )
+
+        # Tutorial box (centered)
+        box_width = 700
+        padding_inner = 20
         line_height = 32
-        title_height = 30
-        height = title_height + len(tutorial.items) * line_height + padding_inner * 2
+        title_height = 40
+        items = tutorial.get('items', [])
+        max_items = min(len(items), 12)  # Limit to 12 items
+        box_height = title_height + max_items * line_height + padding_inner * 3 + 40  # +40 for hint at bottom
 
-        # Background
-        self._draw_rect_filled(x, y, width, height, (*HINT_BG, 240))
+        x = (WINDOW_WIDTH - box_width) // 2
+        y = (WINDOW_HEIGHT - box_height) // 2
 
-        # Border
-        self._draw_rect_outline(x, y, width, height, (100, 100, 100), 2)
+        # Box background (solid)
+        self._draw_rect_filled(x, y, box_width, box_height, (40, 40, 45, 255))
 
-        # Title (cached)
-        title_y = self._flip_y(y + padding_inner + 10)
-        self._draw_cached_text('tutorial_title', tutorial.title,
-                               x + padding_inner, title_y,
-                               (96, 165, 250), font_size=14, anchor_x="left")
+        # Box border
+        self._draw_rect_outline(x, y, box_width, box_height, (96, 165, 250), 3)
 
-        # Items (cached)
-        item_y = y + padding_inner + title_height
-        for i, item in enumerate(tutorial.items):
+        # Title
+        title_y = self._flip_y(y + padding_inner + 15)
+        title_text = tutorial.get('title', 'Tutorial')
+        self._draw_cached_text('tutorial_title', title_text,
+                               x + box_width // 2, title_y,
+                               (96, 165, 250), font_size=20, anchor_x="center", anchor_y="center")
+
+        # Separator line
+        sep_y = y + title_height + padding_inner
+        arcade.draw_line(x + 20, self._flip_y(sep_y),
+                        x + box_width - 20, self._flip_y(sep_y),
+                        (96, 165, 250), 2)
+
+        # Items
+        item_y = sep_y + padding_inner
+        for i, item in enumerate(items[:max_items]):
             screen_y = self._flip_y(item_y + 12)
-            # Bullet point
-            self._draw_cached_text(f'bullet_{i}', "•",
-                                   x + padding_inner, screen_y,
-                                   (96, 165, 250), font_size=20, anchor_x="left")
-            # Item text
-            self._draw_cached_text(f'tutorial_item_{i}', item,
-                                   x + padding_inner + 20, screen_y,
-                                   (220, 220, 220), font_size=12, anchor_x="left")
+            # Bullet point (skip for empty items)
+            if item.strip():
+                self._draw_cached_text(f'tutorial_bullet_{i}', "•",
+                                       x + padding_inner + 10, screen_y,
+                                       (96, 165, 250), font_size=20, anchor_x="left", anchor_y="center")
+                # Item text
+                self._draw_cached_text(f'tutorial_item_{i}', item,
+                                       x + padding_inner + 35, screen_y,
+                                       (220, 220, 220), font_size=14, anchor_x="left", anchor_y="center")
             item_y += line_height
+
+        # Bottom hint
+        hint_y = self._flip_y(y + box_height - 25)
+        self._draw_cached_text('tutorial_hint', 'Press H or ESC to close',
+                               x + box_width // 2, hint_y,
+                               (150, 150, 150), font_size=12, anchor_x="center", anchor_y="center")
 
     def _draw_timeline_hint_box(self, is_active: bool):
         """Draw timeline hint box at bottom center.

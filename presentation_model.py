@@ -90,7 +90,7 @@ class ViewModelBuilder:
 
     # === Layout Constants ===
     WINDOW_WIDTH = 1150
-    WINDOW_HEIGHT = 600
+    WINDOW_HEIGHT = 600  # Original size
 
     PADDING = 30
     CELL_SIZE = 75
