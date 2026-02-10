@@ -141,6 +141,16 @@ class ArcadeRenderer:
                                 anchor_x="left", anchor_y="center"),
         }
 
+        # Fixed help hint (bottom-left corner)
+        self._help_hint = arcade.Text(
+            "[F5] 重置  [Z] 回復  [H] 幫助  [F1] 返回選單",
+            15, 15,
+            (40, 40, 40),  # Dark gray color
+            font_size=12,
+            anchor_x="left",
+            anchor_y="bottom"
+        )
+
     def _get_text(self, key: str, text: str, x: int, y: int, color: tuple,
                   font_size: int = 14, anchor_x: str = "center", anchor_y: str = "center") -> arcade.Text:
         """Get or create a cached text object."""
@@ -542,6 +552,9 @@ class ArcadeRenderer:
             self._draw_overlay("FALL DOWN!", (150, 0, 0))
         elif spec.is_victory:
             self._draw_overlay("LEVEL COMPLETE!", (0, 0, 0))
+
+        # 7. Fixed help hint (always visible, bottom-left corner)
+        self._help_hint.draw()
 
     def _flip_y(self, y: int) -> int:
         """Convert top-down Y to arcade's bottom-up Y."""

@@ -146,6 +146,14 @@ class GameWindow(arcade.Window):
         if self.show_tutorial:
             return
 
+        # Return to menu (F1 key)
+        if key == arcade.key.F1:
+            self.close()
+            # Re-open level selector
+            from level_selector import run_level_selector
+            run_level_selector()
+            return
+
         if key in (arcade.key.LALT, arcade.key.RALT):
             self.alt_held = True
             return
