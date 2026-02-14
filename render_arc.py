@@ -642,7 +642,7 @@ class ArcadeRenderer:
 
         # Entities (boxes) - skip if requested
         if not skip_entities:
-            for e in state.entities:
+            for e in sorted(state.entities, key=lambda e: e.z):
                 if e.uid != 0 and e.type == EntityType.BOX:
                     self._draw_entity(start_x, start_y, e, state, cell_size, spec.alpha,
                                       spec.border_color, spec.is_focused, falling_boxes)
