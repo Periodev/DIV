@@ -142,28 +142,32 @@
         .cell.floor-empty { background: #ffffff; }
         .cell.floor-void { background: #0a0a0a; color: #333; }
         .cell.floor-wall { background: #000; color: #666; }
-        .cell.floor-switch { background: #ffcccc; color: #c00; }
-        .cell.floor-no-carry { background: #ffeecc; color: #c60; }
-        .cell.floor-branch1 { background: #e8ffe8; color: #0a0; }
-        .cell.floor-branch2 { background: #ccffcc; color: #0a0; }
-        .cell.floor-branch3 { background: #a0ffa0; color: #080; }
-        .cell.floor-branch4 { background: #80ff80; color: #060; }
-        .cell.floor-goal { background: #ffffcc; color: #aa0; }
-        .cell.floor-hole { background: #282828; color: #666; }
+        .cell.floor-switch { background: #c8c8c8; color: #5a5a5a; }
+        .cell.floor-no-carry { background: #ff6464; color: #5a0000; }
+        .cell.floor-branch1 { background: #ffffff; color: #329632; }
+        .cell.floor-branch2 { background: #ffffff; color: #329632; }
+        .cell.floor-branch3 { background: #ffffff; color: #329632; }
+        .cell.floor-branch4 { background: #ffffff; color: #329632; }
+        .cell.floor-goal { background: #ffc800; color: #5a4600; }
+        .cell.floor-hole { background: #3c2814; color: #ddd; }
 
         /* 物件層顏色 */
-        .cell.obj-player { background: #0064c8; color: #fff; }
-        .cell.obj-box { background: #dc0000; color: #fff; }
+        .cell.obj-player { background: #6699ff; color: #fff; }
+        .cell.obj-box { background: #ff6666; color: #fff; }
         
         /* 合併視圖 */
         .cell.merged {
             background: linear-gradient(135deg, #1a1a1a 0%, #1a1a1a 50%, #3a3a3a 50%, #3a3a3a 100%);
         }
         .cell.merged.floor-switch { 
-            background: linear-gradient(135deg, #ffcccc 0%, #ffcccc 50%, #3a3a3a 50%, #3a3a3a 100%);
+            background: linear-gradient(135deg, #c8c8c8 0%, #c8c8c8 50%, #3a3a3a 50%, #3a3a3a 100%);
         }
         .cell.merged.obj-player {
-            background: #6699ff;
+            background: #0064c8;
+            color: #fff;
+        }
+        .cell.merged.obj-box {
+            background: #dc0000;
             color: #fff;
         }
         
@@ -224,7 +228,8 @@
                 <button class="tool-btn active" data-layer="floor" data-tool="." onclick="selectTool(this)">. Floor</button>
                 <button class="tool-btn" data-layer="floor" data-tool="#" onclick="selectTool(this)"># Wall</button>
                 <button class="tool-btn" data-layer="floor" data-tool="S" onclick="selectTool(this)">S Switch</button>
-                <button class="tool-btn" data-layer="floor" data-tool="c" onclick="selectTool(this)">c NO_CARRY</button>
+                <button class="tool-btn" data-layer="floor" data-tool="w" onclick="selectTool(this)">w Weight1</button>
+                <button class="tool-btn" data-layer="floor" data-tool="W" onclick="selectTool(this)">W Weight2</button>
                 <button class="tool-btn" data-layer="floor" data-tool="v" onclick="selectTool(this)">v Branch×1</button>
                 <button class="tool-btn" data-layer="floor" data-tool="V" onclick="selectTool(this)">V Branch×2</button>
                 <button class="tool-btn" data-layer="floor" data-tool="x" onclick="selectTool(this)">x Branch×3</button>
@@ -354,9 +359,10 @@
             } else if (floor === 'S') {
                 cell.classList.add('floor-switch');
                 cell.textContent = 'S';
-            } else if (floor === 'c') {
-                cell.classList.add('floor-no-carry');
-                cell.textContent = 'c';
+            } else if (floor === 'w') {
+                cell.textContent = 'w';
+            } else if (floor === 'W') {
+                cell.textContent = 'W';
             } else if (floor === 'v') {
                 cell.classList.add('floor-branch1');
                 cell.textContent = 'v';
