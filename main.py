@@ -1,72 +1,87 @@
 # main.py - Game Entry Point
 #
-# Level selection and game launcher for DIV Timeline Puzzle
+# Level data + launcher for DIV Timeline Puzzle.
 
 import json
 import os
-from game_window import run_game
+import sys
 
-# Progress tracking file
-PROGRESS_FILE = os.path.join(os.path.dirname(__file__), 'progress.json')
+from game_window import run_game
+from map_parser import parse_dual_layer
+
+
+PROGRESS_FILE = os.path.join(os.path.dirname(__file__), "progress.json")
+
+
+EMPTY_HINTS = {
+    "movement": False,
+    "pickup": False,
+    "diverge": False,
+    "merge": False,
+    "inherit": False,
+}
+
+WORLD1_HINTS = {
+    "movement": True,
+    "pickup": False,
+    "diverge": True,  # unlock split in World 1
+    "merge": True,
+    "inherit": False,
+}
+
 
 def load_progress():
     """Load played levels from progress file."""
     if os.path.exists(PROGRESS_FILE):
         try:
-            with open(PROGRESS_FILE, 'r', encoding='utf-8') as f:
+            with open(PROGRESS_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except:
-            return {'played': []}
-    return {'played': []}
+        except Exception:
+            return {"played": []}
+    return {"played": []}
+
 
 def save_progress(progress):
     """Save played levels to progress file."""
-    with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
+    with open(PROGRESS_FILE, "w", encoding="utf-8") as f:
         json.dump(progress, f, ensure_ascii=False, indent=2)
+
 
 def mark_as_played(level_id):
     """Mark a level as played (no longer first-time)."""
     progress = load_progress()
-    if level_id not in progress['played']:
-        progress['played'].append(level_id)
+    if level_id not in progress["played"]:
+        progress["played"].append(level_id)
         save_progress(progress)
+
 
 def is_first_time(level_id):
     """Check if this is the first time playing this level."""
     progress = load_progress()
-    return level_id not in progress['played']
+    return level_id not in progress["played"]
 
 
-# ===== Level Definitions =====
-# Format: L{world}_{stage} corresponding to id '{world}-{stage}'
-
-# Tutorial World 0: Basic Mechanics
+# Keep only 0-0 ~ 0-2
 L0_0 = {
-    'id': '0-0',
-    'name': 'Tutorial - Move',
-    'floor_map': '''
+    "id": "0-0",
+    "name": "Tutorial 0-0",
+    "floor_map": """
 .####.
 ..##..
 ......
 .#..#.
 .####.
 .####G
-''',
-    'object_map': '''
+""",
+    "object_map": """
 ......
 ......
 ......
 ......
 ......
 P.....
-''',
-    'hints': {
-        'movement': False,   # LOCK - Tab switching (teaching basic WASD only)
-        'pickup': False,     # LOCK - X key pickup
-        'diverge': False,    # LOCK - V key split
-        'merge': False,      # LOCK - V/M key merge
-        'inherit': False,    # LOCK - C key inherit mode
-    },
+""",
+    "hints": EMPTY_HINTS.copy(),
     'tutorial': {
         'title': '關卡 0-0：移動',
         'items': [
@@ -78,35 +93,28 @@ P.....
             '',
             '提示：按住方向鍵可以持續移動',
         ]
-    }
-}
+    }}
 
 L0_1 = {
-    'id': '0-1',
-    'name': 'Tutorial - Push',
-    'floor_map': '''
+    "id": "0-1",
+    "name": "Tutorial 0-1",
+    "floor_map": """
 #G...#
 #.##..
 #.#...
 #....#
 #.####
 #.####
-''',
-    'object_map': '''
+""",
+    "object_map": """
 ......
 .B....
 ....B.
 ..B...
 .B....
 .P....
-''',
-    'hints': {
-        'movement': True,    # UNLOCK - Tab switching unlocked
-        'pickup': False,
-        'diverge': False,
-        'merge': False,
-        'inherit': False,
-    },
+""",
+    "hints": EMPTY_HINTS.copy(),
     'tutorial': {
         'title': '關卡 0-1：推動',
         'items': [
@@ -117,35 +125,28 @@ L0_1 = {
                         '',
             '提示：如果沒有面對方塊，朝方塊按下方向鍵會原地轉向',
         ]
-    }
-}
+    }}
 
 L0_2 = {
-    'id': '0-2',
-    'name': 'Tutorial - Goal',
-    'floor_map': '''
+    "id": "0-2",
+    "name": "Tutorial 0-2",
+    "floor_map": """
 #S..##
 ...###
 .#####
 .##S.G
 ..##..
 #....#
-''',
-    'object_map': '''
+""",
+    "object_map": """
 ..BP..
 ......
 ......
 ....B.
 ......
 ......
-''',
-    'hints': {
-        'movement': True,
-        'pickup': False,
-        'diverge': False,
-        'merge': False,
-        'inherit': False,
-    },
+""",
+    "hints": EMPTY_HINTS.copy(),
     'tutorial': {
         'title': '關卡 0-2：目標',
         'items': [
@@ -157,544 +158,266 @@ L0_2 = {
     }
 }
 
-L0_3 = {
-    'id': '0-3',
-    'name': 'Tutorial - Pick',
-    'floor_map': '''
-#....#
-..##..
-.#####
-.#####
-..##.G
-#....#
-''',
-    'object_map': '''
-......
-.B..BP
-......
-......
-.B..B.
-......
-''',
-    'hints': {
-        'movement': True,
-        'pickup': True,      # UNLOCK - X key pickup
-        'diverge': False,
-        'merge': False,
-        'inherit': False,
-    },
-    'tutorial': {
-        'title': '關卡 0-3：拾取與放下',
-        'items': [
-            '按 X 或空白鍵可以拾取面前的方塊',
-            '拾起方塊後，角色會變為方塊的顏色，可以攜帶方塊移動',
-            '再按一次 X 或空白鍵可以放下方塊',
-            '方塊會放置在角色面前的格子',
-            '',
-            '提示：可拾取的方塊，會出現提示 拾取',
-            '提示：可放置方塊的地板，會出現提示 放下',
-            '提示：攜帶方塊時會變精確移動模式，須轉動方向，再往面對方向移動',
 
-        ]
-    }
-}
-
-L0_4 = {
-    'id': '0-4',
-    'name': 'Tutorial - Limit',
-    'floor_map': '''
-cS####
-cc####
-c.####
-cc####
-S.ccG#
-cc.cS#
-''',
-    'object_map': '''
-P.....
-B.....
-......
-......
-.BB...
-......
-''',
-    'hints': {
-        'movement': True,
-        'pickup': True,
-        'diverge': False,
-        'merge': False,
-        'inherit': False,
-    },
-    'tutorial': {
-        'title': '關卡 0-4：限制',
-        'items': [
-            '紅色地板是「禁止攜帶」區域',
-            '角色或方塊可以在紅色地板上移動，但無法攜帶方塊',
-            '站在不可攜帶區撿取方塊會失敗，只允許推動',
-            '如果攜帶方塊接近會被阻檔',
-            '',
-            '提示：拾取無效時不會出現可拾取的提示',
-
-        ]
-    }
-}
-
-
-L0_5 = {
-    'id': '0-5',
-    'name': 'Tutorial - Hole',
-    'floor_map': '''
-..##..
-H.##..
-H.HH..
-HH.H.H
-H.##HH
-H.##HG
-''',
-    'object_map': '''
-P.....
-....BB
-.B....
-......
-......
-.B....
-''',
-    'hints': {
-        'movement': True,
-        'pickup': True,
-        'diverge': False,
-        'merge': False,
-        'inherit': False,
-    },
-    'tutorial': {
-        'title': '關卡 0-5：坑洞',
-        'items': [
-            '棕色是坑洞，角色和方塊都無法通過',
-            '將方塊推入或放入洞中可以填補洞口',
-            '填補後的洞可以正常通過',
-            '利用方塊填洞來開闢道路',
-            '注意：方塊推入洞後無法取回',
-        ]
-    }
-}
-
-# Tutorial World 1: Timeline Mechanics
-L1_1 = {
-    'id': '1-1',
-    'name': 'Tutorial - Split',
-    'floor_map': '''
+TUTORIAL_LEVELS = [L0_0, L0_1, L0_2]
+MAIN_LEVELS = [
+    {
+        "id": "1-1",
+        "name": "Level 1-1",
+        "floor_map": """
 ######
-#....#
-#S..S#
-##.v##
-##G.##
+#.vG##
+#S.S##
 ######
-''',
-    'object_map': '''
+######
+######
+""",
+        "object_map": """
 ......
-...P..
+.P....
 ..B...
 ......
 ......
 ......
-''',
-    'hints': {
-        'movement': True,
-        'pickup': True,
-        'diverge': True,     # UNLOCK - V key split
-        'merge': True,       # UNLOCK - V/M key merge
-        'inherit': False,    # LOCK - inherit still hidden
-    },
+""",
+        "hints": WORLD1_HINTS.copy(),
     'tutorial': {
         'title': '關卡 1-1：分裂',
         'items': [
             '綠色的點是 分裂點',
             '站在分裂點上，再按 V 鍵可以分裂，複製兩個平行空間',
-            '按 Tab 鍵可以切換視角',
-            '按 M 鍵可以預覽合併後的狀態',
-            '確認無誤後按 V 鍵執行合併',
+
+            '再按 V 可以合併兩個空間'
             '合併後，方塊會保持壓住開關的狀態',
             '',
-            '提示：只要各個空間累計按下所有開關，終點就會亮',
-            '提示：M預覽模式可以Tab切換視角',
-            '提示：一般模式可按 V 鍵快速合併',
-            '提示：分裂點使用次數有限，若失敗可按 Z取消 或 F5重試',
+            '提示：按 Tab 鍵可以切換視角',
 
         ]
     }
-}
 
-L1_2 = {
-    'id': '1-2',
-    'name': 'Tutorial - Converge',
-    'floor_map': '''
+    },
+    {
+        "id": "1-2",
+        "name": "Level 1-2",
+        "floor_map": """
+######
+#...##
+#v.S##
+###G##
 ######
 ######
-vccccG
-######
-######
-######
-''',
-    'object_map': '''
+""",
+        "object_map": """
 ......
 ......
 .PB...
 ......
 ......
 ......
-''',
-    'hints': {
-        'movement': True,
-        'pickup': True,
-        'diverge': True,
-        'merge': True,
-        'inherit': False,
+""",
+        "hints": WORLD1_HINTS.copy(),
+        "tutorial": None,
     },
+    {
+        "id": "1-3",
+        "name": "Level 1-3",
+        "floor_map": """
+######
+######
+.v..G#
+######
+######
+######
+""",
+        "object_map": """
+......
+......
+P.B...
+......
+......
+......
+""",
+        "hints": WORLD1_HINTS.copy(),
     'tutorial': {
-        'title': '關卡 1-2：收束',
+        'title': '1-3：收束',
         'items': [
-            '分裂後的方塊，如果在不同位置合併，會留下殘影',
-            '殘影不可推動，並且會阻擋玩家移動',
-            '對著面前的殘影可使用收束，將變回實體並回收其它殘影',
+            '如果方塊在不同位置合併，將變成殘影',
+            '殘影是不可推動的障礙',
+            '對著殘影按下SPACE可破壞其它殘影，並且回復成實體',
             '',
-            '提示：可收束的殘影會出現提示 收束，並有虛線連結到目標',
-            '提示：合併會以當前視角的玩家位置為基準',
-            '提示：安排適當位置收束，讓玩家穿過方塊',
-            
+            '提示：可收束的殘影會有虛線連結到目標',
 
         ]
-    }
-}
-
-L1_3 = {
-    'id': '1-3',
-    'name': 'Pass',
-    'floor_map': '''
+    }    },
+    {
+        "id": "1-4",
+        "name": "Level 1-4",
+        "floor_map": """
 ######
 ###.##
-vcccG#
+#.v.G#
 ###S##
 ######
 ######
-''',
-    'object_map': '''
+""",
+        "object_map": """
+......
+......
+.P.B..
+......
+......
+......
+""",
+        "hints": WORLD1_HINTS.copy(),
+        "tutorial": None,
+    },
+    {
+        "id": "1-5",
+        "name": "Level 1-5",
+        "floor_map": """
+######
+##.#.#
+#...G#
+#v.#S#
+######
+######
+""",
+        "object_map": """
 ......
 ......
 .PB...
 ......
 ......
 ......
-''',
-    'hints': {
-        'movement': True,
-        'pickup': True,
-        'diverge': True,
-        'merge': True,
-        'inherit': False,
+""",
+        "hints": WORLD1_HINTS.copy(),
+        "tutorial": None,
     },
-    'tutorial': {
-        'title': '關卡 1-3：接力',
-        'items': [
-            '提示：在適當位置收束，讓方塊轉向',
-
-        ]
-    }
-}
-
-L1_4 = {
-    'id': '1-4',
-    'name': 'Cross',
-    'floor_map': '''
+    {
+        "id": "1-6",
+        "name": "Level 1-6",
+        "floor_map": """
 ######
-###c##
-#vcccG
-###c##
+###.##
+##v.G#
 ###S##
 ###v##
-''',
-    'object_map': '''
+######
+""",
+        "object_map": """
 ......
 ......
 ...B..
 ...P..
 ......
 ......
-''',
-    'hints': {
-        'movement': True,
-        'pickup': True,
-        'diverge': True,
-        'merge': True,
-        'inherit': False,
+""",
+        "hints": WORLD1_HINTS.copy(),
+        "tutorial": None,
     },
-    'tutorial': {
-        'title': '關卡 1-4：十字路口',
-        'items': [
-        ]
-    }
-}
-
-L1_5 = {
-    'id': '1-5',
-    'name': 'Tutorial - Divergences',
-    'floor_map': '''
+    {
+        "id": "1-7",
+        "name": "Level 1-7",
+        "floor_map": """
 ######
-#S####
-#G.cV#
-####S#
+##.#v#
+#...G#
+#v.#S#
 ######
 ######
-''',
-    'object_map': '''
+""",
+        "object_map": """
 ......
 ......
-.PB...
+...BP.
 ......
 ......
-......''',
-    'hints': {
-        'movement': True,
-        'pickup': True,
-        'diverge': True,
-        'merge': True,
-        'inherit': False,
+......
+""",
+        "hints": WORLD1_HINTS.copy(),
+        "tutorial": None,
     },
-    'tutorial': {
-        'title': '關卡 1-5：分歧',
-        'items': [
-            '分裂點的圈數代表可使用次數',
-
-        ]
-    }
-}
-
-# Main World 2: Advanced Mechanics
-L2_1 = {
-    'id': '2-1',
-    'name': 'Tutorial - Inherit',
-    'floor_map': '''
-######
-##SG##
-##HH##
-##.v##
-##..##
-######
-''',
-    'object_map': '''
-......
-......
-......
-......
-..BP..
-......
-''',
-    'hints': {
-        'movement': True,
-        'pickup': True,
-        'diverge': True,
-        'merge': True,
-        'inherit': True,     # UNLOCK - full feature set
-    },
-    'tutorial': {
-        'title': '關卡 2-1：繼承',
-        'items': [
-            '按 C 鍵可以切換「繼承模式」',
-            '繼承條件：當前視角空手，另一分支持有方塊',
-            '主視角可繼承另一分支的持有狀態',
-            '按 M 預覽會顯示橘色連線，表示可繼承',
-            '在繼承模式下按 V 鍵執行 繼承合併',
-            '合併後將方塊收束回主視角玩家手上',
-            '',
-            '提示：手持方塊時合併會自動收束',
-
-        ]
-    }
-}
-
-L2_2 = {
-    'id': '2-2',
-    'name': 'Bridge',
-    'floor_map': '''
-##.G##
-##HH##
-##HH##
-##HH##
-##..##
-##.v##
-''',
-    'object_map': '''
-......
-......
-......
-......
-..BP..
-..B...''',
-    'hints': {
-        'movement': True,
-        'pickup': True,
-        'diverge': True,
-        'merge': True,
-        'inherit': True,
-    },
-    'tutorial': {
-        'title': '關卡 2-2：橋樑',
-        'items': [
-            '提示：一個坑洞可同時存在多個殘影',
-            '提示：填補坑洞殘影若被其它殘影位置收束，將回復坑洞狀態',
-
-        ]
-    }
-}
-
-
-# ===== Level Collections =====
-
-TUTORIAL_LEVELS = [
-    L0_0, L0_1, L0_2, L0_3, L0_4, L0_5,  # World 0: Basic mechanics
-    L1_1, L1_2, L1_3, L1_4, L1_5,  # World 1: Timeline mechanics
 ]
 
-MAIN_LEVELS = [
-    L2_1, L2_2,  # World 2: Advanced mechanics
-]
-
-
-# ===== Launcher Functions =====
 
 def launch(level):
-    """Launch a level directly from level variable (e.g., launch(L0_0))."""
-    if not isinstance(level, dict) or 'id' not in level:
-        print(f"Error: Invalid level. Expected level dict (e.g., L0_0), got {type(level)}")
+    """Launch a level directly from level dict."""
+    if not isinstance(level, dict) or "id" not in level:
+        print(f"Error: Invalid level: {type(level)}")
         return
 
-    level_id = level['id']
+    level_id = level["id"]
     first_time = is_first_time(level_id)
 
     print(f"Starting: {level['name']} ({level_id})")
-    print(f"Hints enabled: {[k for k, v in level['hints'].items() if v]}")
-
-    # Get tutorial if available
-    tutorial = level.get('tutorial')
-    if tutorial:
-        if first_time:
-            print(f"First time playing - Tutorial will auto-show (Press H to toggle)")
-        else:
-            print(f"Tutorial available: Press H to view")
-
-    # Mark as played after launching
     mark_as_played(level_id)
 
-    run_game(level['floor_map'], level['object_map'],
-             hints=level['hints'], tutorial=tutorial, first_time=first_time)
-
-
-def launch_tutorial(level_index: int = 0):
-    """Launch tutorial level by index (0-9)."""
-    if level_index < 0 or level_index >= len(TUTORIAL_LEVELS):
-        print(f"Error: Tutorial level {level_index} not found")
-        return
-
-    level = TUTORIAL_LEVELS[level_index]
-    launch(level)
-
-
-def launch_level(level_index: int = 0):
-    """Launch main level by index."""
-    if level_index < 0 or level_index >= len(MAIN_LEVELS):
-        print(f"Error: Level {level_index} not found")
-        return
-
-    level = MAIN_LEVELS[level_index]
-    launch(level)
+    run_game(
+        level["floor_map"],
+        level["object_map"],
+        hints=level.get("hints") or EMPTY_HINTS.copy(),
+        tutorial=level.get("tutorial"),
+        first_time=first_time,
+    )
 
 
 def launch_by_id(level_id: str):
-    """Launch level by ID (e.g., '0-0', '1-3', '2-1')."""
-    # Build lookup dictionary
-    all_levels = {level['id']: level for level in TUTORIAL_LEVELS + MAIN_LEVELS}
-
+    all_levels = {level["id"]: level for level in (TUTORIAL_LEVELS + MAIN_LEVELS)}
     if level_id not in all_levels:
         print(f"Error: Level {level_id} not found")
         print(f"Available levels: {', '.join(sorted(all_levels.keys()))}")
         return
-
-    level = all_levels[level_id]
-    launch(level)
+    launch(all_levels[level_id])
 
 
-def level_selector():
-    """Interactive level selector - shows all levels and lets user choose."""
-    all_levels = TUTORIAL_LEVELS + MAIN_LEVELS
-    progress = load_progress()
-    played_set = set(progress['played'])
+def launch_tutorial(level_index: int = 0):
+    if level_index < 0 or level_index >= len(TUTORIAL_LEVELS):
+        print(f"Error: Tutorial level {level_index} not found")
+        return
+    launch(TUTORIAL_LEVELS[level_index])
 
-    print("\n" + "="*60)
-    print("DIV - Timeline Puzzle | Level Selector")
-    print("="*60)
 
-    # Show tutorial levels
-    print("\n[World 0 - Basic Mechanics]")
-    for i, level in enumerate(TUTORIAL_LEVELS[:6]):
-        marker = "✓" if level['id'] in played_set else " "
-        print(f"  [{marker}] {i+1:2d}. {level['id']} - {level['name']}")
+def launch_level(level_index: int = 0):
+    if level_index < 0 or level_index >= len(MAIN_LEVELS):
+        print(f"Error: Level {level_index} not found")
+        return
+    launch(MAIN_LEVELS[level_index])
 
-    print("\n[World 1 - Timeline Mechanics]")
-    for i, level in enumerate(TUTORIAL_LEVELS[6:], start=6):
-        marker = "✓" if level['id'] in played_set else " "
-        print(f"  [{marker}] {i+1:2d}. {level['id']} - {level['name']}")
 
-    print("\n[World 2 - Advanced Mechanics]")
-    for i, level in enumerate(MAIN_LEVELS, start=len(TUTORIAL_LEVELS)):
-        marker = "✓" if level['id'] in played_set else " "
-        print(f"  [{marker}] {i+1:2d}. {level['id']} - {level['name']}")
-
-    print("\n" + "-"*60)
-    print("Enter level number (1-{}), level ID (e.g., '0-0'), or 'q' to quit".format(len(all_levels)))
-    print("-"*60)
-
+def _read_ascii_map_block(layer_name: str) -> str:
+    print(f"\nPaste {layer_name} map (finish with line: END)")
+    lines = []
     while True:
-        choice = input("\nSelect level: ").strip()
-
-        if choice.lower() == 'q':
-            print("Goodbye!")
+        line = input()
+        if line.strip().upper() == "END":
             break
+        lines.append(line)
+    text = "\n".join(lines).strip()
+    if not text:
+        raise ValueError(f"{layer_name} map is empty")
+    return text
 
-        # Try as level number
-        try:
-            level_num = int(choice)
-            if 1 <= level_num <= len(all_levels):
-                launch(all_levels[level_num - 1])
-                continue
-            else:
-                print(f"Invalid level number. Please enter 1-{len(all_levels)}")
-                continue
-        except ValueError:
-            pass
 
-        # Try as level ID
-        level_dict = {level['id']: level for level in all_levels}
-        if choice in level_dict:
-            launch(level_dict[choice])
-            continue
+def launch_ascii_test_main():
+    print("=" * 60)
+    print("DIV Test Main - Paste ASCII Maps")
+    print("=" * 60)
+    print("Floor symbols: . # S c v V x X G H")
+    print("Object symbols: . P B")
 
-        print("Invalid input. Please enter a level number, ID, or 'q' to quit")
+    floor_map = _read_ascii_map_block("floor")
+    object_map = _read_ascii_map_block("object")
+    parse_dual_layer(floor_map, object_map)
+    run_game(floor_map, object_map, hints=EMPTY_HINTS.copy(), tutorial=None, first_time=False)
 
 
 if __name__ == "__main__":
-    # Graphical level selector (default)
-    from level_selector import run_level_selector
-    run_level_selector()
+    try:
+        if "--ascii" in sys.argv:
+            launch_ascii_test_main()
+        else:
+            from level_selector import run_level_selector
 
-    # Alternative launch methods:
-    # Method 1: Launch by level variable
-    # launch(L0_0)
-
-    # Method 2: Launch by index
-    # launch_tutorial(0)  # L0_0
-    # launch_level(0)     # L2_1
-
-    # Method 3: Launch by ID
-    # launch_by_id('0-0')
-
-    # Method 4: Text-based selector
-    # level_selector()
+            run_level_selector()
+    except Exception as e:
+        print(f"Launch failed: {e}")
