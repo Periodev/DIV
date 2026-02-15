@@ -99,7 +99,7 @@ class BranchState:
         instances = self.get_entities_by_uid(uid)
         if not instances:
             return False
-        positions = {e.pos for e in instances}
+        positions = {(e.pos, e.z) for e in instances}
         return len(positions) > 1
 
     def get_held_items(self) -> List[int]:
@@ -196,13 +196,13 @@ class Timeline:
         all_entities = [e for e in main.entities if e.uid != 0] + \
                        [e for e in sub.entities if e.uid != 0]
 
-        # Group by (uid, pos)
-        by_uid_pos: Dict[Tuple[int, Position], List[Entity]] = {}
+        # Group by (uid, pos, z) - include z so underground and grounded instances are kept separate
+        by_uid_pos: Dict[Tuple[int, Position, int], List[Entity]] = {}
         for e in all_entities:
-            key = (e.uid, e.pos)
+            key = (e.uid, e.pos, e.z)
             by_uid_pos.setdefault(key, []).append(e)
 
-        # Pick best instance per (uid, pos) group
+        # Pick best instance per (uid, pos, z) group
         for instances in by_uid_pos.values():
             best = max(instances, key=Timeline._entity_priority)
             copied = Timeline._copy_entity(best)
