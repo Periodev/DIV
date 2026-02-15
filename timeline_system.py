@@ -48,6 +48,7 @@ class Entity:
     z: int = 0  # height layer: -1=underground, 0=ground, 1=held
     holder: Optional[int] = None  # uid of holder (None=not held)
     direction: Position = (0, 1)  # player-exclusive
+    fused_from: Optional[Tuple[int, ...]] = None  # source uids if this is a fusion entity
 
 # ===== Branch State =====
 class BranchState:
@@ -55,12 +56,14 @@ class BranchState:
         self.entities: List[Entity] = []
         self.terrain: Dict[Position, TerrainType] = {}
         self.grid_size: int = 0
+        self.next_uid: int = 0
 
     def copy(self) -> 'BranchState':
         """Deep copy"""
         new_state = BranchState()
         new_state.terrain = self.terrain.copy()
         new_state.grid_size = self.grid_size
+        new_state.next_uid = self.next_uid
         new_state.entities = [
             Entity(
                 uid=e.uid,
@@ -70,7 +73,8 @@ class BranchState:
                 weight=e.weight,
                 z=e.z,
                 holder=e.holder,
-                direction=e.direction
+                direction=e.direction,
+                fused_from=e.fused_from
             )
             for e in self.entities
         ]
@@ -167,8 +171,59 @@ class Timeline:
         return Entity(
             uid=e.uid, type=e.type, pos=e.pos,
             collision=e.collision, weight=e.weight,
-            z=e.z, holder=e.holder, direction=e.direction
+            z=e.z, holder=e.holder, direction=e.direction,
+            fused_from=e.fused_from
         )
+
+    @staticmethod
+    def try_fuse(state: BranchState, pos: Position) -> bool:
+        """Check if multiple shadow entities overlap at pos; if so, fuse them into one.
+
+        Returns True if fusion occurred.
+        """
+        # Find all distinct shadow uids with an instance at pos (z=0, grounded)
+        shadow_uids_at_pos = [
+            e.uid for e in state.entities
+            if e.uid != 0
+            and e.type == EntityType.BOX
+            and e.pos == pos
+            and Physics.grounded(e)
+            and state.is_shadow(e.uid)
+        ]
+        # Deduplicate while preserving order
+        seen = set()
+        unique_shadow_uids = []
+        for uid in shadow_uids_at_pos:
+            if uid not in seen:
+                seen.add(uid)
+                unique_shadow_uids.append(uid)
+
+        if len(unique_shadow_uids) < 2:
+            return False
+
+        print(f"[DEBUG try_fuse] fusing uids={unique_shadow_uids} at pos={pos}, next_uid={state.next_uid}")
+
+        # Remove all instances of each fusing uid
+        fused_from = tuple(sorted(unique_shadow_uids))
+        state.entities = [
+            e for e in state.entities
+            if e.uid not in seen
+        ]
+
+        # Create fusion entity
+        new_uid = state.next_uid
+        state.next_uid += 1
+        fusion = Entity(
+            uid=new_uid,
+            type=EntityType.BOX,
+            pos=pos,
+            collision=1,
+            weight=2,
+            z=0,
+            fused_from=fused_from
+        )
+        state.entities.append(fusion)
+        return True
 
     @staticmethod
     def _entity_priority(e: Entity) -> tuple:
@@ -188,6 +243,7 @@ class Timeline:
         result = BranchState()
         result.terrain = main.terrain.copy()
         result.grid_size = main.grid_size
+        result.next_uid = max(main.next_uid, sub.next_uid)
 
         # Find items held by sub (non-focused) branch that need to be dropped
         sub_held_uids = set(sub.get_held_items())
@@ -398,4 +454,5 @@ def init_branch_from_source(source: LevelSource) -> BranchState:
             weight=1
         ))
 
+    state.next_uid = source.next_uid
     return state

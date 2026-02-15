@@ -392,8 +392,11 @@ class GameController:
             return False
 
         if active.is_shadow(target.uid):
-            # Shadow: converge to front position, don't pickup
-            Timeline.converge_one(active, target.uid, front_pos)
+            # Check for fusion first: multiple shadow uids overlapping at front_pos
+            fused = Timeline.try_fuse(active, front_pos)
+            if not fused:
+                # Normal convergence: single shadow collapses to one instance
+                Timeline.converge_one(active, target.uid, front_pos)
             self.input_log.append('X')
             self._save_snapshot()
             return True

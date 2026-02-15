@@ -868,10 +868,11 @@ class ArcadeRenderer:
                 self._draw_rect_outline(cell_x, cell_y, box_size, box_size,
                                        border_color, border_thickness)
 
-        # UID text (cached)
+        # UID text (cached): fusion entities show "F{uid}", normal boxes show "{uid}"
         center_x = cell_x + box_size // 2
         center_y = self._flip_y(cell_y + box_size // 2)
-        self._draw_cached_text(f'uid_{entity.uid}_{scale:.2f}_{alpha:.2f}', str(entity.uid),
+        label = f'F{entity.uid}' if entity.fused_from else str(entity.uid)
+        self._draw_cached_text(f'uid_{entity.uid}_{scale:.2f}_{alpha:.2f}', label,
                                center_x, center_y, (*WHITE, int(alpha * 255)), font_size=int(14 * scale))
 
     def _draw_dashed_rect(self, x: int, y: int, w: int, h: int,
