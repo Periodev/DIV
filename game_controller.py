@@ -391,8 +391,15 @@ class GameController:
         if target is None:
             return False
 
-        if active.is_shadow(target.uid):
-            # Check for fusion first: multiple shadow uids overlapping at front_pos
+        # Check for overlap: 2+ distinct uids at front_pos (fusion candidate)
+        uids_at_front = {e.uid for e in active.entities
+                         if e.uid != 0
+                         and e.type == EntityType.BOX
+                         and e.pos == front_pos
+                         and Physics.grounded(e)}
+        has_overlap = len(uids_at_front) >= 2
+
+        if has_overlap or active.is_shadow(target.uid):
             fused = Timeline.try_fuse(active, front_pos)
             if not fused:
                 # Normal convergence: single shadow collapses to one instance
@@ -449,8 +456,13 @@ class GameController:
         if target is None:
             return ('', (0, 0, 0), None, False)
 
-        # Check if it's a shadow - convergence is always allowed (even in NO_CARRY zone)
-        if active.is_shadow(target.uid):
+        # Check for overlap (2+ distinct uids) or shadow - both trigger convergence
+        uids_at_front = {e.uid for e in active.entities
+                         if e.uid != 0
+                         and e.type == EntityType.BOX
+                         and e.pos == front_pos
+                         and Physics.grounded(e)}
+        if len(uids_at_front) >= 2 or active.is_shadow(target.uid):
             return ('收束', (0, 220, 220), front_pos, False)  # Cyan
 
         # Solid box: check if pickup is allowed (not in NO_CARRY zone)

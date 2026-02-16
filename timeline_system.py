@@ -211,14 +211,13 @@ class Timeline:
 
         Returns True if fusion occurred.
         """
-        # Find all distinct shadow uids with an instance at pos (z=0, grounded)
+        # Find all distinct uids with an instance at pos (z=0, grounded)
         shadow_uids_at_pos = [
             e.uid for e in state.entities
             if e.uid != 0
             and e.type == EntityType.BOX
             and e.pos == pos
             and Physics.grounded(e)
-            and state.is_shadow(e.uid)
         ]
         # Deduplicate while preserving order
         seen = set()

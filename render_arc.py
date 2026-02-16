@@ -642,10 +642,23 @@ class ArcadeRenderer:
 
         # Entities (boxes) - skip if requested
         if not skip_entities:
+            # Pre-scan: build overlap labels for cells with 2+ distinct uids
+            from collections import defaultdict
+            pos_uids: dict = defaultdict(list)
+            for e in state.entities:
+                if e.uid != 0 and e.type == EntityType.BOX:
+                    pos_uids[(e.pos, e.z)].append(e.uid)
+            overlap_labels = {
+                key: '|'.join(str(u) for u in sorted(uids))
+                for key, uids in pos_uids.items()
+                if len(uids) >= 2
+            }
+
             for e in sorted(state.entities, key=lambda e: e.z):
                 if e.uid != 0 and e.type == EntityType.BOX:
                     self._draw_entity(start_x, start_y, e, state, cell_size, spec.alpha,
-                                      spec.border_color, spec.is_focused, falling_boxes)
+                                      spec.border_color, spec.is_focused, falling_boxes,
+                                      overlap_labels)
 
             # Shadow connections (only on focused, full-scale branch)
             if spec.is_focused and spec.scale >= 1.0:
@@ -667,6 +680,10 @@ class ArcadeRenderer:
             # Player
             held_items = state.get_held_items()
             held_uid = held_items[0] if held_items else None
+            held_entity = next((e for e in state.entities if e.uid == held_uid), None) if held_uid else None
+            held_label = ('+'.join(str(u) for u in held_entity.fused_from)
+                          if held_entity and held_entity.fused_from else
+                          str(held_uid) if held_uid else None)
             if held_uid:
                 color_index = (held_uid - 1) % len(BOX_COLORS)
                 player_color = BOX_COLORS[color_index]
@@ -678,7 +695,8 @@ class ArcadeRenderer:
             self._draw_player(start_x, start_y, state.player, player_color, held_uid,
                               cell_size, spec.alpha,
                               show_border=not (spec.is_merge_preview and not spec.is_focused),
-                              show_inherit_ring=show_inherit_ring)
+                              show_inherit_ring=show_inherit_ring,
+                              held_label=held_label)
 
         # Cell hint (only for focused, full-scale, pickup hints unlocked)
         if (spec.interaction_hint and spec.scale >= 1.0
@@ -806,7 +824,8 @@ class ArcadeRenderer:
                      state: BranchState, cell_size: int, alpha: float = 1.0,
                      branch_color: Tuple[int, int, int] = None,
                      is_focused: bool = False,
-                     falling_boxes: dict = None):
+                     falling_boxes: dict = None,
+                     overlap_labels: dict = None):
         """Draw a single entity (box)."""
         scale = cell_size / CELL_SIZE
 
@@ -868,12 +887,20 @@ class ArcadeRenderer:
                 self._draw_rect_outline(cell_x, cell_y, box_size, box_size,
                                        border_color, border_thickness)
 
-        # UID text (cached): fusion entities show "F{uid}", normal boxes show "{uid}"
+        # UID text: check for unfused overlap (other grounded boxes at same pos)
         center_x = cell_x + box_size // 2
         center_y = self._flip_y(cell_y + box_size // 2)
-        label = f'F{entity.uid}' if entity.fused_from else str(entity.uid)
+
+        if entity.fused_from:
+            label = '+'.join(str(u) for u in entity.fused_from)
+        elif overlap_labels and (entity.pos, entity.z) in overlap_labels:
+            label = overlap_labels[(entity.pos, entity.z)]
+        else:
+            label = str(entity.uid)
+
+        font_size = int(14 * scale)
         self._draw_cached_text(f'uid_{label}_{scale:.2f}_{alpha:.2f}', label,
-                               center_x, center_y, (*WHITE, int(alpha * 255)), font_size=int(14 * scale))
+                               center_x, center_y, (*WHITE, int(alpha * 255)), font_size=font_size)
 
     def _draw_dashed_rect(self, x: int, y: int, w: int, h: int,
                           color: Tuple, thickness: int):
@@ -904,7 +931,8 @@ class ArcadeRenderer:
 
     def _draw_player(self, start_x: int, start_y: int, player,
                      color: Tuple, held_uid: Optional[int], cell_size: int, alpha: float = 1.0,
-                     show_border: bool = True, show_inherit_ring: bool = False):
+                     show_border: bool = True, show_inherit_ring: bool = False,
+                     held_label: Optional[str] = None):
         """Draw the player.
 
         Args:
@@ -934,7 +962,8 @@ class ArcadeRenderer:
                                        (*BLACK, int(alpha * 255)), max(1, int(3 * scale)))
 
             # UID text (cached)
-            self._draw_cached_text(f'held_{held_uid}_{scale:.2f}_{alpha:.2f}', str(held_uid),
+            label = held_label if held_label is not None else str(held_uid)
+            self._draw_cached_text(f'held_{label}_{scale:.2f}_{alpha:.2f}', label,
                                    center_x, center_y, (*WHITE, int(alpha * 255)), font_size=int(14 * scale))
 
             # Arrow
