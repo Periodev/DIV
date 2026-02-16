@@ -161,9 +161,39 @@ class BranchState:
 # ===== Timeline (Pure Functions) =====
 class Timeline:
     @staticmethod
-    def diverge(branch: BranchState) -> BranchState:
-        """Diverge: deep copy"""
-        return branch.copy()
+    def diverge(branch: BranchState) -> Tuple['BranchState', 'BranchState']:
+        """Diverge: returns (main, sub) pair.
+
+        For fusion entities with exactly 2 components, splits them:
+          main (DIV0) gets fused_from[0] (smaller uid)
+          sub  (DIV1) gets fused_from[1] (larger uid)
+        For fusion entities with 3+ components, both branches get the same F.
+        """
+        main = branch.copy()
+        sub = branch.copy()
+
+        splittable = [e for e in branch.entities if e.fused_from and len(e.fused_from) == 2]
+
+        for f in splittable:
+            uid0, uid1 = f.fused_from[0], f.fused_from[1]
+
+            # Replace F in main with B(uid0)
+            for e in main.entities:
+                if e.uid == f.uid:
+                    e.uid = uid0
+                    e.weight = 1
+                    e.fused_from = None
+                    break
+
+            # Replace F in sub with B(uid1)
+            for e in sub.entities:
+                if e.uid == f.uid:
+                    e.uid = uid1
+                    e.weight = 1
+                    e.fused_from = None
+                    break
+
+        return main, sub
 
     @staticmethod
     def _copy_entity(e: Entity) -> Entity:
@@ -218,7 +248,8 @@ class Timeline:
             type=EntityType.BOX,
             pos=pos,
             collision=1,
-            weight=2,
+            # Preserve physical consistency when fusing 2+ shadow uids.
+            weight=len(fused_from),
             z=0,
             fused_from=fused_from
         )

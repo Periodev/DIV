@@ -202,7 +202,7 @@ class GameController:
         new_terrain = self.BRANCH_DECREMENT[terrain]
         self.main_branch.terrain[active.player.pos] = new_terrain
 
-        self.sub_branch = Timeline.diverge(self.main_branch)
+        self.main_branch, self.sub_branch = Timeline.diverge(self.main_branch)
         self.has_branched = True
         self.input_log.append('V')
         self._save_snapshot()

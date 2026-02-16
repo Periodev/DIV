@@ -872,7 +872,7 @@ class ArcadeRenderer:
         center_x = cell_x + box_size // 2
         center_y = self._flip_y(cell_y + box_size // 2)
         label = f'F{entity.uid}' if entity.fused_from else str(entity.uid)
-        self._draw_cached_text(f'uid_{entity.uid}_{scale:.2f}_{alpha:.2f}', label,
+        self._draw_cached_text(f'uid_{label}_{scale:.2f}_{alpha:.2f}', label,
                                center_x, center_y, (*WHITE, int(alpha * 255)), font_size=int(14 * scale))
 
     def _draw_dashed_rect(self, x: int, y: int, w: int, h: int,
