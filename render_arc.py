@@ -44,11 +44,18 @@ INTERACT_GRAY = (100, 100, 100)
 HOLE_COLOR = (60, 40, 20)
 
 
-# Box colors (colorblind-friendly)
+# Box colors (bright, visually distinct)
 BOX_COLORS = [
-    RED,    # Red
-    (70, 130, 180),   # Steel Blue
+    (220, 50,  50),   # Red
+    (50,  130, 220),  # Blue
+    (50,  200, 80),   # Green
     (255, 180, 0),    # Orange
+    (180, 80,  220),  # Purple
+    (0,   210, 210),  # Cyan
+    (240, 100, 160),  # Pink
+    (255, 220, 50),   # Yellow
+    (255, 130, 40),   # Deep Orange
+    (100, 220, 180),  # Teal
 ]
 
 # Hint panel colors
@@ -900,7 +907,7 @@ class ArcadeRenderer:
 
         font_size = int(14 * scale)
         self._draw_cached_text(f'uid_{label}_{scale:.2f}_{alpha:.2f}', label,
-                               center_x, center_y, (*WHITE, int(alpha * 255)), font_size=font_size)
+                               center_x, center_y, (*BLACK, int(alpha * 255)), font_size=font_size)
 
     def _draw_dashed_rect(self, x: int, y: int, w: int, h: int,
                           color: Tuple, thickness: int):
@@ -964,7 +971,7 @@ class ArcadeRenderer:
             # UID text (cached)
             label = held_label if held_label is not None else str(held_uid)
             self._draw_cached_text(f'held_{label}_{scale:.2f}_{alpha:.2f}', label,
-                                   center_x, center_y, (*WHITE, int(alpha * 255)), font_size=int(14 * scale))
+                                   center_x, center_y, (*BLACK, int(alpha * 255)), font_size=int(14 * scale))
 
             # Arrow
             arrow_size = int(21 * scale)

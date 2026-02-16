@@ -341,10 +341,13 @@ class Timeline:
         held = next((e for e in instances if e.holder == 0), None)
         if held:
             target = held
-        # Priority 2: instance at target_pos
+        # Priority 2: best instance at target_pos (by _entity_priority, e.g. z=0 over z=-1)
         elif target_pos:
-            at_pos = next((e for e in instances if e.pos == target_pos), None)
-            target = at_pos if at_pos else instances[0]
+            at_pos_instances = [e for e in instances if e.pos == target_pos]
+            if at_pos_instances:
+                target = max(at_pos_instances, key=Timeline._entity_priority)
+            else:
+                target = instances[0]
         # Priority 3: first instance
         else:
             target = instances[0]
