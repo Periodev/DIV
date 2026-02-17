@@ -7,6 +7,7 @@ import os
 import sys
 
 from game_window import run_game
+from level_constructor import MAIN_LEVELS
 from map_parser import parse_dual_layer
 
 
@@ -20,15 +21,6 @@ EMPTY_HINTS = {
     "merge": False,
     "inherit": False,
 }
-
-WORLD1_HINTS = {
-    "movement": True,
-    "pickup": False,
-    "diverge": True,  # unlock split in World 1
-    "merge": True,
-    "inherit": False,
-}
-
 
 def load_progress():
     """Load played levels from progress file."""
@@ -160,185 +152,6 @@ L0_2 = {
 
 
 TUTORIAL_LEVELS = [L0_0, L0_1, L0_2]
-MAIN_LEVELS = [
-    {
-        "id": "1-1",
-        "name": "Level 1-1",
-        "floor_map": """
-######
-#.vG##
-#S.S##
-######
-######
-######
-""",
-        "object_map": """
-......
-.P....
-..B...
-......
-......
-......
-""",
-        "hints": WORLD1_HINTS.copy(),
-    'tutorial': {
-        'title': '關卡 1-1：分裂',
-        'items': [
-            '綠色的點是 分裂點',
-            '站在分裂點上，再按 V 鍵可以分裂，複製兩個平行空間',
-
-            '再按 V 可以合併兩個空間'
-            '合併後，方塊會保持壓住開關的狀態',
-            '',
-            '提示：按 Tab 鍵可以切換視角',
-
-        ]
-    }
-
-    },
-    {
-        "id": "1-2",
-        "name": "Level 1-2",
-        "floor_map": """
-######
-#...##
-#v.S##
-###G##
-######
-######
-""",
-        "object_map": """
-......
-......
-.PB...
-......
-......
-......
-""",
-        "hints": WORLD1_HINTS.copy(),
-        "tutorial": None,
-    },
-    {
-        "id": "1-3",
-        "name": "Level 1-3",
-        "floor_map": """
-######
-######
-.v..G#
-######
-######
-######
-""",
-        "object_map": """
-......
-......
-P.B...
-......
-......
-......
-""",
-        "hints": WORLD1_HINTS.copy(),
-    'tutorial': {
-        'title': '1-3：收束',
-        'items': [
-            '如果方塊在不同位置合併，將變成殘影',
-            '殘影是不可推動的障礙',
-            '對著殘影按下SPACE可破壞其它殘影，並且回復成實體',
-            '',
-            '提示：可收束的殘影會有虛線連結到目標',
-
-        ]
-    }    },
-    {
-        "id": "1-4",
-        "name": "Level 1-4",
-        "floor_map": """
-######
-###.##
-#.v.G#
-###S##
-######
-######
-""",
-        "object_map": """
-......
-......
-.P.B..
-......
-......
-......
-""",
-        "hints": WORLD1_HINTS.copy(),
-        "tutorial": None,
-    },
-    {
-        "id": "1-5",
-        "name": "Level 1-5",
-        "floor_map": """
-######
-##.#.#
-#...G#
-#v.#S#
-######
-######
-""",
-        "object_map": """
-......
-......
-.PB...
-......
-......
-......
-""",
-        "hints": WORLD1_HINTS.copy(),
-        "tutorial": None,
-    },
-    {
-        "id": "1-6",
-        "name": "Level 1-6",
-        "floor_map": """
-######
-###.##
-##v.G#
-###S##
-###v##
-######
-""",
-        "object_map": """
-......
-......
-...B..
-...P..
-......
-......
-""",
-        "hints": WORLD1_HINTS.copy(),
-        "tutorial": None,
-    },
-    {
-        "id": "1-7",
-        "name": "Level 1-7",
-        "floor_map": """
-######
-##.#v#
-#...G#
-#v.#S#
-######
-######
-""",
-        "object_map": """
-......
-......
-...BP.
-......
-......
-......
-""",
-        "hints": WORLD1_HINTS.copy(),
-        "tutorial": None,
-    },
-]
-
 
 def launch(level):
     """Launch a level directly from level dict."""
@@ -421,3 +234,4 @@ if __name__ == "__main__":
             run_level_selector()
     except Exception as e:
         print(f"Launch failed: {e}")
+

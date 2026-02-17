@@ -1,7 +1,8 @@
 # level_selector.py - Graphical Level Selector
 
 import arcade
-from main import TUTORIAL_LEVELS, MAIN_LEVELS, load_progress, launch
+from level_constructor import MAIN_LEVELS
+from main import TUTORIAL_LEVELS, load_progress, launch
 
 
 WINDOW_WIDTH = 820
