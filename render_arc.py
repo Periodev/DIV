@@ -14,10 +14,10 @@ if TYPE_CHECKING:
     from presentation_model import FrameViewSpec, BranchViewSpec, InteractionHint
 
 # === Layout Constants ===
-GRID_SIZE = 6
+DEFAULT_GRID_SIZE = 6
 CELL_SIZE = 75
-GRID_WIDTH = GRID_SIZE * CELL_SIZE  # 450
-GRID_HEIGHT = GRID_SIZE * CELL_SIZE
+GRID_WIDTH = DEFAULT_GRID_SIZE * CELL_SIZE  # 450
+GRID_HEIGHT = DEFAULT_GRID_SIZE * CELL_SIZE
 
 WINDOW_WIDTH = 1150
 WINDOW_HEIGHT = 600  # Original size
@@ -80,9 +80,17 @@ class ArcadeRenderer:
     def __init__(self):
         # Font path for Chinese characters
         self.chinese_font = "Microsoft YaHei"
+        # Hold Ctrl to temporarily fade front box and peek floor beneath it.
+        self.peek_floor_mode = False
+        # Grid size is set once at level load; does not change during gameplay.
+        self.grid_size = DEFAULT_GRID_SIZE
 
         # === Texture Cache for SpriteList Rendering ===
         self._init_texture_cache()
+
+    def set_grid_size(self, grid_size: int):
+        """Set fixed grid size for current level (called once on level load)."""
+        self.grid_size = max(1, int(grid_size))
 
     def _init_texture_cache(self):
         """Initialize cached textures for GPU-batched rendering."""
@@ -219,8 +227,8 @@ class ArcadeRenderer:
         sprites = arcade.SpriteList()
         dynamic_cells = []  # (gx, gy, terrain_type) for immediate mode
 
-        for gx in range(GRID_SIZE):
-            for gy in range(GRID_SIZE):
+        for gx in range(self.grid_size):
+            for gy in range(self.grid_size):
                 pos = (gx, gy)
                 terrain = state.terrain.get(pos, TerrainType.FLOOR)
                 center_x = start_x + gx * cell_size + cell_size // 2
@@ -364,8 +372,8 @@ class ArcadeRenderer:
                 )
 
         # Draw NO_CARRY markers
-        for gx in range(GRID_SIZE):
-            for gy in range(GRID_SIZE):
+        for gx in range(self.grid_size):
+            for gy in range(self.grid_size):
                 pos = (gx, gy)
                 terrain = state.terrain.get(pos, TerrainType.FLOOR)
 
@@ -493,7 +501,7 @@ class ArcadeRenderer:
 
             # Layer 4: Merge convergence hints (when focused is holding)
             # Shows where other branch's items will converge to focused position
-            cell_size = int(CELL_SIZE * focused_branch.scale)
+            cell_size = self._scaled_cell_size(focused_branch.scale)
             self._draw_merge_convergence_hints(
                 focused_branch.pos_x, focused_branch.pos_y,  # Focused branch screen position
                 non_focused_branch.pos_x, non_focused_branch.pos_y,  # Other branch screen position
@@ -526,7 +534,7 @@ class ArcadeRenderer:
         if spec.flash_pos and spec.flash_intensity > 0:
             focused_branch = spec.main_branch if spec.current_focus == 0 else spec.sub_branch
             if focused_branch:
-                cell_size = int(CELL_SIZE * focused_branch.scale)
+                cell_size = self._scaled_cell_size(focused_branch.scale)
                 self._draw_flash_effect(
                     focused_branch.pos_x, focused_branch.pos_y,
                     spec.flash_pos, spec.flash_intensity, cell_size
@@ -567,6 +575,11 @@ class ArcadeRenderer:
         """Convert top-down Y to arcade's bottom-up Y."""
         return WINDOW_HEIGHT - y
 
+    def _scaled_cell_size(self, scale: float) -> int:
+        """Cell size derived from fixed map pixel size and configured grid size."""
+        base_cell_size = GRID_WIDTH / self.grid_size
+        return max(1, int(base_cell_size * scale))
+
     def _grid_to_screen(self, start_x: int, start_y: int,
                         grid_x: int, grid_y: int, cell_size: int) -> Tuple[int, int]:
         """Convert grid position to screen center coordinates."""
@@ -600,9 +613,11 @@ class ArcadeRenderer:
             start_y = spec.pos_y
         else:
             start_x, start_y = override_pos
-        cell_size = int(CELL_SIZE * spec.scale)
-        grid_width = cell_size * GRID_SIZE
-        grid_height = cell_size * GRID_SIZE
+        # Keep total map size fixed (GRID_WIDTH x GRID_HEIGHT).
+        # Only cell size changes with grid_size.
+        cell_size = self._scaled_cell_size(spec.scale)
+        grid_width = cell_size * self.grid_size
+        grid_height = cell_size * self.grid_size
 
         # Title and Border (skip if decorations disabled)
         if not skip_decorations:
@@ -663,9 +678,17 @@ class ArcadeRenderer:
 
             for e in sorted(state.entities, key=lambda e: e.z):
                 if e.uid != 0 and e.type == EntityType.BOX:
+                    fade_front = (
+                        self.peek_floor_mode
+                        and spec.is_focused
+                        and spec.scale >= 1.0
+                        and e.z == 0
+                        and e.pos == (state.player.pos[0] + state.player.direction[0],
+                                      state.player.pos[1] + state.player.direction[1])
+                    )
                     self._draw_entity(start_x, start_y, e, state, cell_size, spec.alpha,
                                       spec.border_color, spec.is_focused, falling_boxes,
-                                      overlap_labels)
+                                      overlap_labels, fade_front)
 
             # Shadow connections (only on focused, full-scale branch)
             if spec.is_focused and spec.scale >= 1.0:
@@ -707,7 +730,8 @@ class ArcadeRenderer:
 
         # Cell hint (only for focused, full-scale, pickup hints unlocked)
         if (spec.interaction_hint and spec.scale >= 1.0
-            and self.current_hints.get('pickup', True)):
+            and self.current_hints.get('pickup', True)
+            and not self.peek_floor_mode):
             self._draw_cell_hint(start_x, start_y, spec.interaction_hint, cell_size, spec.alpha)
 
         # Grid lines (skip if terrain is skipped)
@@ -752,8 +776,8 @@ class ArcadeRenderer:
                       cell_size: int, goal_active: bool, has_branched: bool,
                       highlight_branch_point: bool):
         """Draw terrain layer."""
-        for gx in range(GRID_SIZE):
-            for gy in range(GRID_SIZE):
+        for gx in range(self.grid_size):
+            for gy in range(self.grid_size):
                 pos = (gx, gy)
                 cell_x = start_x + gx * cell_size
                 cell_y = start_y + gy * cell_size
@@ -832,7 +856,8 @@ class ArcadeRenderer:
                      branch_color: Tuple[int, int, int] = None,
                      is_focused: bool = False,
                      falling_boxes: dict = None,
-                     overlap_labels: dict = None):
+                     overlap_labels: dict = None,
+                     fade_front: bool = False):
         """Draw a single entity (box)."""
         scale = cell_size / CELL_SIZE
 
@@ -870,7 +895,8 @@ class ArcadeRenderer:
         else:
             display_color = base_color
 
-        display_color = (*display_color, int(alpha * 255))
+        effective_alpha = alpha * (0.18 if fade_front else 1.0)
+        display_color = (*display_color, int(effective_alpha * 255))
 
         # Fill
         self._draw_rect_filled(cell_x, cell_y, box_size, box_size, display_color)
@@ -882,7 +908,7 @@ class ArcadeRenderer:
             border_thickness = 0
         else:
             # Normal black border
-            border_color = (*BLACK, int(alpha * 255))
+            border_color = (*BLACK, int(effective_alpha * 255))
             border_thickness = max(1, int(2 * scale))
 
         # Border (dashed for shadow, solid otherwise, none for transparent overlay)
@@ -906,8 +932,9 @@ class ArcadeRenderer:
             label = str(entity.uid)
 
         font_size = int(14 * scale)
-        self._draw_cached_text(f'uid_{label}_{scale:.2f}_{alpha:.2f}', label,
-                               center_x, center_y, (*BLACK, int(alpha * 255)), font_size=font_size)
+        text_alpha = max(0, int(effective_alpha * 255) - 40) if fade_front else int(effective_alpha * 255)
+        self._draw_cached_text(f'uid_{label}_{scale:.2f}_{effective_alpha:.2f}', label,
+                               center_x, center_y, (*BLACK, text_alpha), font_size=font_size)
 
     def _draw_dashed_rect(self, x: int, y: int, w: int, h: int,
                           color: Tuple, thickness: int):
@@ -1009,8 +1036,8 @@ class ArcadeRenderer:
         """Draw grid lines."""
         scale = cell_size / CELL_SIZE
 
-        for gx in range(GRID_SIZE):
-            for gy in range(GRID_SIZE):
+        for gx in range(self.grid_size):
+            for gy in range(self.grid_size):
                 pos = (gx, gy)
                 cell_x = start_x + gx * cell_size
                 cell_y = start_y + gy * cell_size
@@ -1445,11 +1472,13 @@ class ArcadeRenderer:
         B = ViewModelBuilder
 
         # Calculate static focused branch position
-        grid_px = CELL_SIZE * GRID_SIZE  # Always use full scale for hint position
+        # Hint positioning uses fixed full-scale map size.
+        grid_px = GRID_WIDTH
 
         # Position below the grid (outside map area)
         box_width = 75
         box_height = 40
+        half_cell = int((GRID_WIDTH / self.grid_size) // 2)
         y_offset = 15  # Distance below grid
         arrow_size = 15
 
@@ -1466,7 +1495,7 @@ class ArcadeRenderer:
         # Left Tab hint: "← Tab" (active if current_focus == 1, switch to DIV 0)
         left_active = (current_focus == 1)
         x_left = B.CENTER_X - box_width - 10
-        y_left = B.CENTER_Y + grid_px - CELL_SIZE // 2 - box_height // 2
+        y_left = B.CENTER_Y + grid_px - half_cell - box_height // 2
 
         bg_color = active_bg if left_active else inactive_bg
         border_color = active_border if left_active else inactive_border
@@ -1496,7 +1525,7 @@ class ArcadeRenderer:
         # Right Tab hint: "Tab →" (active if current_focus == 0, switch to DIV 1)
         right_active = (current_focus == 0)
         x_right = B.CENTER_X + grid_px + 10
-        y_right = B.CENTER_Y + grid_px - CELL_SIZE // 2 - box_height // 2
+        y_right = B.CENTER_Y + grid_px - half_cell - box_height // 2
 
         bg_color = active_bg if right_active else inactive_bg
         border_color = active_border if right_active else inactive_border
@@ -1528,7 +1557,8 @@ class ArcadeRenderer:
         from presentation_model import ViewModelBuilder
         B = ViewModelBuilder
 
-        grid_px = CELL_SIZE * GRID_SIZE
+        # Indicator positioning uses fixed full-scale map size.
+        grid_px = GRID_WIDTH
         box_width = 130
         box_height = 40
         y_offset = 15
@@ -1624,8 +1654,8 @@ class ArcadeRenderer:
 
     def _draw_merge_overlay(self, spec: 'FrameViewSpec', focused: 'BranchViewSpec'):
         """Draw merge preview overlay on focused branch."""
-        cell_size = int(CELL_SIZE * focused.scale)
-        grid_px = cell_size * GRID_SIZE
+        cell_size = self._scaled_cell_size(focused.scale)
+        grid_px = cell_size * self.grid_size
         margin = int(12 * focused.scale)
 
         # We'll draw the preview state at the focused panel's position

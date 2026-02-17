@@ -28,6 +28,7 @@ class GameWindow(arcade.Window):
 
         # Renderer
         self.renderer = ArcadeRenderer()
+        self.renderer.set_grid_size(source.grid_size)
 
         # Hint configuration (tutorial progression)
         self.hints = hints or {
@@ -64,6 +65,7 @@ class GameWindow(arcade.Window):
         # Track held keys for continuous movement
         self.held_keys = set()
         self.alt_held = False
+        self.ctrl_held = False
 
         # Global inherit mode toggle (Shift key)
         self.inherit_mode_enabled = False
@@ -156,6 +158,9 @@ class GameWindow(arcade.Window):
 
         if key in (arcade.key.LALT, arcade.key.RALT):
             self.alt_held = True
+            return
+        if key in (arcade.key.LCTRL, arcade.key.RCTRL):
+            self.ctrl_held = True
             return
         # Movement keys - add to held set
         if key in (arcade.key.UP, arcade.key.DOWN, arcade.key.LEFT, arcade.key.RIGHT,
@@ -251,6 +256,9 @@ class GameWindow(arcade.Window):
         if key in (arcade.key.LALT, arcade.key.RALT):
             self.alt_held = False
             return
+        if key in (arcade.key.LCTRL, arcade.key.RCTRL):
+            self.ctrl_held = False
+            return
         if key in self.held_keys:
             self.held_keys.discard(key)
 
@@ -291,6 +299,7 @@ class GameWindow(arcade.Window):
         )
 
         # Render
+        self.renderer.peek_floor_mode = self.ctrl_held
         self.renderer.draw_frame(frame_spec)
 
         # Draw tutorial overlay if active
