@@ -228,6 +228,7 @@
                 <button class="tool-btn active" data-layer="floor" data-tool="." onclick="selectTool(this)">. Floor</button>
                 <button class="tool-btn" data-layer="floor" data-tool="#" onclick="selectTool(this)"># Wall</button>
                 <button class="tool-btn" data-layer="floor" data-tool="S" onclick="selectTool(this)">S Switch</button>
+                <button class="tool-btn" data-layer="floor" data-tool="c" onclick="selectTool(this)">c NO_CARRY</button>
                 <button class="tool-btn" data-layer="floor" data-tool="w" onclick="selectTool(this)">w Weight1</button>
                 <button class="tool-btn" data-layer="floor" data-tool="W" onclick="selectTool(this)">W Weight2</button>
                 <button class="tool-btn" data-layer="floor" data-tool="v" onclick="selectTool(this)">v Branch×1</button>
@@ -359,6 +360,9 @@
             } else if (floor === 'S') {
                 cell.classList.add('floor-switch');
                 cell.textContent = 'S';
+            } else if (floor === 'c') {
+                cell.classList.add('floor-no-carry');
+                cell.textContent = 'c';
             } else if (floor === 'w') {
                 cell.textContent = 'w';
             } else if (floor === 'W') {
@@ -420,7 +424,7 @@
         }
         
         function updateOutput() {
-            let output = "# Floor Map\nfloor_map = '''\n";
+            let output = "floor_map = '''\n";
             for (let y = 0; y < gridSize; y++) {
                 let line = '';
                 for (let x = 0; x < gridSize; x++) {
@@ -428,7 +432,7 @@
                 }
                 output += line + '\n';
             }
-            output += "'''\n\n# Object Map\nobject_map = '''\n";
+            output += "'''\n\nobject_map = '''\n";
             for (let y = 0; y < gridSize; y++) {
                 let line = '';
                 for (let x = 0; x < gridSize; x++) {
