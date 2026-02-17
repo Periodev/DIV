@@ -32,10 +32,9 @@ class GameWindow(arcade.Window):
 
         # Hint configuration (tutorial progression)
         self.hints = hints or {
-            'movement': True,
             'pickup': True,
             'diverge': True,
-            'merge': True,
+            'converge': True,
             'inherit': True,
         }
 

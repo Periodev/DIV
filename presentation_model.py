@@ -77,7 +77,7 @@ class FrameViewSpec:
     show_inherit_indicator: bool = False  # Show orange player when inherit available
     inherit_mode_enabled: bool = False  # Global inherit mode toggle (Shift key)
     # Tutorial hint configuration (progressive unlock)
-    hints: dict = None  # {'movement': bool, 'pickup': bool, 'diverge': bool, 'merge': bool, 'inherit': bool}
+    hints: dict = None  # {'pickup': bool, 'diverge': bool, 'converge': bool, 'inherit': bool}
 
 
 class ViewModelBuilder:

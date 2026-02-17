@@ -402,10 +402,9 @@ class ArcadeRenderer:
         """
         # Store hints configuration for this frame (used by all hint rendering methods)
         self.current_hints = spec.hints or {
-            'movement': True,
             'pickup': True,
             'diverge': True,
-            'merge': True,
+            'converge': True,
             'inherit': True,
         }
 
@@ -501,13 +500,14 @@ class ArcadeRenderer:
 
             # Layer 4: Merge convergence hints (when focused is holding)
             # Shows where other branch's items will converge to focused position
-            cell_size = self._scaled_cell_size(focused_branch.scale)
-            self._draw_merge_convergence_hints(
-                focused_branch.pos_x, focused_branch.pos_y,  # Focused branch screen position
-                non_focused_branch.pos_x, non_focused_branch.pos_y,  # Other branch screen position
-                focused_branch.state, non_focused_branch.state,
-                spec.animation_frame, cell_size
-            )
+            if self.current_hints.get('converge', True):
+                cell_size = self._scaled_cell_size(focused_branch.scale)
+                self._draw_merge_convergence_hints(
+                    focused_branch.pos_x, focused_branch.pos_y,  # Focused branch screen position
+                    non_focused_branch.pos_x, non_focused_branch.pos_y,  # Other branch screen position
+                    focused_branch.state, non_focused_branch.state,
+                    spec.animation_frame, cell_size
+                )
         else:
             # Normal mode: draw in standard order
             if spec.sub_branch and -500 < spec.sub_branch.pos_x < WINDOW_WIDTH + 100:
@@ -550,9 +550,10 @@ class ArcadeRenderer:
             self._draw_tab_switch_hint(focused_branch, spec.current_focus)
 
         # 3.6. Draw merge operation hints in center (merge hints)
-        if spec.show_merge_preview_hint and self.current_hints.get('merge', True):
+        merge_hint_on = self.current_hints.get('merge', True)
+        if spec.show_merge_preview_hint and merge_hint_on:
             self._draw_merge_preview_hint(spec.merge_preview_active)
-        if spec.show_merge_hint and self.current_hints.get('merge', True):
+        if spec.show_merge_hint and merge_hint_on:
             # Show inherit hint if inherit mode enabled and inherit is available
             self._draw_merge_hint(spec.inherit_mode_enabled and spec.show_inherit_indicator)
 
@@ -728,9 +729,19 @@ class ArcadeRenderer:
                               show_inherit_ring=show_inherit_ring,
                               held_label=held_label)
 
-        # Cell hint (only for focused, full-scale, pickup hints unlocked)
+        # Cell hint (only for focused, full-scale)
+        # Converge hint uses 'converge' lock; pickup/drop uses 'pickup' lock.
+        is_converge_hint = (
+            spec.interaction_hint is not None
+            and spec.interaction_hint.color == (0, 220, 220)
+        )
+        hint_unlocked = (
+            self.current_hints.get('converge', True)
+            if is_converge_hint
+            else self.current_hints.get('pickup', True)
+        )
         if (spec.interaction_hint and spec.scale >= 1.0
-            and self.current_hints.get('pickup', True)
+            and hint_unlocked
             and not self.peek_floor_mode):
             self._draw_cell_hint(start_x, start_y, spec.interaction_hint, cell_size, spec.alpha)
 

@@ -15,8 +15,9 @@ PROGRESS_FILE = os.path.join(os.path.dirname(__file__), "progress.json")
 
 
 EMPTY_HINTS = {
-    "movement": False,
+    "diverge": False,
     "pickup": False,
+    "converge": False,
     "inherit": False,
 }
 
