@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DIV Level Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Consolas', 'Monaco', monospace;
+    background: #1a1a1a;
+    color: #e0e0e0;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 200px;
+    min-width: 160px;
+    background: #232323;
+    border-right: 1px solid #3a3a3a;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow: hidden;
+  }
+  .sidebar-header {
+    padding: 12px 10px 8px;
+    border-bottom: 1px solid #3a3a3a;
+    flex-shrink: 0;
+  }
+  .sidebar-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #60a5fa;
+    margin-bottom: 8px;
+  }
+  .pick-btn {
+    width: 100%;
+    padding: 7px 10px;
+    background: #60a5fa;
+    border: none;
+    color: #000;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .pick-btn:hover { background: #3b82f6; }
+  #fileInput { display: none; }
+
+  .tab-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 6px;
+  }
+  .tab-list::-webkit-scrollbar { width: 4px; }
+  .tab-list::-webkit-scrollbar-track { background: #232323; }
+  .tab-list::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+
+  .tab {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 6px 8px;
+    margin-bottom: 3px;
+    background: #2e2e2e;
+    border: 1px solid #3a3a3a;
+    color: #bbb;
+    font-family: inherit;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tab:hover { background: #3a3a3a; color: #e0e0e0; }
+  .tab.active {
+    background: #60a5fa;
+    border-color: #60a5fa;
+    color: #000;
+    font-weight: bold;
+  }
+
+  /* ── Main ── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .level-name {
+    font-size: 15px;
+    font-weight: bold;
+    color: #60a5fa;
+    flex-shrink: 0;
+  }
+
+  .grid-wrapper {
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-start;
+  }
+  .grid {
+    display: inline-grid;
+    gap: 2px;
+    background: #444;
+    padding: 2px;
+    border-radius: 4px;
+  }
+  .cell {
+    width: 38px;
+    height: 38px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: bold;
+    user-select: none;
+  }
+
+  /* Floor styles */
+  .floor-empty  { background: #ffffff; color: #aaa; }
+  .floor-void   { background: #0a0a0a; color: #333; }
+  .floor-wall   { background: #111; color: #555; }
+  .floor-switch { background: #c8c8c8; color: #5a5a5a; }
+  .floor-no-carry { background: #ff6464; color: #5a0000; }
+  .floor-branch1 { background: #ffffff; color: #329632; }
+  .floor-branch2 { background: #ffffff; color: #329632; }
+  .floor-branch3 { background: #ffffff; color: #329632; }
+  .floor-branch4 { background: #ffffff; color: #329632; }
+  .floor-goal   { background: #ffc800; color: #5a4600; }
+  .floor-hole   { background: #3c2814; color: #ddd; }
+
+  /* Object on top (merged) */
+  .obj-player { background: #0064c8; color: #fff; }
+  .obj-box    { background: #dc0000; color: #fff; }
+
+  /* Raw text block */
+  .raw-block {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: #232323;
+    border: 1px solid #3a3a3a;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .raw-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    border-bottom: 1px solid #3a3a3a;
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #888;
+  }
+  .copy-btn {
+    padding: 3px 10px;
+    background: #3a3a3a;
+    border: 1px solid #555;
+    color: #ddd;
+    font-family: inherit;
+    font-size: 11px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .copy-btn:hover { background: #4a4a4a; }
+  .copy-btn.ok { background: #1a5a1a; border-color: #2a7a2a; color: #7dff7d; }
+  #rawText {
+    flex: 1;
+    background: #111;
+    color: #0f0;
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1.4;
+    padding: 10px;
+    border: none;
+    resize: none;
+    outline: none;
+    min-height: 0;
+  }
+
+  .placeholder {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #444;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-title">DIV Level Preview</div>
+    <button class="pick-btn" id="pickBtn">選取 Level .txt</button>
+    <input type="file" id="fileInput" accept=".txt,text/plain" multiple>
+  </div>
+  <div class="tab-list" id="tabList"></div>
+</aside>
+
+<main class="main" id="main">
+  <div class="placeholder" id="placeholder">選取 Level txt 後，點選左側關卡</div>
+</main>
+
+<script>
+const pickBtn    = document.getElementById('pickBtn');
+const fileInput  = document.getElementById('fileInput');
+const tabList    = document.getElementById('tabList');
+const mainEl     = document.getElementById('main');
+const placeholder = document.getElementById('placeholder');
+
+let levels = [];   // [{name, floor, obj, raw}]
+
+// ── File picking ──────────────────────────────────────────────────
+pickBtn.addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', async () => {
+  const files = Array.from(fileInput.files);
+  if (!files.length) return;
+
+  levels = [];
+  for (const file of files) {
+    const text = await file.text();
+    levels.push(...parseLevels(text));
+  }
+
+  renderTabs();
+  if (levels.length) selectLevel(0);
+});
+
+// ── Parser ────────────────────────────────────────────────────────
+function parseLevels(text) {
+  // Normalise line endings
+  text = text.replace(/\r/g, '');
+
+  // Split on separator lines of 4+ dashes
+  const chunks = text.split(/\n-{4,}\n/).map(s => s.trim()).filter(Boolean);
+
+  const out = [];
+  for (const chunk of chunks) {
+    const floorMatch  = chunk.match(/floor_map\s*=\s*'''([\s\S]*?)'''/m);
+    const objectMatch = chunk.match(/object_map\s*=\s*'''([\s\S]*?)'''/m);
+    if (!floorMatch || !objectMatch) continue;
+
+    // Name: first # comment line (strip the # and trim)
+    const commentLine = chunk.split('\n').map(l => l.trim()).find(l => l.startsWith('#'));
+    const name = commentLine ? commentLine.replace(/^#+\s*/, '') : `Level ${out.length + 1}`;
+
+    const floor = floorMatch[1].replace(/^\n/, '').replace(/\n$/, '').split('\n');
+    const obj   = objectMatch[1].replace(/^\n/, '').replace(/\n$/, '').split('\n');
+
+    out.push({ name, floor, obj, raw: chunk });
+  }
+  return out;
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────
+function renderTabs() {
+  tabList.innerHTML = '';
+  levels.forEach((lvl, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab';
+    btn.textContent = lvl.name;
+    btn.title = lvl.name;
+    btn.addEventListener('click', () => selectLevel(i));
+    tabList.appendChild(btn);
+  });
+}
+
+function selectLevel(index) {
+  document.querySelectorAll('.tab').forEach((el, i) =>
+    el.classList.toggle('active', i === index));
+  renderMain(levels[index]);
+}
+
+// ── Main render ───────────────────────────────────────────────────
+function renderMain(lvl) {
+  // Clear
+  mainEl.innerHTML = '';
+
+  // Title
+  const title = document.createElement('div');
+  title.className = 'level-name';
+  title.textContent = lvl.name;
+  mainEl.appendChild(title);
+
+  // Grid
+  const gridWrap = document.createElement('div');
+  gridWrap.className = 'grid-wrapper';
+  const grid = buildGrid(lvl.floor, lvl.obj);
+  gridWrap.appendChild(grid);
+  mainEl.appendChild(gridWrap);
+
+  // Raw block
+  const rawBlock = document.createElement('div');
+  rawBlock.className = 'raw-block';
+
+  const rawHeader = document.createElement('div');
+  rawHeader.className = 'raw-header';
+  rawHeader.innerHTML = '<span>原始文字</span>';
+
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'copy-btn';
+  copyBtn.textContent = '複製';
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(lvl.raw).then(() => {
+      copyBtn.textContent = '已複製 ✓';
+      copyBtn.classList.add('ok');
+      setTimeout(() => { copyBtn.textContent = '複製'; copyBtn.classList.remove('ok'); }, 1500);
+    });
+  });
+  rawHeader.appendChild(copyBtn);
+
+  const rawText = document.createElement('textarea');
+  rawText.id = 'rawText';
+  rawText.readOnly = true;
+  rawText.value = lvl.raw;
+
+  rawBlock.appendChild(rawHeader);
+  rawBlock.appendChild(rawText);
+  mainEl.appendChild(rawBlock);
+}
+
+// ── Grid builder ──────────────────────────────────────────────────
+function buildGrid(floorRows, objRows) {
+  const rows = floorRows.length;
+  const cols = Math.max(...floorRows.map(r => r.length));
+
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+  grid.style.gridTemplateColumns = `repeat(${cols}, 38px)`;
+
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const f = (floorRows[y] || '')[x] || ' ';
+      const o = (objRows[y]   || '')[x] || '.';
+
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+
+      if (o !== '.') {
+        // Object takes priority in merged view
+        if (o === 'P') { cell.classList.add('obj-player'); cell.textContent = 'P'; }
+        else if (o === 'B') { cell.classList.add('obj-box'); cell.textContent = 'B'; }
+        else { cell.textContent = o; }
+      } else {
+        applyFloor(cell, f);
+      }
+
+      grid.appendChild(cell);
+    }
+  }
+  return grid;
+}
+
+function applyFloor(cell, f) {
+  const map = {
+    '#': ['floor-wall',     '#'],
+    '.': ['floor-empty',    ''],
+    ' ': ['floor-void',     ''],
+    'S': ['floor-switch',   'S'],
+    'c': ['floor-no-carry', 'c'],
+    'w': ['',               'w'],
+    'W': ['',               'W'],
+    'v': ['floor-branch1',  'v'],
+    'V': ['floor-branch2',  'V'],
+    'x': ['floor-branch3',  'x'],
+    'X': ['floor-branch4',  'X'],
+    'G': ['floor-goal',     'G'],
+    'H': ['floor-hole',     'H'],
+  };
+  const [cls, text] = map[f] || ['', f];
+  if (cls) cell.classList.add(cls);
+  cell.textContent = text;
+}
+</script>
+</body>
+</html>
