@@ -338,8 +338,11 @@ class GameController:
                 self._trigger_flash(target_pos)
             return False
 
-    def handle_pickup(self) -> bool:
+    def handle_pickup(self, allow_pickup: bool = True) -> bool:
         """Handle pickup action"""
+        if not allow_pickup:
+            return False
+
         active = self.get_active_branch()
 
         # Check if player is on NO_CARRY before attempting pickup
@@ -369,7 +372,7 @@ class GameController:
             self._save_snapshot()
         return result
 
-    def handle_adaptive_action(self) -> bool:
+    def handle_adaptive_action(self, allow_converge: bool = True, allow_pickup: bool = True) -> bool:
         """Adaptive X action:
         - If holding: drop (same as Space)
         - If facing shadow in active branch: converge only (stay on ground)
@@ -400,6 +403,8 @@ class GameController:
         has_overlap = len(uids_at_front) >= 2
 
         if has_overlap or active.is_shadow(target.uid):
+            if not allow_converge:
+                return False
             fused = Timeline.try_fuse(active, front_pos)
             if not fused:
                 # Normal convergence: single shadow collapses to one instance
@@ -409,7 +414,7 @@ class GameController:
             return True
         else:
             # Solid: normal pickup
-            return self.handle_pickup()
+            return self.handle_pickup(allow_pickup=allow_pickup)
 
     def check_victory(self) -> bool:
         """Check victory conditions"""

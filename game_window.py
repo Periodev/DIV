@@ -195,13 +195,16 @@ class GameWindow(arcade.Window):
 
         # Toggle inherit mode (Shift key)
         if key == arcade.key.C:
+            if not self.hints.get('inherit', True):
+                self.inherit_mode_enabled = False
+                return
             self.inherit_mode_enabled = not self.inherit_mode_enabled
             return
 
         # Branch / Merge (V key)
         if key == arcade.key.V:
             if self.controller.has_branched:
-                if self.inherit_mode_enabled:
+                if self.inherit_mode_enabled and self.hints.get('inherit', True):
                     # Fallback to normal merge when inherit merge is not possible.
                     if not self.controller.try_inherit_merge():
                         self.controller.try_merge()
@@ -248,7 +251,10 @@ class GameWindow(arcade.Window):
 
         # Adaptive action (X or Space)
         elif key == arcade.key.X or key == arcade.key.SPACE:
-            self.controller.handle_adaptive_action()
+            self.controller.handle_adaptive_action(
+                allow_converge=self.hints.get('converge', True),
+                allow_pickup=self.hints.get('pickup', True)
+            )
 
     def on_key_release(self, key: int, modifiers: int):
         """Handle key release events."""
