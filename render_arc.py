@@ -38,8 +38,11 @@ RED = (220, 0, 0)
 LIGHT_RED = (255, 100, 100)
 PLAYER_RING_BLUE_GRAY = (120, 145, 170)
 
-SWITCH_OFF_COLOR = (200, 200, 200)
+SWITCH_OFF_COLOR  = (200, 200, 200)
+SWITCH_ON_COLOR   = (255, 200,   0)   # amber when pressed
 SWITCH_OFF_BORDER = (160, 160, 160)
+SWITCH_ON_BORDER  = (160, 120,   0)   # dark amber border
+SWITCH_INNER      = ( 90,  90,  90)   # visible inner frame when off
 INTERACT_GRAY = (100, 100, 100)
 HOLE_COLOR = (60, 40, 20)
 
@@ -102,7 +105,7 @@ class ArcadeRenderer:
             'yellow': arcade.make_soft_square_texture(CELL_SIZE, YELLOW, outer_alpha=255),
             'light_orange': arcade.make_soft_square_texture(CELL_SIZE, LIGHT_ORANGE, outer_alpha=255),
             'no_carry_bg': arcade.make_soft_square_texture(CELL_SIZE, LIGHT_RED, outer_alpha=255),
-            'switch_on': arcade.make_soft_square_texture(CELL_SIZE, (200, 255, 200), outer_alpha=255),
+            'switch_on': arcade.make_soft_square_texture(CELL_SIZE, SWITCH_ON_COLOR, outer_alpha=255),
             'switch_off': arcade.make_soft_square_texture(CELL_SIZE, SWITCH_OFF_COLOR, outer_alpha=255),
             'hole_filled': arcade.make_soft_square_texture(CELL_SIZE, HOLE_COLOR, outer_alpha=255),  # Same as floor
             'hole_empty': arcade.make_soft_square_texture(CELL_SIZE, HOLE_COLOR, outer_alpha=255),
@@ -201,7 +204,7 @@ class ArcadeRenderer:
                     'white': WHITE, 'black': BLACK, 'gray': GRAY,
                     'yellow': YELLOW, 'light_orange': LIGHT_ORANGE,
                     'no_carry_bg': LIGHT_RED,
-                    'switch_on': (200, 255, 200), 'switch_off': SWITCH_OFF_COLOR,
+                    'switch_on': SWITCH_ON_COLOR, 'switch_off': SWITCH_OFF_COLOR,
                     'hole_filled': HOLE_COLOR, 'hole_empty': HOLE_COLOR,
                     'branch_highlight': (150, 255, 150),
                 }
@@ -808,7 +811,7 @@ class ArcadeRenderer:
                     self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, BLACK)
                 elif terrain == TerrainType.SWITCH:
                     activated = state.switch_activated(pos)
-                    color = (200, 255, 200) if activated else SWITCH_OFF_COLOR
+                    color = SWITCH_ON_COLOR if activated else SWITCH_OFF_COLOR
                     self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, color)
                 elif terrain == TerrainType.NO_CARRY:
                     # Light orange background
@@ -1058,15 +1061,22 @@ class ArcadeRenderer:
                 if terrain == TerrainType.SWITCH:
                     activated = state.switch_activated(pos)
                     if activated:
-                        color = (0, 200, 0, int(alpha * 255))
+                        color = (*SWITCH_ON_BORDER, int(alpha * 255))
                     else:
-                        color = (*SWITCH_OFF_BORDER, int(alpha * 255))
+                        color = (*SWITCH_INNER, int(alpha * 255))
                     inset = max(1, int(3 * scale))
                     self._draw_rect_outline(
                         cell_x + inset, cell_y + inset,
                         cell_size - inset * 2, cell_size - inset * 2,
                         color, max(1, int(3 * scale))
                     )
+                    if not activated:
+                        inner = max(4, int(cell_size * 0.28))
+                        ox = cell_x + (cell_size - inner) // 2
+                        oy = cell_y + (cell_size - inner) // 2
+                        self._draw_rect_filled(ox, oy, inner, inner, (*SWITCH_INNER, int(alpha * 255)))
+                elif terrain == TerrainType.WALL:
+                    pass  # black wall absorbs its own border
                 else:
                     self._draw_rect_outline(cell_x, cell_y, cell_size, cell_size, (*GRAY, int(alpha * 255)), 1)
 
