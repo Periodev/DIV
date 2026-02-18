@@ -1450,11 +1450,11 @@ class ArcadeRenderer:
         Args:
             is_active: True if player is on branch point (green glow), False (gray)
         """
-        # Position at bottom center
+        # Position: just below map, aligned with M preview hint
         box_width = 150
         box_height = 40
         x = (WINDOW_WIDTH - box_width) // 2
-        y = WINDOW_HEIGHT - 60
+        y = (WINDOW_HEIGHT + GRID_HEIGHT) // 2 + 15
 
         # Colors
         if is_active:
@@ -1516,7 +1516,7 @@ class ArcadeRenderer:
         # Left Tab hint: "← Tab" (active if current_focus == 1, switch to DIV 0)
         left_active = (current_focus == 1)
         x_left = B.CENTER_X - box_width - 10
-        y_left = B.CENTER_Y + grid_px - half_cell - box_height // 2
+        y_left = B.CENTER_Y + grid_px - box_height
 
         bg_color = active_bg if left_active else inactive_bg
         border_color = active_border if left_active else inactive_border
@@ -1546,7 +1546,7 @@ class ArcadeRenderer:
         # Right Tab hint: "Tab →" (active if current_focus == 0, switch to DIV 1)
         right_active = (current_focus == 0)
         x_right = B.CENTER_X + grid_px + 10
-        y_right = B.CENTER_Y + grid_px - half_cell - box_height // 2
+        y_right = B.CENTER_Y + grid_px - box_height
 
         bg_color = active_bg if right_active else inactive_bg
         border_color = active_border if right_active else inactive_border
@@ -1614,11 +1614,11 @@ class ArcadeRenderer:
         from presentation_model import ViewModelBuilder
         B = ViewModelBuilder
 
-        # Match timeline hint ("V 分裂") size and position
+        # Match timeline hint ("V 分裂") size and position: just below map
         box_width = 150
         box_height = 40
         x = (WINDOW_WIDTH - box_width) // 2
-        y = WINDOW_HEIGHT - 60
+        y = (WINDOW_HEIGHT + GRID_HEIGHT) // 2 + 15
 
         if can_inherit:
             # Orange inherit merge hint
