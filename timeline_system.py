@@ -1,7 +1,7 @@
 # timeline_system.py - Complete Timeline System
 
 from dataclasses import dataclass
-from typing import Dict, List, Set, Tuple, Optional
+from typing import Dict, FrozenSet, List, Set, Tuple, Optional
 from enum import Enum
 
 Position = Tuple[int, int]
@@ -48,7 +48,7 @@ class Entity:
     z: int = 0  # height layer: -1=underground, 0=ground, 1=held
     holder: Optional[int] = None  # uid of holder (None=not held)
     direction: Position = (0, 1)  # player-exclusive
-    fused_from: Optional[Tuple[int, ...]] = None  # source uids if this is a fusion entity
+    fused_from: Optional[FrozenSet[int]] = None  # uids of absorbed entities
 
 # ===== Branch State =====
 class BranchState:
@@ -164,35 +164,10 @@ class Timeline:
     def diverge(branch: BranchState) -> Tuple['BranchState', 'BranchState']:
         """Diverge: returns (main, sub) pair.
 
-        For fusion entities with exactly 2 components, splits them:
-          main (DIV0) gets fused_from[0] (smaller uid)
-          sub  (DIV1) gets fused_from[1] (larger uid)
-        For fusion entities with 3+ components, both branches get the same F.
+        Fusion entities are inseparable and carried into both branches as-is.
         """
         main = branch.copy()
         sub = branch.copy()
-
-        splittable = [e for e in branch.entities if e.fused_from and len(e.fused_from) == 2]
-
-        for f in splittable:
-            uid0, uid1 = f.fused_from[0], f.fused_from[1]
-
-            # Replace F in main with B(uid0)
-            for e in main.entities:
-                if e.uid == f.uid:
-                    e.uid = uid0
-                    e.weight = 1
-                    e.fused_from = None
-                    break
-
-            # Replace F in sub with B(uid1)
-            for e in sub.entities:
-                if e.uid == f.uid:
-                    e.uid = uid1
-                    e.weight = 1
-                    e.fused_from = None
-                    break
-
         return main, sub
 
     @staticmethod
@@ -233,7 +208,7 @@ class Timeline:
         print(f"[DEBUG try_fuse] fusing uids={unique_shadow_uids} at pos={pos}, next_uid={state.next_uid}")
 
         # Remove all instances of each fusing uid
-        fused_from = tuple(sorted(unique_shadow_uids))
+        fused_from = frozenset(unique_shadow_uids)
         state.entities = [
             e for e in state.entities
             if e.uid not in seen

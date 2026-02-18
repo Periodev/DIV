@@ -715,9 +715,9 @@ class ArcadeRenderer:
             held_items = state.get_held_items()
             held_uid = held_items[0] if held_items else None
             held_entity = next((e for e in state.entities if e.uid == held_uid), None) if held_uid else None
-            held_label = ('+'.join(str(u) for u in held_entity.fused_from)
-                          if held_entity and held_entity.fused_from else
-                          str(held_uid) if held_uid else None)
+            held_label = ("?" if held_entity and held_entity.fused_from and len(held_entity.fused_from) == 2
+                          else '+'.join(str(u) for u in sorted(held_entity.fused_from)) if held_entity and held_entity.fused_from
+                          else str(held_uid) if held_uid else None)
             if held_uid:
                 color_index = (held_uid - 1) % len(BOX_COLORS)
                 player_color = BOX_COLORS[color_index]
@@ -939,7 +939,7 @@ class ArcadeRenderer:
         center_y = self._flip_y(cell_y + box_size // 2)
 
         if entity.fused_from:
-            label = '+'.join(str(u) for u in entity.fused_from)
+            label = "?" if len(entity.fused_from) == 2 else '+'.join(str(u) for u in sorted(entity.fused_from))
         elif overlap_labels and (entity.pos, entity.z) in overlap_labels:
             label = overlap_labels[(entity.pos, entity.z)]
         else:
