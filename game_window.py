@@ -1,6 +1,6 @@
-# game_window.py - Arcade Game Window
+# game_window.py - Arcade Game View
 #
-# Main game window with arcade rendering and input handling.
+# Game view (arcade.View) with rendering and input handling.
 # Handles slide animations for timeline focus switching.
 
 import time
@@ -11,16 +11,17 @@ from presentation_model import ViewModelBuilder
 from render_arc import ArcadeRenderer, WINDOW_WIDTH, WINDOW_HEIGHT
 
 
-class GameWindow(arcade.Window):
-    """Main game window using Arcade."""
+class GameView(arcade.View):
+    """Main game view using Arcade."""
 
     # Animation settings
     SLIDE_DURATION = 0.25  # seconds for slide animation
 
-    def __init__(self, floor_map: str, object_map: str, hints: dict = None, tutorial: dict = None, first_time: bool = False):
-        super().__init__(WINDOW_WIDTH, WINDOW_HEIGHT, "div - Timeline Puzzle")
-
-        self.set_update_rate(1/60)  # 60 FPS
+    def __init__(self, floor_map: str, object_map: str, hints: dict = None,
+                 tutorial: dict = None, first_time: bool = False,
+                 cursor_index: int = 0, all_levels: list = None,
+                 progress: set = None, level_id: str = None):
+        super().__init__()
 
         # Parse map and create controller
         source = parse_dual_layer(floor_map, object_map)
@@ -69,7 +70,15 @@ class GameWindow(arcade.Window):
         # Global inherit mode toggle (Shift key)
         self.inherit_mode_enabled = False
 
+        # Menu navigation context (for returning to menu)
+        self.cursor_index = cursor_index
+        self.all_levels = all_levels or []
+        self.progress = progress if progress is not None else set()
+        self.level_id = level_id
+
+    def on_show_view(self):
         arcade.set_background_color(arcade.color.WHITE)
+        self.window.set_update_rate(1 / 60)
 
     def on_update(self, delta_time: float):
         """Called every frame for game logic updates."""
@@ -149,10 +158,7 @@ class GameWindow(arcade.Window):
 
         # Return to menu (F1 key)
         if key == arcade.key.F1:
-            self.close()
-            # Re-open level selector
-            from level_selector import run_level_selector
-            run_level_selector()
+            self._return_to_menu()
             return
 
         if key in (arcade.key.LALT, arcade.key.RALT):
@@ -183,10 +189,11 @@ class GameWindow(arcade.Window):
 
         # Return to menu on victory (SPACE key)
         if self.controller.victory and key == arcade.key.SPACE:
-            self.close()
-            # Re-open level selector
-            from level_selector import run_level_selector
-            run_level_selector()
+            if self.level_id:
+                from main import mark_as_played
+                mark_as_played(self.level_id)
+                self.progress.add(self.level_id)
+            self._return_to_menu()
             return
 
         # Skip actions if collapsed or victory
@@ -311,8 +318,8 @@ class GameWindow(arcade.Window):
         if self.show_tutorial and self.tutorial:
             self.renderer._draw_tutorial(self.tutorial)
 
-
-def run_game(floor_map: str, object_map: str, hints: dict = None, tutorial: dict = None, first_time: bool = False):
-    """Main entry point - creates window and runs game loop."""
-    window = GameWindow(floor_map, object_map, hints, tutorial, first_time)
-    arcade.run()
+    def _return_to_menu(self):
+        """Switch back to MenuView, preserving cursor position."""
+        from menu_view import MenuView
+        menu_view = MenuView(self.all_levels, self.progress, self.cursor_index)
+        self.window.show_view(menu_view)

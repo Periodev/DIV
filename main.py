@@ -1,14 +1,14 @@
 # main.py - Game Entry Point
 #
-# Level data + launcher for DIV Timeline Puzzle.
+# Level data and launcher for DIV Timeline Puzzle.
 
 import json
 import os
 import sys
 
-from game_window import run_game
+import arcade
+from render_arc import WINDOW_WIDTH, WINDOW_HEIGHT
 from level_constructor import MAIN_LEVELS
-from map_parser import parse_dual_layer
 
 
 PROGRESS_FILE = os.path.join(os.path.dirname(__file__), "progress.json")
@@ -20,6 +20,7 @@ EMPTY_HINTS = {
     "converge": False,
     "inherit": False,
 }
+
 
 def load_progress():
     """Load played levels from progress file."""
@@ -39,17 +40,11 @@ def save_progress(progress):
 
 
 def mark_as_played(level_id):
-    """Mark a level as played (no longer first-time)."""
+    """Mark a level as played."""
     progress = load_progress()
     if level_id not in progress["played"]:
         progress["played"].append(level_id)
         save_progress(progress)
-
-
-def is_first_time(level_id):
-    """Check if this is the first time playing this level."""
-    progress = load_progress()
-    return level_id not in progress["played"]
 
 
 # Keep only 0-0 ~ 0-2
@@ -152,85 +147,14 @@ L0_2 = {
 
 TUTORIAL_LEVELS = [L0_0, L0_1, L0_2]
 
-def launch(level):
-    """Launch a level directly from level dict."""
-    if not isinstance(level, dict) or "id" not in level:
-        print(f"Error: Invalid level: {type(level)}")
-        return
-
-    level_id = level["id"]
-    first_time = is_first_time(level_id)
-
-    print(f"Starting: {level['name']} ({level_id})")
-    mark_as_played(level_id)
-
-    run_game(
-        level["floor_map"],
-        level["object_map"],
-        hints=level.get("hints") or EMPTY_HINTS.copy(),
-        tutorial=level.get("tutorial"),
-        first_time=first_time,
-    )
-
-
-def launch_by_id(level_id: str):
-    all_levels = {level["id"]: level for level in (TUTORIAL_LEVELS + MAIN_LEVELS)}
-    if level_id not in all_levels:
-        print(f"Error: Level {level_id} not found")
-        print(f"Available levels: {', '.join(sorted(all_levels.keys()))}")
-        return
-    launch(all_levels[level_id])
-
-
-def launch_tutorial(level_index: int = 0):
-    if level_index < 0 or level_index >= len(TUTORIAL_LEVELS):
-        print(f"Error: Tutorial level {level_index} not found")
-        return
-    launch(TUTORIAL_LEVELS[level_index])
-
-
-def launch_level(level_index: int = 0):
-    if level_index < 0 or level_index >= len(MAIN_LEVELS):
-        print(f"Error: Level {level_index} not found")
-        return
-    launch(MAIN_LEVELS[level_index])
-
-
-def _read_ascii_map_block(layer_name: str) -> str:
-    print(f"\nPaste {layer_name} map (finish with line: END)")
-    lines = []
-    while True:
-        line = input()
-        if line.strip().upper() == "END":
-            break
-        lines.append(line)
-    text = "\n".join(lines).strip()
-    if not text:
-        raise ValueError(f"{layer_name} map is empty")
-    return text
-
-
-def launch_ascii_test_main():
-    print("=" * 60)
-    print("DIV Test Main - Paste ASCII Maps")
-    print("=" * 60)
-    print("Floor symbols: . # S c v V x X G H")
-    print("Object symbols: . P B")
-
-    floor_map = _read_ascii_map_block("floor")
-    object_map = _read_ascii_map_block("object")
-    parse_dual_layer(floor_map, object_map)
-    run_game(floor_map, object_map, hints=EMPTY_HINTS.copy(), tutorial=None, first_time=False)
-
 
 if __name__ == "__main__":
-    try:
-        if "--ascii" in sys.argv:
-            launch_ascii_test_main()
-        else:
-            from level_selector import run_level_selector
+    from menu_view import MenuView
 
-            run_level_selector()
-    except Exception as e:
-        print(f"Launch failed: {e}")
+    all_levels = TUTORIAL_LEVELS + MAIN_LEVELS
+    progress = set(load_progress().get("played", []))
 
+    window = arcade.Window(WINDOW_WIDTH, WINDOW_HEIGHT, "div - Timeline Puzzle")
+    menu_view = MenuView(all_levels, progress, cursor_index=0)
+    window.show_view(menu_view)
+    arcade.run()
