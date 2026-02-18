@@ -77,7 +77,7 @@ class GameView(arcade.View):
         self.level_id = level_id
 
     def on_show_view(self):
-        arcade.set_background_color(arcade.color.WHITE)
+        arcade.set_background_color((20, 20, 25))
         self.window.set_update_rate(1 / 60)
 
     def on_update(self, delta_time: float):

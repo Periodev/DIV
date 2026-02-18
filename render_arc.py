@@ -27,6 +27,9 @@ PADDING = 30
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GRAY = (200, 200, 200)
+DARK_BG = (20, 20, 25)      # Dark background (matches menu)
+#WALL_COLOR = (50, 50, 55)   # Wall tile: slightly lighter than background
+WALL_COLOR = (0, 0, 0)   # Wall tile: slightly lighter than background
 LIGHT_GRAY = (220, 220, 220)
 BLUE = (0, 100, 200)
 GREEN = (50, 150, 50)
@@ -100,7 +103,7 @@ class ArcadeRenderer:
         # Terrain textures at base cell size
         self._terrain_textures = {
             'white': arcade.make_soft_square_texture(CELL_SIZE, WHITE, outer_alpha=255),
-            'black': arcade.make_soft_square_texture(CELL_SIZE, BLACK, outer_alpha=255),
+            'black': arcade.make_soft_square_texture(CELL_SIZE, WALL_COLOR, outer_alpha=255),
             'gray': arcade.make_soft_square_texture(CELL_SIZE, GRAY, outer_alpha=255),
             'yellow': arcade.make_soft_square_texture(CELL_SIZE, YELLOW, outer_alpha=255),
             'light_orange': arcade.make_soft_square_texture(CELL_SIZE, LIGHT_ORANGE, outer_alpha=255),
@@ -145,9 +148,9 @@ class ArcadeRenderer:
                                YELLOW, font_size=48, anchor_x="center", anchor_y="center"),
             'victory': arcade.Text("LEVEL COMPLETE!", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 40,
                                   YELLOW, font_size=36, anchor_x="center", anchor_y="center"),
-            'hint': arcade.Text("F5 restart  Z undo", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 20,
+            'hint': arcade.Text("F5 重置  Z 回復", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 20,
                                WHITE, font_size=14, anchor_x="center", anchor_y="center"),
-            'victory_hint': arcade.Text("SPACE 回到選單", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 50,
+            'victory_hint': arcade.Text("SPACE 返回選單", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 50,
                                        WHITE, font_size=16, anchor_x="center", anchor_y="center"),
         }
 
@@ -161,9 +164,9 @@ class ArcadeRenderer:
 
         # Fixed help hint (bottom-left corner)
         self._help_hint = arcade.Text(
-            "[F5] 重置  [Z] 回復  [H] 幫助  [F1] 返回選單",
+            "[F5/R] 重置  [Z] 回復  [H] 幫助  [F1] 返回選單",
             15, 15,
-            (40, 40, 40),  # Dark gray color
+            (160, 160, 160),  # Light gray for dark background
             font_size=12,
             anchor_x="left",
             anchor_y="bottom"
@@ -201,7 +204,7 @@ class ArcadeRenderer:
                 # Create scaled texture
                 new_size = int(CELL_SIZE * scale)
                 color_map = {
-                    'white': WHITE, 'black': BLACK, 'gray': GRAY,
+                    'white': WHITE, 'black': WALL_COLOR, 'gray': GRAY,
                     'yellow': YELLOW, 'light_orange': LIGHT_ORANGE,
                     'no_carry_bg': LIGHT_RED,
                     'switch_on': SWITCH_ON_COLOR, 'switch_off': SWITCH_OFF_COLOR,
@@ -413,7 +416,7 @@ class ArcadeRenderer:
 
         # 1. Clear screen
         arcade.draw_lrbt_rectangle_filled(
-            0, WINDOW_WIDTH, 0, WINDOW_HEIGHT, WHITE
+            0, WINDOW_WIDTH, 0, WINDOW_HEIGHT, DARK_BG
         )
 
         # 2. Draw branches
@@ -642,7 +645,7 @@ class ArcadeRenderer:
 
             self._draw_cached_text(
                 f'title_{spec.title}_{font_size}_{spec.alpha:.2f}', spec.title, title_x, title_y,
-                (*BLACK, int(spec.alpha * 255)), font_size=font_size, anchor_x=anchor_x, anchor_y="center"
+                (200, 200, 200, int(spec.alpha * 255)), font_size=font_size, anchor_x=anchor_x, anchor_y="center"
             )
 
             # Border (disabled for merge preview and DIV split view)
@@ -808,7 +811,7 @@ class ArcadeRenderer:
                     continue
 
                 if terrain == TerrainType.WALL:
-                    self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, BLACK)
+                    self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, WALL_COLOR)
                 elif terrain == TerrainType.SWITCH:
                     activated = state.switch_activated(pos)
                     color = SWITCH_ON_COLOR if activated else SWITCH_OFF_COLOR
