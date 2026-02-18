@@ -89,13 +89,13 @@ class ViewModelBuilder:
     }
 
     # === Layout Constants ===
-    WINDOW_WIDTH = 1150
-    WINDOW_HEIGHT = 600  # Original size
+    WINDOW_WIDTH = 1280
+    WINDOW_HEIGHT = 720
 
     PADDING = 30
-    CELL_SIZE = 75
+    CELL_SIZE = 80
     GRID_SIZE = 6
-    GRID_PX = CELL_SIZE * GRID_SIZE  # 450
+    GRID_PX = CELL_SIZE * GRID_SIZE  # 480
     GAP = 30
 
     # Scale settings
