@@ -164,7 +164,7 @@ class ArcadeRenderer:
 
         # Fixed help hint (bottom-left corner)
         self._help_hint = arcade.Text(
-            "[F5/R] 重置  [Z] 回復  [H] 幫助  [F1] 返回選單",
+            "[ESC] 關卡說明   [F1] 返回選單    [R] 重置   [Z] 回復   [H] 提示",
             15, 15,
             (160, 160, 160),  # Light gray for dark background
             font_size=12,
@@ -1387,8 +1387,8 @@ class ArcadeRenderer:
         self._draw_cached_text(cache_key, text, x, y, text_color,
                               font_size=font_size, anchor_x="center", anchor_y="center")
 
-    def _draw_tutorial(self, tutorial):
-        """Draw tutorial overlay (covers entire screen with semi-transparent background)."""
+    def _draw_tutorial(self, tutorial, close_hint='按 H 或 ESC 關閉'):
+        """Draw overlay box (covers entire screen with semi-transparent background)."""
         # Full-screen semi-transparent dark background
         arcade.draw_lrbt_rectangle_filled(
             0, WINDOW_WIDTH, 0, WINDOW_HEIGHT,
@@ -1443,7 +1443,7 @@ class ArcadeRenderer:
 
         # Bottom hint
         hint_y = self._flip_y(y + box_height - 25)
-        self._draw_cached_text('tutorial_hint', 'Press H or ESC to close',
+        self._draw_cached_text('tutorial_hint', close_hint,
                                x + box_width // 2, hint_y,
                                (150, 150, 150), font_size=12, anchor_x="center", anchor_y="center")
 

@@ -68,7 +68,7 @@ L0_0 = {
 P.....
 """,
     "hints": EMPTY_HINTS.copy(),
-    'tutorial': {
+    'objective': {
         'title': '關卡 0-0：移動',
         'items': [
             '使用 W/A/S/D 或方向鍵移動角色',
@@ -99,7 +99,7 @@ L0_1 = {
 .P....
 """,
     "hints": EMPTY_HINTS.copy(),
-    'tutorial': {
+    'objective': {
         'title': '關卡 0-1：推動',
         'items': [
             '標記數字的方形色塊是方塊',
@@ -130,7 +130,7 @@ L0_2 = {
 ......
 """,
     "hints": EMPTY_HINTS.copy(),
-    'tutorial': {
+    'objective': {
         'title': '關卡 0-2：目標',
         'items': [
             '有方形標記的灰色地磚是開關',
@@ -138,7 +138,6 @@ L0_2 = {
             '當所有開關都壓下，Goal就會閃爍',
             '',
             '任務 : 壓住所有開關後走到終點',
-
         ]
     }
 }
