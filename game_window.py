@@ -91,11 +91,8 @@ class GameView(arcade.View):
         if self.slide_start_time is not None:
             elapsed = time.time() - self.slide_start_time
             if elapsed >= self.SLIDE_DURATION:
-                # Animation complete - commit the focus change
-                if self.slide_direction == 1:
-                    self.controller.current_focus = 1
-                else:
-                    self.controller.current_focus = 0
+                # Animation complete - commit the focus change via controller
+                self.controller.switch_focus()
                 self.slide_start_time = None
                 self.slide_direction = 0
 
@@ -103,8 +100,8 @@ class GameView(arcade.View):
         if self.merge_preview_swap_start_time is not None:
             elapsed = time.time() - self.merge_preview_swap_start_time
             if elapsed >= self.MERGE_PREVIEW_SWAP_DURATION:
-                # Animation complete - commit focus switch
-                self.controller.current_focus = 1 - self.controller.current_focus
+                # Animation complete - commit focus switch via controller
+                self.controller.switch_focus()
                 self.merge_preview_swap_start_time = None
 
         # Continuous movement from held keys (only if not animating)
