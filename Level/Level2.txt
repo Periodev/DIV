@@ -1,5 +1,8 @@
 # Hole 坑洞
 
+objective = '''
+'''
+
 floor_map = '''
 ##G###
 ##H###
@@ -20,6 +23,9 @@ object_map = '''
 
 --------------------------
 # Bridge 橋
+
+objective = '''
+'''
 
 floor_map = '''
 ##G###
@@ -42,6 +48,9 @@ object_map = '''
 --------------------------
 # Multifunction 多功能
 
+objective = '''
+'''
+
 floor_map = '''
 #S###
 #H.G#
@@ -61,6 +70,9 @@ object_map = '''
 --------------------------
 # Support 支撐
 
+objective = '''
+'''
+
 floor_map = '''
 ##G##
 ##H##
@@ -79,6 +91,9 @@ P....
 
 --------------------------
 # Give way 讓路
+
+objective = '''
+'''
 
 floor_map = '''
 ###G##
@@ -101,6 +116,9 @@ object_map = '''
 --------------------------
 # Corner case 特殊案例
 
+objective = '''
+'''
+
 floor_map = '''
 #S.H
 #H#.
@@ -118,6 +136,9 @@ P...
 --------------------------
 # Extract 抽取
 
+objective = '''
+'''
+
 floor_map = '''
 #SvH
 #H#.
@@ -134,6 +155,9 @@ P...
 
 --------------------------
 # Shadow Bridge 影橋
+
+objective = '''
+'''
 
 floor_map = '''
 ##G###
@@ -156,6 +180,9 @@ object_map = '''
 --------------------------
 # Swap 置換
 
+objective = '''
+'''
+
 floor_map = '''
 ###G##
 ###H##
@@ -173,4 +200,3 @@ object_map = '''
 PB....
 ......
 '''
-

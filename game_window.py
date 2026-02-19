@@ -18,7 +18,7 @@ class GameView(arcade.View):
     SLIDE_DURATION = 0.25  # seconds for slide animation
 
     def __init__(self, floor_map: str, object_map: str, hints: dict = None,
-                 tutorial: dict = None, objective: dict = None, first_time: bool = False,
+                 objective: dict = None, first_time: bool = False,
                  cursor_index: int = 0, all_levels: list = None,
                  progress: set = None, level_id: str = None):
         super().__init__()
@@ -38,10 +38,6 @@ class GameView(arcade.View):
             'converge': True,
             'inherit': True,
         }
-
-        # Tutorial overlay state (H key — mechanics/controls hints)
-        self.tutorial = tutorial  # {'title': str, 'items': [str, ...]}
-        self.show_tutorial = False
 
         # Objective overlay state (ESC key — level name + task description)
         self.objective = objective  # {'title': str, 'items': [str, ...]}
@@ -145,17 +141,8 @@ class GameView(arcade.View):
 
     def on_key_press(self, key: int, modifiers: int):
         """Handle key press events."""
-        # H key — toggle mechanics/controls hint overlay
-        if key == arcade.key.H:
-            if self.tutorial:
-                self.show_tutorial = not self.show_tutorial
-            return
-
-        # ESC key — close any open overlay first, otherwise toggle objective
+        # ESC key — close objective overlay if open, otherwise open it
         if key == arcade.key.ESCAPE:
-            if self.show_tutorial:
-                self.show_tutorial = False
-                return
             if self.show_objective:
                 self.show_objective = False
                 return
@@ -163,8 +150,13 @@ class GameView(arcade.View):
                 self.show_objective = True
                 return
 
-        # Block game input when any overlay is shown
-        if self.show_tutorial or self.show_objective:
+        # Enter / Space — also close objective overlay
+        if key in (arcade.key.ENTER, arcade.key.SPACE) and self.show_objective:
+            self.show_objective = False
+            return
+
+        # Block game input when objective overlay is shown
+        if self.show_objective:
             return
 
         # Return to menu (F1 key)
@@ -327,11 +319,7 @@ class GameView(arcade.View):
 
         # Draw objective overlay if active (ESC key)
         if self.show_objective and self.objective:
-            self.renderer._draw_tutorial(self.objective, close_hint='按 ESC 關閉')
-
-        # Draw tutorial overlay if active (H key)
-        if self.show_tutorial and self.tutorial:
-            self.renderer._draw_tutorial(self.tutorial, close_hint='按 H 關閉')
+            self.renderer._draw_tutorial(self.objective, close_hint='ESC / Enter / Space 關閉')
 
     def _return_to_menu(self):
         """Switch back to MenuView, preserving cursor position."""

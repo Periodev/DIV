@@ -148,7 +148,7 @@ class ArcadeRenderer:
                                YELLOW, font_size=48, anchor_x="center", anchor_y="center"),
             'victory': arcade.Text("LEVEL COMPLETE!", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 + 40,
                                   YELLOW, font_size=36, anchor_x="center", anchor_y="center"),
-            'hint': arcade.Text("F5 重置  Z 回復", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 20,
+            'hint': arcade.Text("R 重置  Z 回復", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 20,
                                WHITE, font_size=14, anchor_x="center", anchor_y="center"),
             'victory_hint': arcade.Text("SPACE 返回選單", WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 50,
                                        WHITE, font_size=16, anchor_x="center", anchor_y="center"),

@@ -1,5 +1,8 @@
 # Pick 拾取
 
+objective = '''
+'''
+
 floor_map = '''
 ###S##
 ....##
@@ -21,6 +24,9 @@ P.BB..
 --------------------------
 # Spin 旋轉
 
+objective = '''
+'''
+
 floor_map = '''
 ####
 GHH.
@@ -38,6 +44,9 @@ object_map = '''
 --------------------------
 # No carry 手持禁止
 
+objective = '''
+'''
+
 floor_map = '''
 ###.
 v.cG
@@ -54,6 +63,9 @@ object_map = '''
 
 --------------------------
 #Double Corner 雙轉角
+
+objective = '''
+'''
 
 floor_map = '''
 ####
@@ -73,6 +85,9 @@ PB..
 --------------------------
 # Recycle 再循環
 
+objective = '''
+'''
+
 floor_map = '''
 ####
 HHH.
@@ -89,6 +104,9 @@ object_map = '''
 
 --------------------------
 # Narrow entrance 狹窄入口
+
+objective = '''
+'''
 
 floor_map = '''
 #GH##
@@ -108,6 +126,9 @@ object_map = '''
 
 --------------------------
 # Zip 拉鏈
+
+objective = '''
+'''
 
 floor_map = '''
 ##G###
