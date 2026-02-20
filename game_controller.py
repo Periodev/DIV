@@ -6,7 +6,7 @@ from timeline_system import BranchState, Timeline, Physics, PhysicsResult, Terra
 from game_logic import GameLogic
 
 
-@dataclass
+@dataclass(slots=True)
 class GameSnapshot:
     """Snapshot of game state for undo functionality."""
     main_branch: BranchState
@@ -16,6 +16,15 @@ class GameSnapshot:
 
 
 class GameController:
+    __slots__ = (
+        'source', 'solver_mode',
+        'main_branch', 'sub_branch', 'current_focus', 'has_branched',
+        'collapsed', 'victory',
+        'history', 'input_log',
+        'failed_action_pos', 'failed_action_time',
+        'falling_boxes', 'just_undid',
+    )
+
     def __init__(self, source: LevelSource, solver_mode: bool = False):
         self.source = source
         self.solver_mode = solver_mode

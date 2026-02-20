@@ -27,7 +27,7 @@ class PhysicsResult(Enum):
     FALL = 1
 
 # ===== Static Configuration =====
-@dataclass
+@dataclass(slots=True)
 class LevelSource:
     """Raw configuration imported from map_parser"""
     grid_size: int
@@ -37,7 +37,7 @@ class LevelSource:
     next_uid: int
 
 # ===== Runtime Entity =====
-@dataclass
+@dataclass(slots=True)
 class Entity:
     """0th-order: existence (uid) + 1st-order: physical properties"""
     uid: int  # 0 = player
@@ -52,6 +52,8 @@ class Entity:
 
 # ===== Branch State =====
 class BranchState:
+    __slots__ = ('entities', 'terrain', 'grid_size', 'next_uid')
+
     def __init__(self):
         self.entities: List[Entity] = []
         self.terrain: Dict[Position, TerrainType] = {}

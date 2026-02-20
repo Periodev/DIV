@@ -67,22 +67,62 @@ def _has_any_box_instance_at(b, pos: tuple[int, int]) -> bool:
     )
 
 
-def _branch_key(b) -> tuple | None:
-    """Hashable snapshot for one branch."""
+def _pack_i16(value: int) -> bytes:
+    return int(value).to_bytes(2, 'little', signed=True)
+
+
+def _pack_i32(value: int) -> bytes:
+    return int(value).to_bytes(4, 'little', signed=True)
+
+
+def _encode_entity_key(entity) -> bytes:
+    """Compact, stable per-entity encoding for state hashing."""
+    holder = -1 if entity.holder is None else entity.holder
+    fused = entity.fused_from
+
+    data = bytearray()
+    data.extend(_pack_i32(entity.uid))
+    data.extend(_pack_i16(entity.pos[0]))
+    data.extend(_pack_i16(entity.pos[1]))
+    data.extend(int(entity.z).to_bytes(1, 'little', signed=True))
+    data.append(1 if entity.type == EntityType.BOX else 0)
+    data.extend(_pack_i32(holder))
+
+    if fused:
+        fused_ids = sorted(fused)
+        data.extend(len(fused_ids).to_bytes(2, 'little', signed=False))
+        for uid in fused_ids:
+            data.extend(_pack_i32(uid))
+    else:
+        data.extend((0).to_bytes(2, 'little', signed=False))
+
+    return bytes(data)
+
+
+def _branch_key(b) -> bytes | None:
+    """Compact, hashable snapshot for one branch."""
     if b is None:
         return None
-    entities = frozenset(
-        # Shadow status is derivable from entity placement/fusion structure,
-        # so it is intentionally omitted to keep keys compact and cheaper.
-        (e.uid, e.pos, e.z, e.type.value, e.holder, e.fused_from)
-        for e in b.entities
-    )
-    return (b.player.pos, _canonical_direction(b), entities)
+
+    direction = _canonical_direction(b)
+    # Keep historical semantics: identical entity records are deduplicated.
+    # This intentionally merges states that differ only by duplicate instances.
+    entities = sorted({_encode_entity_key(e) for e in b.entities})
+
+    data = bytearray()
+    data.extend(_pack_i16(b.player.pos[0]))
+    data.extend(_pack_i16(b.player.pos[1]))
+    data.extend(int(direction[0]).to_bytes(1, 'little', signed=True))
+    data.extend(int(direction[1]).to_bytes(1, 'little', signed=True))
+    data.extend(len(entities).to_bytes(2, 'little', signed=False))
+    for record in entities:
+        data.extend(record)
+    return bytes(data)
 
 
-def _state_key(c: GameController) -> tuple:
-    """Hashable snapshot of controller state (terrain is fixed, excluded)."""
-    main_key = _branch_key(c.main_branch)
+def _state_key(c: GameController) -> bytes:
+    """Compact snapshot of controller state (terrain is fixed, excluded)."""
+    main_key = _branch_key(c.main_branch) or b''
     sub_key = _branch_key(c.sub_branch)
     focus_key = c.current_focus
 
@@ -96,7 +136,16 @@ def _state_key(c: GameController) -> tuple:
             # Perfectly symmetric branches: focus has no distinguishing power.
             focus_key = 0
 
-    return (main_key, sub_key, focus_key, c.has_branched)
+    sub_key = sub_key or b''
+
+    data = bytearray()
+    data.append(1 if c.has_branched else 0)
+    data.append(focus_key & 0xFF)
+    data.extend(len(main_key).to_bytes(4, 'little', signed=False))
+    data.extend(main_key)
+    data.extend(len(sub_key).to_bytes(4, 'little', signed=False))
+    data.extend(sub_key)
+    return bytes(data)
 
 
 def _is_noop(ctrl: GameController, action: str, last_action: str = None,
