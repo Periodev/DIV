@@ -10,7 +10,8 @@ STEPS_PER_SECOND = 4  # auto-play speed
 
 
 class ReplayView(arcade.View):
-    def __init__(self, replayer: Replayer, title: str = "Replay"):
+    def __init__(self, replayer: Replayer, title: str = "Replay",
+                 auto_play_start: bool = False):
         super().__init__()
         self.replayer = replayer
         self.renderer = ArcadeRenderer()
@@ -18,7 +19,7 @@ class ReplayView(arcade.View):
         self.title = title
 
         self.animation_frame = 0
-        self.auto_play = False
+        self.auto_play = auto_play_start
         self.time_since_step = 0.0
         self.step_interval = 1.0 / STEPS_PER_SECOND
 

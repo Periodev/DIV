@@ -22,14 +22,34 @@ def progress(states, visited):
     print(f"  ... {states} states explored, {visited} unique", flush=True)
 
 
+def parse_args(argv: list[str]) -> tuple[str, int]:
+    if not argv:
+        raise ValueError
+
+    level_id = argv[0]
+    max_depth = 80
+
+    for arg in argv[1:]:
+        try:
+            max_depth = int(arg)
+        except ValueError as exc:
+            raise ValueError(f"Unknown argument: {arg}") from exc
+
+    return level_id, max_depth
+
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("Usage: python solver.py <level_id> [max_depth]")
         print("Example: python solver.py 0-1")
         sys.exit(1)
 
-    level_id = sys.argv[1]
-    max_depth = int(sys.argv[2]) if len(sys.argv) > 2 else 80
+    try:
+        level_id, max_depth = parse_args(sys.argv[1:])
+    except ValueError as e:
+        print(f"Argument error: {e}")
+        print("Usage: python solver.py <level_id> [max_depth]")
+        sys.exit(1)
 
     level = find_level(level_id)
     if not level:
@@ -44,5 +64,6 @@ if __name__ == '__main__':
 
     if result:
         print(f"Solution ({len(result)} steps) in {elapsed:.2f}s: {result}")
+        print(f"{level['id']} {result}")
     else:
         print(f"No solution found within depth {max_depth} ({elapsed:.2f}s)")
