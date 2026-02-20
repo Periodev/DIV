@@ -119,7 +119,6 @@ class ViewModelBuilder:
               slide_progress: float = 0.0,
               slide_direction: int = 0,
               merge_preview_active: bool = False,
-              show_inherit_hint: bool = False,
               merge_preview_progress: float = 0.0,
               merge_preview_swap_progress: float = 0.0,
               inherit_mode_enabled: bool = False,
@@ -165,6 +164,11 @@ class ViewModelBuilder:
 
         focus = controller.current_focus
         has_branched = controller.has_branched
+        show_inherit_hint = (
+            merge_preview_active
+            and inherit_mode_enabled
+            and controller.can_show_inherit_hint()
+        )
 
         # Use controller states
         main_branch_state = controller.main_branch
@@ -491,5 +495,4 @@ class ViewModelBuilder:
         player_pos = state.player.pos
         terrain = state.terrain.get(player_pos)
         return terrain in ViewModelBuilder.BRANCH_TERRAINS
-
 

@@ -303,7 +303,6 @@ class GameView(arcade.View):
             slide_progress,
             self.slide_direction,
             self.merge_preview_active,
-            self.merge_preview_active and self.inherit_mode_enabled and self.controller.can_show_inherit_hint(),
             merge_preview_progress,
             merge_preview_swap_progress,
             self.inherit_mode_enabled,
