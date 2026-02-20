@@ -1,6 +1,7 @@
 # solver_core.py - BFS / Fast(A*) level solver (pure logic, no Arcade dependency)
 
 from collections import deque
+from array import array
 from heapq import heappop, heappush
 from map_parser import parse_dual_layer
 from game_controller import GameController
@@ -421,11 +422,11 @@ def _next_tail(raw_tail: str, action: str, keep: int = 3) -> str:
     return tail
 
 
-def _rebuild_output_path(parents: list[int], out_actions: list[str], node_id: int) -> str:
+def _rebuild_output_path(parents, out_actions: bytearray, node_id: int) -> str:
     """Reconstruct output sequence from parent chain."""
     chars = []
     while node_id != 0:
-        chars.append(out_actions[node_id])
+        chars.append(chr(out_actions[node_id]))
         node_id = parents[node_id]
     chars.reverse()
     return ''.join(chars)
@@ -447,22 +448,19 @@ def solve_fast(level_dict: dict, max_depth: int = 60,
     start_key = _state_key(initial)
     best_g = {start_key: 0}
 
-    # Node storage (shared by queued states) to avoid per-entry path copies.
-    # node 0 is root.
-    parents = [-1]
-    out_actions = ['']
-    depths = [0]
-    raw_tails = ['']
+    # Node storage for reconstruction only (node 0 is root).
+    parents = array('i', [-1])
+    out_actions = bytearray(b'\0')
 
-    # Heap item: (f, g, tie, controller, node_id)
+    # Heap item: (f, g, tie, controller, node_id, raw_tail)
     heap = []
     tie = 0
     start_h = _heuristic(initial, goal_positions)
-    heappush(heap, (weight * start_h, 0, tie, initial, 0))
+    heappush(heap, (weight * start_h, 0, tie, initial, 0, ''))
     popped = 0
 
     while heap:
-        _, g, _, ctrl, node_id = heappop(heap)
+        _, g, _, ctrl, node_id, raw_tail = heappop(heap)
         popped += 1
         if progress_cb and popped % 5000 == 0:
             progress_cb(popped, len(best_g))
@@ -471,11 +469,10 @@ def solve_fast(level_dict: dict, max_depth: int = 60,
         if g != best_g.get(key):
             continue  # stale queue entry
 
-        if depths[node_id] >= max_depth:
+        if g >= max_depth:
             continue
 
-        last_action = raw_tails[node_id][-1] if raw_tails[node_id] else None
-        raw_tail = raw_tails[node_id]
+        last_action = raw_tail[-1] if raw_tail else None
         for action in _ordered_actions(ctrl, hints):
             if _is_noop(ctrl, action, last_action, hints, raw_tail):
                 continue
@@ -501,13 +498,12 @@ def solve_fast(level_dict: dict, max_depth: int = 60,
             new_g = g + 1
             if new_g > max_depth:
                 continue
+            child_tail = _next_tail(raw_tail, action)
 
             if new_ctrl.victory:
                 child_id = len(parents)
                 parents.append(node_id)
-                out_actions.append(output_char)
-                depths.append(new_g)
-                raw_tails.append(_next_tail(raw_tail, action))
+                out_actions.append(ord(output_char))
                 return _rebuild_output_path(parents, out_actions, child_id)
 
             new_key = _state_key(new_ctrl)
@@ -519,11 +515,9 @@ def solve_fast(level_dict: dict, max_depth: int = 60,
             tie += 1
             child_id = len(parents)
             parents.append(node_id)
-            out_actions.append(output_char)
-            depths.append(new_g)
-            raw_tails.append(_next_tail(raw_tail, action))
+            out_actions.append(ord(output_char))
             new_h = _heuristic(new_ctrl, goal_positions)
-            heappush(heap, (new_g + weight * new_h, new_g, tie, new_ctrl, child_id))
+            heappush(heap, (new_g + weight * new_h, new_g, tie, new_ctrl, child_id, child_tail))
 
     return None
 
@@ -542,28 +536,24 @@ def solve(level_dict: dict, max_depth: int = 60,
     }
     source = parse_dual_layer(level_dict['floor_map'], level_dict['object_map'])
     initial = GameController(source, solver_mode=True)
-    # Node storage (shared by queued states) to avoid per-entry path copies.
-    # node 0 is root.
-    parents = [-1]
-    out_actions = ['']
-    depths = [0]
-    raw_tails = ['']
+    # Node storage for reconstruction only (node 0 is root).
+    parents = array('i', [-1])
+    out_actions = bytearray(b'\0')
 
-    queue = deque([(initial, 0)])  # (controller, node_id)
+    queue = deque([(initial, 0, 0, '')])  # (controller, node_id, depth, raw_tail)
     visited = {_state_key(initial)}
     count = 0
 
     while queue:
-        ctrl, node_id = queue.popleft()
+        ctrl, node_id, depth, raw_tail = queue.popleft()
         count += 1
         if progress_cb and count % 5000 == 0:
             progress_cb(count, len(visited))
 
-        if depths[node_id] >= max_depth:
+        if depth >= max_depth:
             continue
 
-        last_action = raw_tails[node_id][-1] if raw_tails[node_id] else None
-        raw_tail = raw_tails[node_id]
+        last_action = raw_tail[-1] if raw_tail else None
         actions = _legal_actions_for_state(ctrl, hints)
         for action in actions:
             if _is_noop(ctrl, action, last_action, hints, raw_tail):
@@ -588,14 +578,13 @@ def solve(level_dict: dict, max_depth: int = 60,
             if not hints.get('pickup', True) and _has_dead_corner_box(active):
                 continue
 
-            new_depth = depths[node_id] + 1
+            new_depth = depth + 1
+            child_tail = _next_tail(raw_tail, action)
 
             if new_ctrl.victory:
                 child_id = len(parents)
                 parents.append(node_id)
-                out_actions.append(output_char)
-                depths.append(new_depth)
-                raw_tails.append(_next_tail(raw_tail, action))
+                out_actions.append(ord(output_char))
                 return _rebuild_output_path(parents, out_actions, child_id)
 
             new_key = _state_key(new_ctrl)
@@ -603,9 +592,7 @@ def solve(level_dict: dict, max_depth: int = 60,
                 visited.add(new_key)
                 child_id = len(parents)
                 parents.append(node_id)
-                out_actions.append(output_char)
-                depths.append(new_depth)
-                raw_tails.append(_next_tail(raw_tail, action))
-                queue.append((new_ctrl, child_id))
+                out_actions.append(ord(output_char))
+                queue.append((new_ctrl, child_id, new_depth, child_tail))
 
     return None
