@@ -3,6 +3,7 @@
 from collections import deque
 from array import array
 from heapq import heappop, heappush
+import struct
 from map_parser import parse_dual_layer
 from game_controller import GameController
 from game_logic import GameLogic
@@ -44,14 +45,13 @@ def _canonical_direction(b) -> tuple:
         return b.player.direction
 
     # Orientation matters if any adjacent cell has a grounded box.
+    # Scan entities once; use module-level frozenset to avoid per-call set allocation.
     px, py = b.player.pos
-    grounded_boxes = {
-        e.pos for e in b.entities
-        if e.type == EntityType.BOX and Physics.grounded(e)
-    }
-    for dx, dy in DIRECTION_MAP.values():
-        if (px + dx, py + dy) in grounded_boxes:
-            return b.player.direction
+    for e in b.entities:
+        if e.type == EntityType.BOX and Physics.grounded(e):
+            ex, ey = e.pos
+            if (ex - px, ey - py) in _ADJACENT_DELTAS:
+                return b.player.direction
 
     # No nearby interaction target: orientation is behaviorally irrelevant.
     return (0, 0)
@@ -61,42 +61,47 @@ def _has_any_box_instance_at(b, pos: tuple[int, int]) -> bool:
     """Check for any box instance at pos, including underground (z = -1)."""
     if b is None:
         return False
-    return any(
-        e.type == EntityType.BOX and e.pos == pos
-        for e in b.entities
-    )
+    for e in b.entities:
+        if e.type == EntityType.BOX and e.pos == pos:
+            return True
+    return False
 
 
-def _pack_i16(value: int) -> bytes:
-    return int(value).to_bytes(2, 'little', signed=True)
+def _has_fused_entity(branch) -> bool:
+    """Return True if any entity in the branch has fused_from set."""
+    for e in branch.entities:
+        if e.fused_from:
+            return True
+    return False
 
 
-def _pack_i32(value: int) -> bytes:
-    return int(value).to_bytes(4, 'little', signed=True)
+# Cardinal delta set for adjacency check (avoids per-call abs() calls).
+_ADJACENT_DELTAS = frozenset(((0, -1), (0, 1), (-1, 0), (1, 0)))
+
+# Pre-compiled struct formats for state key encoding.
+# Layout: i32 uid, i16 pos[0], i16 pos[1], i8 z, u8 is_box, i32 holder, u16 fused_count
+_ENTITY_STRUCT = struct.Struct('<ihhbBiH')
+# Layout: i16 pos[0], i16 pos[1], i8 dir[0], i8 dir[1], u16 entity_count
+_BRANCH_HEADER_STRUCT = struct.Struct('<hhbbH')
 
 
 def _encode_entity_key(entity) -> bytes:
     """Compact, stable per-entity encoding for state hashing."""
     holder = -1 if entity.holder is None else entity.holder
     fused = entity.fused_from
+    is_box = 1 if entity.type == EntityType.BOX else 0
 
-    data = bytearray()
-    data.extend(_pack_i32(entity.uid))
-    data.extend(_pack_i16(entity.pos[0]))
-    data.extend(_pack_i16(entity.pos[1]))
-    data.extend(int(entity.z).to_bytes(1, 'little', signed=True))
-    data.append(1 if entity.type == EntityType.BOX else 0)
-    data.extend(_pack_i32(holder))
+    if not fused:
+        return _ENTITY_STRUCT.pack(
+            entity.uid, entity.pos[0], entity.pos[1], int(entity.z), is_box, holder, 0
+        )
 
-    if fused:
-        fused_ids = sorted(fused)
-        data.extend(len(fused_ids).to_bytes(2, 'little', signed=False))
-        for uid in fused_ids:
-            data.extend(_pack_i32(uid))
-    else:
-        data.extend((0).to_bytes(2, 'little', signed=False))
-
-    return bytes(data)
+    fused_ids = sorted(fused)
+    n = len(fused_ids)
+    return struct.pack(
+        f'<ihhbBiH{n}i',
+        entity.uid, entity.pos[0], entity.pos[1], int(entity.z), is_box, holder, n, *fused_ids
+    )
 
 
 def _branch_key(b) -> bytes | None:
@@ -109,15 +114,10 @@ def _branch_key(b) -> bytes | None:
     # This intentionally merges states that differ only by duplicate instances.
     entities = sorted({_encode_entity_key(e) for e in b.entities})
 
-    data = bytearray()
-    data.extend(_pack_i16(b.player.pos[0]))
-    data.extend(_pack_i16(b.player.pos[1]))
-    data.extend(int(direction[0]).to_bytes(1, 'little', signed=True))
-    data.extend(int(direction[1]).to_bytes(1, 'little', signed=True))
-    data.extend(len(entities).to_bytes(2, 'little', signed=False))
-    for record in entities:
-        data.extend(record)
-    return bytes(data)
+    header = _BRANCH_HEADER_STRUCT.pack(
+        b.player.pos[0], b.player.pos[1], direction[0], direction[1], len(entities)
+    )
+    return header + b''.join(entities)
 
 
 def _state_key(c: GameController) -> bytes:
@@ -511,7 +511,7 @@ def solve_fast(level_dict: dict, max_depth: int = 60,
     while heap:
         _, g, _, ctrl, node_id, raw_tail = heappop(heap)
         popped += 1
-        if progress_cb and popped % 5000 == 0:
+        if progress_cb and popped % 10000 == 0:
             progress_cb(popped, len(best_g))
 
         key = _state_key(ctrl)
@@ -539,7 +539,7 @@ def solve_fast(level_dict: dict, max_depth: int = 60,
                 continue
 
             active = new_ctrl.get_active_branch()
-            if any(e.fused_from for e in active.entities):
+            if _has_fused_entity(active):
                 continue
             if not hints.get('pickup', True) and _has_dead_corner_box(active):
                 continue
@@ -596,7 +596,7 @@ def solve(level_dict: dict, max_depth: int = 60,
     while queue:
         ctrl, node_id, depth, raw_tail = queue.popleft()
         count += 1
-        if progress_cb and count % 5000 == 0:
+        if progress_cb and count % 10000 == 0:
             progress_cb(count, len(visited))
 
         if depth >= max_depth:
@@ -622,7 +622,7 @@ def solve(level_dict: dict, max_depth: int = 60,
             # Fusion entities indicate an unintended state (shadow boxes pushed together).
             # Treat as failure to keep the search space tractable.
             active = new_ctrl.get_active_branch()
-            if any(e.fused_from for e in active.entities):
+            if _has_fused_entity(active):
                 continue
             if not hints.get('pickup', True) and _has_dead_corner_box(active):
                 continue
