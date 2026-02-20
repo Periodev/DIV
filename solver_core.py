@@ -274,6 +274,35 @@ def _legal_actions_for_state(ctrl: GameController, hints: dict) -> list:
     return actions
 
 
+def _output_char_for_action(ctrl: GameController, action: str) -> str:
+    """Map internal action to user-facing bottom-level action symbol."""
+    if action != 'X':
+        return action
+
+    active = ctrl.get_active_branch()
+    if active.get_held_items():
+        return 'O'
+
+    px, py = active.player.pos
+    dx, dy = active.player.direction
+    front_pos = (px + dx, py + dy)
+    target = active.find_box_at(front_pos)
+    if target is None:
+        return 'X'
+
+    uids_at_front = {
+        e.uid for e in active.entities
+        if e.uid != 0
+        and e.type == EntityType.BOX
+        and e.pos == front_pos
+        and Physics.grounded(e)
+    }
+    has_overlap = len(uids_at_front) >= 2
+    if has_overlap or active.is_shadow(target.uid):
+        return 'X'
+    return 'P'
+
+
 def solve(level_dict: dict, max_depth: int = 60,
           progress_cb=None) -> str | None:
     """BFS solver. Returns solution string or None if not found.
@@ -288,25 +317,26 @@ def solve(level_dict: dict, max_depth: int = 60,
     }
     source = parse_dual_layer(level_dict['floor_map'], level_dict['object_map'])
     initial = GameController(source, solver_mode=True)
-    queue = deque([(initial, '')])
+    queue = deque([(initial, '', '')])  # (controller, raw_path, output_path)
     visited = {_state_key(initial)}
     count = 0
 
     while queue:
-        ctrl, path = queue.popleft()
+        ctrl, raw_path, output_path = queue.popleft()
         count += 1
         if progress_cb and count % 5000 == 0:
             progress_cb(count, len(visited))
 
-        if len(path) >= max_depth:
+        if len(raw_path) >= max_depth:
             continue
 
-        last_action = path[-1] if path else None
+        last_action = raw_path[-1] if raw_path else None
         actions = _legal_actions_for_state(ctrl, hints)
         for action in actions:
             if _is_noop(ctrl, action, last_action, hints):
                 continue
             new_ctrl = ctrl.clone_for_solver()
+            output_char = _output_char_for_action(ctrl, action)
             execute_action(new_ctrl, action, hints)
 
             if not new_ctrl.collapsed and not new_ctrl.victory:
@@ -323,14 +353,15 @@ def solve(level_dict: dict, max_depth: int = 60,
             if any(e.fused_from for e in active.entities):
                 continue
 
-            new_path = path + action
+            new_raw_path = raw_path + action
+            new_output_path = output_path + output_char
 
             if new_ctrl.victory:
-                return new_path
+                return new_output_path
 
             new_key = _state_key(new_ctrl)
             if new_key not in visited:
                 visited.add(new_key)
-                queue.append((new_ctrl, new_path))
+                queue.append((new_ctrl, new_raw_path, new_output_path))
 
     return None

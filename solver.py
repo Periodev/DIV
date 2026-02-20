@@ -29,7 +29,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     level_id = sys.argv[1]
-    max_depth = int(sys.argv[2]) if len(sys.argv) > 2 else 60
+    max_depth = int(sys.argv[2]) if len(sys.argv) > 2 else 80
 
     level = find_level(level_id)
     if not level:
