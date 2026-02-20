@@ -541,7 +541,7 @@ def solve_fast(level_dict: dict, max_depth: int = 60,
             active = new_ctrl.get_active_branch()
             if _has_fused_entity(active):
                 continue
-            if not hints.get('pickup', True) and _has_dead_corner_box(active):
+            if not hints.get('pickup', True) and not hints.get('diverge', True) and _has_dead_corner_box(active):
                 continue
 
             new_g = g + 1
@@ -624,7 +624,7 @@ def solve(level_dict: dict, max_depth: int = 60,
             active = new_ctrl.get_active_branch()
             if _has_fused_entity(active):
                 continue
-            if not hints.get('pickup', True) and _has_dead_corner_box(active):
+            if not hints.get('pickup', True) and not hints.get('diverge', True) and _has_dead_corner_box(active):
                 continue
 
             new_depth = depth + 1
