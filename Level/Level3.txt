@@ -103,7 +103,7 @@ object_map = '''
 '''
 
 --------------------------
-# Narrow entrance 狹窄入口
+# Entrance 入口
 
 objective = '''
 '''
