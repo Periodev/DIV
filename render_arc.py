@@ -289,6 +289,9 @@ class ArcadeRenderer:
                             texture_key = None
                     else:
                         texture_key = 'switch_on' if activated else 'switch_off'
+                        # Inactive switch center mark must stay below entities/player.
+                        if not activated:
+                            dynamic_cells.append((gx, gy, terrain, activated))
                 elif terrain == TerrainType.NO_CARRY:
                     texture_key = 'no_carry_bg'
                     dynamic_cells.append((gx, gy, terrain, False))  # Need NO_CARRY rendering
@@ -364,18 +367,25 @@ class ArcadeRenderer:
                     color = (*GRAY, int(alpha * 255)) if has_branched else (*GREEN, int(alpha * 255))
                     self._draw_branch_marker(center_x, center_y, terrain, color, cell_size)
             elif terrain == TerrainType.SWITCH:
-                # Diff-only switch overlay: outline only
                 is_active = bool(extra)
-                if is_active:
-                    color = (0, 200, 0, int(alpha * 255))
-                else:
-                    color = (*SWITCH_OFF_BORDER, int(alpha * 255))
-                inset = max(1, int(3 * scale))
-                self._draw_rect_outline(
-                    cell_x + inset, cell_y + inset,
-                    cell_size - inset * 2, cell_size - inset * 2,
-                    color, max(1, int(3 * scale))
-                )
+                if terrain_diff_reference is not None:
+                    # Diff-only switch overlay: outline only
+                    if is_active:
+                        color = (0, 200, 0, int(alpha * 255))
+                    else:
+                        color = (*SWITCH_OFF_BORDER, int(alpha * 255))
+                    inset = max(1, int(3 * scale))
+                    self._draw_rect_outline(
+                        cell_x + inset, cell_y + inset,
+                        cell_size - inset * 2, cell_size - inset * 2,
+                        color, max(1, int(3 * scale))
+                    )
+                elif not is_active:
+                    # Draw center square in terrain phase so it stays under player/entity layers.
+                    inner = max(4, int(cell_size * 0.28))
+                    ox = cell_x + (cell_size - inner) // 2
+                    oy = cell_y + (cell_size - inner) // 2
+                    self._draw_rect_filled(ox, oy, inner, inner, (*SWITCH_INNER, int(alpha * 255)))
 
         # Draw NO_CARRY markers
         for gx in range(self.grid_size):
@@ -1072,11 +1082,6 @@ class ArcadeRenderer:
                         cell_size - inset * 2, cell_size - inset * 2,
                         color, max(1, int(3 * scale))
                     )
-                    if not activated:
-                        inner = max(4, int(cell_size * 0.28))
-                        ox = cell_x + (cell_size - inner) // 2
-                        oy = cell_y + (cell_size - inner) // 2
-                        self._draw_rect_filled(ox, oy, inner, inner, (*SWITCH_INNER, int(alpha * 255)))
                 elif terrain == TerrainType.WALL:
                     pass  # black wall absorbs its own border
                 else:
