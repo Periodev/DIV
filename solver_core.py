@@ -51,6 +51,16 @@ def _canonical_direction(b) -> tuple:
     return (0, 0)
 
 
+def _has_any_box_instance_at(b, pos: tuple[int, int]) -> bool:
+    """Check for any box instance at pos, including underground (z = -1)."""
+    if b is None:
+        return False
+    return any(
+        e.type == EntityType.BOX and e.pos == pos
+        for e in b.entities
+    )
+
+
 def _branch_key(b) -> tuple | None:
     """Hashable snapshot for one branch."""
     if b is None:
@@ -119,7 +129,9 @@ def _is_noop(ctrl: GameController, action: str, last_action: str = None,
         if not is_holding and last_action in _OPPOSITES and action == _OPPOSITES[last_action]:
             fwd = DIRECTION_MAP[last_action]
             pushed_pos = (px + fwd[0], py + fwd[1])
-            if not active.has_box_at(pushed_pos):
+            # Keep reverse moves when the prior step pushed a box into a hole:
+            # the box becomes underground (z=-1) and isn't visible to has_box_at().
+            if not _has_any_box_instance_at(active, pushed_pos):
                 return True
 
         if is_holding or has_box_ahead:
