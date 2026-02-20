@@ -14,7 +14,6 @@ class GameLogic:
 
         # Collision check
         collision = Physics.collision_at(new_pos, state)
-        print(f"[MOVE] collision={collision}")
 
         # Unfilled HOLE blocks player
         if collision < 0:
