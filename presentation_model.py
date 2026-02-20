@@ -74,6 +74,7 @@ class FrameViewSpec:
     show_merge_preview_hint: bool = False  # Show "M ?汗" hint
     merge_preview_active: bool = False  # True when M preview mode is toggled on
     show_merge_hint: bool = False  # Show "V ?蔥" hint
+    merge_hint_active: bool = False  # True when merge key is currently valid
     show_inherit_indicator: bool = False  # Show orange player when inherit available
     inherit_mode_enabled: bool = False  # Global inherit mode toggle (Shift key)
     # Tutorial hint configuration (progressive unlock)
@@ -260,6 +261,7 @@ class ViewModelBuilder:
             show_merge_preview_hint=has_branched,
             merge_preview_active=merge_preview_active,
             show_merge_hint=has_branched,
+            merge_hint_active=has_branched and controller.can_merge(),
             show_inherit_indicator=has_branched and controller.can_show_inherit_hint(),
             inherit_mode_enabled=inherit_mode_enabled,
             hints=hints

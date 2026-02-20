@@ -272,6 +272,9 @@ class GameController:
         if not self.has_branched:
             return False
 
+        if not self.can_merge():
+            return False
+
         focused = self.get_active_branch()
         other = self.sub_branch if self.current_focus == 0 else self.main_branch
 
@@ -286,6 +289,17 @@ class GameController:
         capacity = Physics.effective_capacity(focused)
         return total_items <= capacity
 
+    def can_merge(self) -> bool:
+        """Check if merge is currently allowed under merge-space rules."""
+        if not self.has_branched:
+            return False
+
+        focused = self.get_active_branch()
+        other = self.sub_branch if self.current_focus == 0 else self.main_branch
+
+        # Rule: merge is blocked if the other branch has a grounded box on focused player tile.
+        return not other.has_box_at(focused.player.pos)
+
     def _merge_branches(self, mode: str) -> bool:
         """Merge branches with optional inherit mode."""
         if not self.has_branched:
@@ -293,6 +307,9 @@ class GameController:
 
         focused = self.get_active_branch()
         other = self.sub_branch if self.current_focus == 0 else self.main_branch
+
+        if not self.can_merge():
+            return False
 
         if mode == "inherit":
             focused_held = set(focused.get_held_items())
