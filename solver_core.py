@@ -1,11 +1,12 @@
-# solver_core.py - BFS level solver (pure logic, no Arcade dependency)
+# solver_core.py - BFS / Fast(A*) level solver (pure logic, no Arcade dependency)
 
 from collections import deque
+from heapq import heappop, heappush
 from map_parser import parse_dual_layer
 from game_controller import GameController
 from game_logic import GameLogic
 from replay_core import execute_action, DIRECTION_MAP
-from timeline_system import Physics, EntityType
+from timeline_system import Physics, EntityType, TerrainType
 
 _OPPOSITES = {'U': 'D', 'D': 'U', 'L': 'R', 'R': 'L'}
 
@@ -43,8 +44,12 @@ def _canonical_direction(b) -> tuple:
 
     # Orientation matters if any adjacent cell has a grounded box.
     px, py = b.player.pos
+    grounded_boxes = {
+        e.pos for e in b.entities
+        if e.type == EntityType.BOX and Physics.grounded(e)
+    }
     for dx, dy in DIRECTION_MAP.values():
-        if b.has_box_at((px + dx, py + dy)):
+        if (px + dx, py + dy) in grounded_boxes:
             return b.player.direction
 
     # No nearby interaction target: orientation is behaviorally irrelevant.
@@ -66,9 +71,9 @@ def _branch_key(b) -> tuple | None:
     if b is None:
         return None
     entities = frozenset(
-        (e.uid, e.pos, e.z, e.type.value, e.holder,
-         frozenset(e.fused_from) if e.fused_from else None,
-         b.is_shadow(e.uid))
+        # Shadow status is derivable from entity placement/fusion structure,
+        # so it is intentionally omitted to keep keys compact and cheaper.
+        (e.uid, e.pos, e.z, e.type.value, e.holder, e.fused_from)
         for e in b.entities
     )
     return (b.player.pos, _canonical_direction(b), entities)
@@ -94,7 +99,7 @@ def _state_key(c: GameController) -> tuple:
 
 
 def _is_noop(ctrl: GameController, action: str, last_action: str = None,
-             hints: dict | None = None) -> bool:
+             hints: dict | None = None, raw_path: str = '') -> bool:
     """Pre-check: is this action definitely a no-op? Avoids unnecessary deepcopy."""
     hints = hints or {}
     allow_converge = hints.get('converge', True)
@@ -113,6 +118,21 @@ def _is_noop(ctrl: GameController, action: str, last_action: str = None,
     # Pattern: V->C/I (branch then immediately merge)
     if action in ('C', 'I') and last_action == 'V':
         return True
+
+    # Short oscillation pruning: ABAB on system actions (e.g., TCTC, TITI).
+    if raw_path and len(raw_path) >= 3:
+        a = raw_path[-3]
+        b = raw_path[-2]
+        c = raw_path[-1]
+        d = action
+        if a == c and b == d:
+            pair = (a, b)
+            if pair in {
+                ('T', 'C'), ('C', 'T'),
+                ('T', 'I'), ('I', 'T'),
+                ('C', 'I'), ('I', 'C'),
+            }:
+                return True
 
     if action in DIRECTION_MAP:
         direction = DIRECTION_MAP[action]
@@ -237,6 +257,42 @@ def _is_noop(ctrl: GameController, action: str, last_action: str = None,
     return False
 
 
+def _is_static_wall_or_oob(state, pos: tuple[int, int]) -> bool:
+    """True if pos is out of bounds or a wall tile."""
+    if not Physics.in_bound(pos, state):
+        return True
+    return state.terrain.get(pos) == TerrainType.WALL
+
+
+def _has_dead_corner_box(state) -> bool:
+    """Detect simple irreversible corner deadlock (non-switch grounded boxes).
+
+    NOTE: This heuristic is only sound in non-pickup rulesets. When pickup is
+    enabled, cornered boxes can still be recovered by lifting them.
+    """
+    for e in state.entities:
+        if e.uid == 0 or e.type != EntityType.BOX:
+            continue
+        if not Physics.grounded(e) or e.collision <= 0:
+            continue
+        if e.holder is not None:
+            continue
+        if state.is_shadow(e.uid):
+            continue
+
+        pos = e.pos
+        if state.terrain.get(pos) == TerrainType.SWITCH:
+            continue
+
+        left = _is_static_wall_or_oob(state, (pos[0] - 1, pos[1]))
+        right = _is_static_wall_or_oob(state, (pos[0] + 1, pos[1]))
+        up = _is_static_wall_or_oob(state, (pos[0], pos[1] - 1))
+        down = _is_static_wall_or_oob(state, (pos[0], pos[1] + 1))
+        if (left and up) or (left and down) or (right and up) or (right and down):
+            return True
+    return False
+
+
 def _legal_actions_for_state(ctrl: GameController, hints: dict) -> list:
     """Build legal candidate actions from system constraints for current state."""
     actions = ['U', 'D', 'L', 'R']
@@ -315,6 +371,163 @@ def _output_char_for_action(ctrl: GameController, action: str) -> str:
     return 'P'
 
 
+def _manhattan(a: tuple[int, int], b: tuple[int, int]) -> int:
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+
+def _heuristic(ctrl: GameController, goal_positions: list[tuple[int, int]]) -> int:
+    """Heuristic for fast mode (weighted A*)."""
+    active = ctrl.get_active_branch()
+    player_pos = active.player.pos
+
+    if goal_positions:
+        goal_dist = min(_manhattan(player_pos, goal_pos) for goal_pos in goal_positions)
+    else:
+        goal_dist = 0
+
+    # Prefer states closer to satisfying switch conditions.
+    if ctrl.has_branched:
+        preview = ctrl.get_merge_preview()
+    else:
+        preview = active
+    unlit_switches = sum(
+        1 for pos, terrain in preview.terrain.items()
+        if terrain == TerrainType.SWITCH and not preview.switch_activated(pos)
+    )
+
+    branched_penalty = 2 if ctrl.has_branched else 0
+    carrying_penalty = 1 if active.get_held_items() else 0
+    return goal_dist + 3 * unlit_switches + branched_penalty + carrying_penalty
+
+
+def _ordered_actions(ctrl: GameController, hints: dict) -> list[str]:
+    """Action ordering for fast mode to improve early solution quality."""
+    actions = _legal_actions_for_state(ctrl, hints)
+    priority = {
+        'X': 0, 'P': 0, 'O': 0,
+        'U': 1, 'D': 1, 'L': 1, 'R': 1,
+        'V': 2,
+        'C': 3, 'I': 3,
+        'T': 4,
+    }
+    return sorted(actions, key=lambda action: (priority.get(action, 9), action))
+
+
+def _next_tail(raw_tail: str, action: str, keep: int = 3) -> str:
+    """Keep only the latest N raw actions for local pattern checks."""
+    tail = raw_tail + action
+    if len(tail) > keep:
+        return tail[-keep:]
+    return tail
+
+
+def _rebuild_output_path(parents: list[int], out_actions: list[str], node_id: int) -> str:
+    """Reconstruct output sequence from parent chain."""
+    chars = []
+    while node_id != 0:
+        chars.append(out_actions[node_id])
+        node_id = parents[node_id]
+    chars.reverse()
+    return ''.join(chars)
+
+
+def solve_fast(level_dict: dict, max_depth: int = 60,
+               progress_cb=None, weight: float = 1.6) -> str | None:
+    """Weighted A* solver (f = g + weight * h).
+
+    Returns a valid solution quickly in hard levels; does not guarantee shortest path.
+    """
+    hints = level_dict.get('hints') or {
+        'diverge': True, 'converge': True, 'pickup': True, 'inherit': True,
+    }
+    source = parse_dual_layer(level_dict['floor_map'], level_dict['object_map'])
+    initial = GameController(source, solver_mode=True)
+    goal_positions = [pos for pos, terrain in source.terrain.items() if terrain == TerrainType.GOAL]
+
+    start_key = _state_key(initial)
+    best_g = {start_key: 0}
+
+    # Node storage (shared by queued states) to avoid per-entry path copies.
+    # node 0 is root.
+    parents = [-1]
+    out_actions = ['']
+    depths = [0]
+    raw_tails = ['']
+
+    # Heap item: (f, g, tie, controller, node_id)
+    heap = []
+    tie = 0
+    start_h = _heuristic(initial, goal_positions)
+    heappush(heap, (weight * start_h, 0, tie, initial, 0))
+    popped = 0
+
+    while heap:
+        _, g, _, ctrl, node_id = heappop(heap)
+        popped += 1
+        if progress_cb and popped % 5000 == 0:
+            progress_cb(popped, len(best_g))
+
+        key = _state_key(ctrl)
+        if g != best_g.get(key):
+            continue  # stale queue entry
+
+        if depths[node_id] >= max_depth:
+            continue
+
+        last_action = raw_tails[node_id][-1] if raw_tails[node_id] else None
+        raw_tail = raw_tails[node_id]
+        for action in _ordered_actions(ctrl, hints):
+            if _is_noop(ctrl, action, last_action, hints, raw_tail):
+                continue
+
+            new_ctrl = ctrl.clone_for_solver()
+            output_char = _output_char_for_action(ctrl, action)
+            execute_action(new_ctrl, action, hints)
+
+            if not new_ctrl.collapsed and not new_ctrl.victory:
+                new_ctrl.update_physics()
+            if not new_ctrl.victory:
+                new_ctrl.check_victory()
+
+            if new_ctrl.collapsed:
+                continue
+
+            active = new_ctrl.get_active_branch()
+            if any(e.fused_from for e in active.entities):
+                continue
+            if not hints.get('pickup', True) and _has_dead_corner_box(active):
+                continue
+
+            new_g = g + 1
+            if new_g > max_depth:
+                continue
+
+            if new_ctrl.victory:
+                child_id = len(parents)
+                parents.append(node_id)
+                out_actions.append(output_char)
+                depths.append(new_g)
+                raw_tails.append(_next_tail(raw_tail, action))
+                return _rebuild_output_path(parents, out_actions, child_id)
+
+            new_key = _state_key(new_ctrl)
+            old_g = best_g.get(new_key)
+            if old_g is not None and new_g >= old_g:
+                continue
+
+            best_g[new_key] = new_g
+            tie += 1
+            child_id = len(parents)
+            parents.append(node_id)
+            out_actions.append(output_char)
+            depths.append(new_g)
+            raw_tails.append(_next_tail(raw_tail, action))
+            new_h = _heuristic(new_ctrl, goal_positions)
+            heappush(heap, (new_g + weight * new_h, new_g, tie, new_ctrl, child_id))
+
+    return None
+
+
 def solve(level_dict: dict, max_depth: int = 60,
           progress_cb=None) -> str | None:
     """BFS solver. Returns solution string or None if not found.
@@ -329,23 +542,31 @@ def solve(level_dict: dict, max_depth: int = 60,
     }
     source = parse_dual_layer(level_dict['floor_map'], level_dict['object_map'])
     initial = GameController(source, solver_mode=True)
-    queue = deque([(initial, '', '')])  # (controller, raw_path, output_path)
+    # Node storage (shared by queued states) to avoid per-entry path copies.
+    # node 0 is root.
+    parents = [-1]
+    out_actions = ['']
+    depths = [0]
+    raw_tails = ['']
+
+    queue = deque([(initial, 0)])  # (controller, node_id)
     visited = {_state_key(initial)}
     count = 0
 
     while queue:
-        ctrl, raw_path, output_path = queue.popleft()
+        ctrl, node_id = queue.popleft()
         count += 1
         if progress_cb and count % 5000 == 0:
             progress_cb(count, len(visited))
 
-        if len(raw_path) >= max_depth:
+        if depths[node_id] >= max_depth:
             continue
 
-        last_action = raw_path[-1] if raw_path else None
+        last_action = raw_tails[node_id][-1] if raw_tails[node_id] else None
+        raw_tail = raw_tails[node_id]
         actions = _legal_actions_for_state(ctrl, hints)
         for action in actions:
-            if _is_noop(ctrl, action, last_action, hints):
+            if _is_noop(ctrl, action, last_action, hints, raw_tail):
                 continue
             new_ctrl = ctrl.clone_for_solver()
             output_char = _output_char_for_action(ctrl, action)
@@ -364,16 +585,27 @@ def solve(level_dict: dict, max_depth: int = 60,
             active = new_ctrl.get_active_branch()
             if any(e.fused_from for e in active.entities):
                 continue
+            if not hints.get('pickup', True) and _has_dead_corner_box(active):
+                continue
 
-            new_raw_path = raw_path + action
-            new_output_path = output_path + output_char
+            new_depth = depths[node_id] + 1
 
             if new_ctrl.victory:
-                return new_output_path
+                child_id = len(parents)
+                parents.append(node_id)
+                out_actions.append(output_char)
+                depths.append(new_depth)
+                raw_tails.append(_next_tail(raw_tail, action))
+                return _rebuild_output_path(parents, out_actions, child_id)
 
             new_key = _state_key(new_ctrl)
             if new_key not in visited:
                 visited.add(new_key)
-                queue.append((new_ctrl, new_raw_path, new_output_path))
+                child_id = len(parents)
+                parents.append(node_id)
+                out_actions.append(output_char)
+                depths.append(new_depth)
+                raw_tails.append(_next_tail(raw_tail, action))
+                queue.append((new_ctrl, child_id))
 
     return None
