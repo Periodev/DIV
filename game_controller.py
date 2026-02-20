@@ -16,8 +16,9 @@ class GameSnapshot:
 
 
 class GameController:
-    def __init__(self, source: LevelSource):
+    def __init__(self, source: LevelSource, solver_mode: bool = False):
         self.source = source
+        self.solver_mode = solver_mode
         self.main_branch: Optional[BranchState] = None
         self.sub_branch: Optional[BranchState] = None
         self.current_focus = 0  # 0=main, 1=sub
@@ -40,6 +41,30 @@ class GameController:
         self.just_undid: bool = False
 
         self.reset()
+
+    def _log_input(self, char: str):
+        """Record input only in gameplay/replay mode, not in solver mode."""
+        if not self.solver_mode:
+            self.input_log.append(char)
+
+    def clone_for_solver(self) -> 'GameController':
+        """Lightweight clone for solver expansion (no history/log/FX payload)."""
+        new = GameController.__new__(GameController)
+        new.source = self.source
+        new.solver_mode = True
+        new.main_branch = self.main_branch.copy() if self.main_branch else None
+        new.sub_branch = self.sub_branch.copy() if self.sub_branch else None
+        new.current_focus = self.current_focus
+        new.has_branched = self.has_branched
+        new.collapsed = self.collapsed
+        new.victory = self.victory
+        new.history = []
+        new.input_log = []
+        new.failed_action_pos = None
+        new.failed_action_time = 0.0
+        new.falling_boxes = {}
+        new.just_undid = False
+        return new
 
     def reset(self):
         """Reset level"""
@@ -97,6 +122,8 @@ class GameController:
 
     def _save_snapshot(self):
         """Save current state to history."""
+        if self.solver_mode:
+            return
         snapshot = GameSnapshot(
             main_branch=self.main_branch.copy(),
             sub_branch=self.sub_branch.copy() if self.sub_branch else None,
@@ -145,6 +172,13 @@ class GameController:
         The failed state is already saved in history, so the player
         sees the failure frame before the overlay appears.
         """
+        if self.solver_mode:
+            active = self.get_active_branch()
+            result = Physics.step(active)
+            if result == PhysicsResult.FALL:
+                self.collapsed = True
+            return
+
         import time
         active = self.get_active_branch()
 
@@ -204,7 +238,7 @@ class GameController:
 
         self.main_branch, self.sub_branch = Timeline.diverge(self.main_branch)
         self.has_branched = True
-        self.input_log.append('V')
+        self._log_input('V')
         self._save_snapshot()
         return True
 
@@ -278,7 +312,7 @@ class GameController:
         self.sub_branch = None
         self.has_branched = False
         self.current_focus = 0
-        self.input_log.append(log_char)
+        self._log_input(log_char)
         self._save_snapshot()
         return True
 
@@ -287,7 +321,7 @@ class GameController:
         if not self.has_branched:
             return False
         self.current_focus = 1 - self.current_focus
-        self.input_log.append('T')
+        self._log_input('T')
         self._save_snapshot()
         return True
 
@@ -319,7 +353,7 @@ class GameController:
         if is_holding or has_box_ahead:
             if active.player.direction != direction:
                 active.player.direction = direction
-                self.input_log.append(dir_key)
+                self._log_input(dir_key)
                 self._save_snapshot()
                 return True
         else:
@@ -329,7 +363,7 @@ class GameController:
         # Attempt move
         if GameLogic.can_move(active, direction):
             GameLogic.execute_move(active, direction)
-            self.input_log.append(dir_key)
+            self._log_input(dir_key)
             self._save_snapshot()
             return True
         else:
@@ -350,7 +384,7 @@ class GameController:
 
         result = GameLogic.try_pickup(active)
         if result:
-            self.input_log.append('P')
+            self._log_input('P')
             self._save_snapshot()
         else:
             # Pickup failed - flash if it's because of NO_CARRY restriction
@@ -368,7 +402,7 @@ class GameController:
         active = self.get_active_branch()
         result = GameLogic.try_drop(active)
         if result:
-            self.input_log.append('O')
+            self._log_input('O')
             self._save_snapshot()
         return result
 
@@ -405,11 +439,22 @@ class GameController:
         if has_overlap or active.is_shadow(target.uid):
             if not allow_converge:
                 return False
+            # Try normal fusion first (2+ distinct uids overlapping at same position)
             fused = Timeline.try_fuse(active, front_pos)
             if not fused:
-                # Normal convergence: single shadow collapses to one instance
-                Timeline.converge_one(active, target.uid, front_pos)
-            self.input_log.append('X')
+                entity = next((e for e in active.entities if e.uid == target.uid), None)
+                if entity and entity.fused_from and any(
+                        e.uid in entity.fused_from for e in active.entities):
+                    # Facing a fusion in paradox: keep fusion, remove source entities
+                    Timeline.resolve_fusion_toward_fusion(active, target.uid)
+                elif any(e.fused_from and target.uid in e.fused_from
+                         for e in active.entities if e.uid != target.uid):
+                    # Facing a source in paradox: keep sources, remove fusion
+                    Timeline.resolve_fusion_toward_sources(active, target.uid)
+                else:
+                    # Normal shadow: collapse to one instance
+                    Timeline.converge_one(active, target.uid, front_pos)
+            self._log_input('X')
             self._save_snapshot()
             return True
         else:
