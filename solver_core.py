@@ -95,6 +95,8 @@ def _is_noop(ctrl: GameController, action: str, last_action: str = None,
     if action == 'T':
         if last_action == 'T':
             return True  # T->T
+        if last_action == 'V':
+            return True  # branches identical right after diverge, T is noop
         if ctrl.has_branched and _branch_key(ctrl.main_branch) == _branch_key(ctrl.sub_branch):
             return True  # branches are still symmetric
 
@@ -313,6 +315,12 @@ def solve(level_dict: dict, max_depth: int = 60,
                 new_ctrl.check_victory()
 
             if new_ctrl.collapsed:
+                continue
+
+            # Fusion entities indicate an unintended state (shadow boxes pushed together).
+            # Treat as failure to keep the search space tractable.
+            active = new_ctrl.get_active_branch()
+            if any(e.fused_from for e in active.entities):
                 continue
 
             new_path = path + action
