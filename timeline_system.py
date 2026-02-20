@@ -99,12 +99,32 @@ class BranchState:
                 if e.uid == uid and e.z <= 0 and e.holder is None]
 
     def is_shadow(self, uid: int) -> bool:
-        """Check if entity is in shadow state (multiple positions)"""
+        """Check if entity is in shadow state (multiple positions or fusion paradox).
+
+        Fusion paradox: after merging two branches where only one performed a fusion,
+        both the fusion entity AND its source uids coexist. The fusion IS the shadow
+        combined form of its sources, so all involved entities count as shadow.
+        """
         instances = self.get_entities_by_uid(uid)
         if not instances:
             return False
+        # Standard shadow: same uid at multiple (pos, z) locations
         positions = {(e.pos, e.z) for e in instances}
-        return len(positions) > 1
+        if len(positions) > 1:
+            return True
+
+        # Fusion paradox ①: this entity is a fusion AND at least one source still exists
+        entity = instances[0]
+        if entity.fused_from:
+            if any(e.uid in entity.fused_from for e in self.entities):
+                return True
+
+        # Fusion paradox ②: a fusion entity exists that has absorbed this uid
+        if any(e.fused_from and uid in e.fused_from
+               for e in self.entities if e.uid != uid):
+            return True
+
+        return False
 
     def get_held_items(self) -> List[int]:
         """Get uids of all items held by player (holder == 0).
@@ -205,7 +225,14 @@ class Timeline:
         if len(unique_shadow_uids) < 2:
             return False
 
-        print(f"[DEBUG try_fuse] fusing uids={unique_shadow_uids} at pos={pos}, next_uid={state.next_uid}")
+        # Don't create a new fusion if the entities at this pos are already in a
+        # fusion-paradox relationship (one uid is absorbed inside another uid's fused_from).
+        # e.g. uid5(fused_from={1,2}) + uid1 at same pos → paradox, not a new fusion.
+        uids_set = set(unique_shadow_uids)
+        entities_at_pos = [e for e in state.entities if e.uid in uids_set]
+        already_absorbed = Timeline._absorbed_uid_closure(entities_at_pos)
+        if already_absorbed & uids_set:
+            return False
 
         # Remove all instances of each fusing uid
         fused_from = frozenset(unique_shadow_uids)
@@ -236,6 +263,30 @@ class Timeline:
         return (e.holder is not None, e.z)
 
     @staticmethod
+    def _absorbed_uid_closure(entities: List[Entity]) -> Set[int]:
+        """Collect all uids absorbed by any fusion entity (transitively)."""
+        fused_map: Dict[int, Set[int]] = {}
+        seeds: List[int] = []
+
+        for e in entities:
+            if not e.fused_from:
+                continue
+            fused_map.setdefault(e.uid, set()).update(e.fused_from)
+            seeds.extend(e.fused_from)
+
+        absorbed: Set[int] = set()
+        stack = list(seeds)
+        while stack:
+            uid = stack.pop()
+            if uid in absorbed:
+                continue
+            absorbed.add(uid)
+            for child_uid in fused_map.get(uid, ()):
+                if child_uid not in absorbed:
+                    stack.append(child_uid)
+        return absorbed
+
+    @staticmethod
     def converge(main: BranchState, sub: BranchState) -> BranchState:
         """
         Merge two branches.
@@ -257,7 +308,9 @@ class Timeline:
         all_entities = [e for e in main.entities if e.uid != 0] + \
                        [e for e in sub.entities if e.uid != 0]
 
-        # Group by (uid, pos, z) - include z so underground and grounded instances are kept separate
+        # Group by (uid, pos, z) - include z so underground and grounded instances are kept separate.
+        # Fusion paradox: if one branch fused boxes that still exist in the other branch,
+        # all involved entities are preserved as shadow (resolved later via X action).
         by_uid_pos: Dict[Tuple[int, Position, int], List[Entity]] = {}
         for e in all_entities:
             key = (e.uid, e.pos, e.z)
@@ -277,6 +330,17 @@ class Timeline:
                 # pos is already sub.player.pos
 
             result.entities.append(copied)
+
+        # Remove source instances co-located with their fusion entity.
+        # e.g. uid3(1+2)@pos3 + uid1@pos3 → remove uid1@pos3 (already represented by fusion).
+        # Sources at other positions are kept as paradox shadows for X-resolution.
+        fusions = [e for e in result.entities if e.fused_from]
+        if fusions:
+            co_located = {(uid, fusion.pos)
+                          for fusion in fusions
+                          for uid in fusion.fused_from}
+            result.entities = [e for e in result.entities
+                               if (e.uid, e.pos) not in co_located]
 
         # Add player from main (focused) branch at position 0
         result.entities.insert(0, Timeline._copy_entity(main.player))
@@ -330,6 +394,24 @@ class Timeline:
         state.entities = [e for e in state.entities if e.uid != target_uid]
         state.entities.append(target)
         return target
+
+    @staticmethod
+    def resolve_fusion_toward_fusion(state: BranchState, fusion_uid: int):
+        """Resolve fusion paradox by keeping the fusion, removing its source entities."""
+        absorbed = Timeline._absorbed_uid_closure(state.entities)
+        state.entities = [e for e in state.entities if e.uid not in absorbed]
+
+    @staticmethod
+    def resolve_fusion_toward_sources(state: BranchState, source_uid: int):
+        """Resolve fusion paradox by keeping the sources, removing the fusion entity."""
+        fusion = next(
+            (e for e in state.entities
+             if e.fused_from and source_uid in e.fused_from),
+            None
+        )
+        if fusion is None:
+            return
+        state.entities = [e for e in state.entities if e.uid != fusion.uid]
 
     @staticmethod
     def settle_carried(state: BranchState):

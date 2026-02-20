@@ -236,6 +236,44 @@ def test_inherit_blocked_when_focus_holding():
     print("[OK] PASS: Inherit correctly blocked when focus holding")
 
 
+def test_fused_entity_absorption_persists_after_merge():
+    """Fusion should suppress absorbed component uids after converge."""
+    print("\n[Test 6] Fusion absorption persists after merge")
+
+    main = BranchState()
+    main.grid_size = 6
+    main.terrain = {(x, y): TerrainType.FLOOR for x in range(6) for y in range(6)}
+    main.entities.append(Entity(uid=0, type=EntityType.PLAYER, pos=(3, 5)))
+    main.entities.append(
+        Entity(
+            uid=3,
+            type=EntityType.BOX,
+            pos=(3, 4),
+            z=0,
+            holder=None,
+            collision=1,
+            fused_from=frozenset({1, 2}),
+        )
+    )
+
+    sub = BranchState()
+    sub.grid_size = 6
+    sub.terrain = main.terrain.copy()
+    sub.entities.append(Entity(uid=0, type=EntityType.PLAYER, pos=(3, 5)))
+    # Absorbed components exist in the other branch (the bug case).
+    sub.entities.append(Entity(uid=1, type=EntityType.BOX, pos=(3, 4), z=0, holder=None, collision=1))
+    sub.entities.append(Entity(uid=2, type=EntityType.BOX, pos=(3, 3), z=-1, holder=None, collision=1))
+
+    merged = Timeline.converge(main, sub)
+    uids = [e.uid for e in merged.entities if e.uid != 0]
+
+    assert 3 in uids, "Expected fused uid=3 to remain after merge"
+    assert 1 not in uids, "Absorbed uid=1 should not reappear after merge"
+    assert 2 not in uids, "Absorbed uid=2 should not reappear after merge"
+
+    print("[OK] PASS: Absorbed component uids do not reappear")
+
+
 def run_all_tests():
     """Run all merge logic tests"""
     print("=" * 60)
@@ -249,6 +287,7 @@ def run_all_tests():
         test_case_4_focus_empty_sub_b2_normal_merge()
         test_case_4_focus_empty_sub_b2_inherit_merge()
         test_inherit_blocked_when_focus_holding()
+        test_fused_entity_absorption_persists_after_merge()
 
         print("\n" + "=" * 60)
         print("ALL TESTS PASSED [OK]")
