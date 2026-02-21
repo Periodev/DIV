@@ -834,68 +834,6 @@ class ArcadeRenderer:
         bottom = self._flip_y(y + h)
         arcade.draw_lrbt_rectangle_filled(left, right, bottom, top, color)
 
-    def _draw_terrain(self, start_x: int, start_y: int, state: BranchState,
-                      cell_size: int, goal_active: bool, has_branched: bool,
-                      highlight_branch_point: bool):
-        """Draw terrain layer."""
-        for gx in range(self.grid_size):
-            for gy in range(self.grid_size):
-                pos = (gx, gy)
-                cell_x = start_x + gx * cell_size
-                cell_y = start_y + gy * cell_size
-
-                terrain = state.terrain.get(pos, TerrainType.FLOOR)
-                center_x, center_y = self._grid_to_screen(start_x, start_y, gx, gy, cell_size)
-
-                # Branch point highlight
-                if (highlight_branch_point and pos == state.player.pos
-                    and terrain in (TerrainType.BRANCH1, TerrainType.BRANCH2,
-                                   TerrainType.BRANCH3, TerrainType.BRANCH4)):
-                    self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, (150, 255, 150))
-                    self._draw_branch_marker(center_x, center_y, terrain, GREEN, cell_size)
-                    continue
-
-                if terrain == TerrainType.WALL:
-                    self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, WALL_COLOR)
-                elif terrain == TerrainType.SWITCH:
-                    activated = state.switch_activated(pos)
-                    color = SWITCH_ON_COLOR if activated else SWITCH_OFF_COLOR
-                    self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, color)
-                elif terrain == TerrainType.NO_CARRY:
-                    # Light orange background
-                    self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, (255, 240, 220))
-                    # Dark orange border
-                    scale = cell_size / CELL_SIZE
-                    self._draw_rect_outline(cell_x, cell_y, cell_size, cell_size,
-                                           (255, 140, 0), max(1, int(4 * scale)))
-                    # 'c' symbol
-                    arcade.draw_text('c', center_x, center_y, (255, 100, 0),
-                                    font_size=int(14 * scale),
-                                    anchor_x="center", anchor_y="center")
-                elif terrain in (TerrainType.BRANCH1, TerrainType.BRANCH2,
-                                TerrainType.BRANCH3, TerrainType.BRANCH4):
-                    self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, WHITE)
-                    color = GRAY if has_branched else GREEN
-                    self._draw_branch_marker(center_x, center_y, terrain, color, cell_size)
-                elif terrain == TerrainType.GOAL:
-                    if goal_active:
-                        flash = int((time.time() * 1000 / 300) % 2)
-                        color = (255, 255, 100) if flash else YELLOW
-                        self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, color)
-                        self._draw_rect_outline(cell_x, cell_y, cell_size, cell_size,
-                                               GREEN, max(1, int(6 * cell_size / CELL_SIZE)))
-                    else:
-                        self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, YELLOW)
-                    arcade.draw_text('Goal', center_x, center_y, BLACK,
-                                    font_size=int(14 * cell_size / CELL_SIZE),
-                                    anchor_x="center", anchor_y="center")
-                elif terrain == TerrainType.HOLE:
-                    filled = state.is_hole_filled(pos)
-                    color = WHITE if filled else (60, 40, 20)
-                    self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, color)
-                else:
-                    self._draw_rect_filled(cell_x, cell_y, cell_size, cell_size, WHITE)
-
     def _draw_branch_marker(self, cx: int, cy: int, terrain: TerrainType,
                             color: Tuple, cell_size: int):
         """Draw concentric circles for branch point."""
