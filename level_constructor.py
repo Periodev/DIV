@@ -72,6 +72,10 @@ def _hints_for_level(world_num: int, level_num: int):
     if world_num >= 3:
         hints["pickup"] = True
 
+    # Zone 4 unlock
+    if world_num >= 4:
+        hints["inherit"] = True
+
     return hints
 
 
