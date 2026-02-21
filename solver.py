@@ -1,14 +1,15 @@
-# solver.py - CLI entry point for BFS level solver
+# solver.py - CLI entry point for BFS / fast solver
 #
 # Usage:
-#   python solver.py <level_id> [max_depth]
+#   python solver.py <level_id> [max_depth] [--bfs|--fast]
 #   python solver.py 0-1
 #   python solver.py 1-3 80
+#   python solver.py 3-9 80 --fast
 
 import sys
 import time
 from level_constructor import MAIN_LEVELS
-from solver_core import solve
+from solver_core import solve, solve_fast
 
 
 def find_level(level_id: str) -> dict:
@@ -22,33 +23,39 @@ def progress(states, visited):
     print(f"  ... {states} states explored, {visited} unique", flush=True)
 
 
-def parse_args(argv: list[str]) -> tuple[str, int]:
+def parse_args(argv: list[str]) -> tuple[str, int, str]:
     if not argv:
         raise ValueError
 
     level_id = argv[0]
     max_depth = 80
+    mode = 'bfs'
 
     for arg in argv[1:]:
-        try:
-            max_depth = int(arg)
-        except ValueError as exc:
-            raise ValueError(f"Unknown argument: {arg}") from exc
+        if arg == '--bfs':
+            mode = 'bfs'
+        elif arg == '--fast':
+            mode = 'fast'
+        else:
+            try:
+                max_depth = int(arg)
+            except ValueError as exc:
+                raise ValueError(f"Unknown argument: {arg}") from exc
 
-    return level_id, max_depth
+    return level_id, max_depth, mode
 
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("Usage: python solver.py <level_id> [max_depth]")
+        print("Usage: python solver.py <level_id> [max_depth] [--bfs|--fast]")
         print("Example: python solver.py 0-1")
         sys.exit(1)
 
     try:
-        level_id, max_depth = parse_args(sys.argv[1:])
+        level_id, max_depth, mode = parse_args(sys.argv[1:])
     except ValueError as e:
         print(f"Argument error: {e}")
-        print("Usage: python solver.py <level_id> [max_depth]")
+        print("Usage: python solver.py <level_id> [max_depth] [--bfs|--fast]")
         sys.exit(1)
 
     level = find_level(level_id)
@@ -57,9 +64,12 @@ if __name__ == '__main__':
         print(f"Available: {[lv['id'] for lv in MAIN_LEVELS]}")
         sys.exit(1)
 
-    print(f"Solving {level['id']} {level['name']}  (max depth {max_depth})")
+    print(f"Solving {level['id']} {level['name']}  (max depth {max_depth}, mode={mode})")
     t0 = time.time()
-    result = solve(level, max_depth=max_depth, progress_cb=progress)
+    if mode == 'fast':
+        result = solve_fast(level, max_depth=max_depth, progress_cb=progress)
+    else:
+        result = solve(level, max_depth=max_depth, progress_cb=progress)
     elapsed = time.time() - t0
 
     if result:
