@@ -457,7 +457,7 @@ class ArcadeRenderer:
             'pickup': True,
             'diverge': True,
             'converge': True,
-            'inherit': True,
+            'fetch': True,
         }
 
         # 1. Clear screen
@@ -547,7 +547,7 @@ class ArcadeRenderer:
                 hidden_sub=hidden_sub,
                 current_focus=spec.current_focus,
                 falling_boxes=spec.falling_boxes,
-                show_inherit_ring=spec.show_inherit_indicator
+                show_fetch_ring=spec.show_fetch_indicator
             )
 
             # Layer 4: Merge convergence hints (when focused is holding)
@@ -569,7 +569,7 @@ class ArcadeRenderer:
                     has_branched=spec.has_branched,
                     animation_frame=spec.animation_frame,
                     falling_boxes=spec.falling_boxes,
-                    show_inherit_ring=spec.show_inherit_indicator and spec.current_focus == 1
+                    show_fetch_ring=spec.show_fetch_indicator and spec.current_focus == 1
                 )
 
             if -500 < spec.main_branch.pos_x < WINDOW_WIDTH + 100:
@@ -579,7 +579,7 @@ class ArcadeRenderer:
                     has_branched=spec.has_branched,
                     animation_frame=spec.animation_frame,
                     falling_boxes=spec.falling_boxes,
-                    show_inherit_ring=spec.show_inherit_indicator and spec.current_focus == 0
+                    show_fetch_ring=spec.show_fetch_indicator and spec.current_focus == 0
                 )
 
         # 2.5. Draw flash effect on focused branch
@@ -606,14 +606,14 @@ class ArcadeRenderer:
         if spec.show_merge_preview_hint and merge_hint_on:
             self._draw_merge_preview_hint(spec.merge_preview_active)
         if spec.show_merge_hint and merge_hint_on:
-            # Show inherit hint if inherit mode enabled and inherit is available
-            self._draw_merge_hint(spec.inherit_mode_enabled and spec.show_inherit_indicator)
+            # Show fetch hint if fetch mode enabled and fetch is available
+            self._draw_merge_hint(spec.fetch_mode_enabled and spec.show_fetch_indicator)
 
         # 4. Debug info hidden by request.
 
-        # 5. Draw inherit mode indicator (inherit hints)
-        if self.current_hints.get('inherit', True):
-            self._draw_inherit_mode_indicator(spec.inherit_mode_enabled)
+        # 5. Draw fetch mode indicator (fetch hints)
+        if self.current_hints.get('fetch', True):
+            self._draw_fetch_mode_indicator(spec.fetch_mode_enabled)
 
         # 6. Overlay (collapsed or victory)
         if spec.is_collapsed:
@@ -652,7 +652,7 @@ class ArcadeRenderer:
                      terrain_type_filter: Optional[str] = None,
                      override_pos: Optional[Tuple[int, int]] = None,
                      falling_boxes: dict = None,
-                     show_inherit_ring: bool = False):
+                     show_fetch_ring: bool = False):
         """Draw a single branch panel.
 
         Args:
@@ -751,10 +751,10 @@ class ArcadeRenderer:
             if spec.is_focused and spec.scale >= 1.0:
                 self._draw_grounded_object_lock(start_x, start_y, state, cell_size)
 
-            # Inherited hold hint (merge preview only, inherit hints unlocked)
-            if (spec.is_merge_preview and spec.show_inherit_hint and hidden_main and hidden_sub
-                and self.current_hints.get('inherit', True)):
-                self._draw_inherited_hold_hint(
+            # fetched hold hint (merge preview only, fetch hints unlocked)
+            if (spec.is_merge_preview and spec.show_fetch_hint and hidden_main and hidden_sub
+                and self.current_hints.get('fetch', True)):
+                self._draw_fetched_hold_hint(
                     start_x, start_y, state,
                     hidden_main, hidden_sub,
                     current_focus, animation_frame, cell_size
@@ -777,7 +777,7 @@ class ArcadeRenderer:
             self._draw_player(start_x, start_y, state.player, player_color, held_uid,
                               cell_size, spec.alpha,
                               show_border=not (spec.is_merge_preview and not spec.is_focused),
-                              show_inherit_ring=show_inherit_ring,
+                              show_fetch_ring=show_fetch_ring,
                               held_label=held_label)
 
         # Cell hint (only for focused, full-scale)
@@ -1027,12 +1027,12 @@ class ArcadeRenderer:
 
     def _draw_player(self, start_x: int, start_y: int, player,
                      color: Tuple, held_uid: Optional[int], cell_size: int, alpha: float = 1.0,
-                     show_border: bool = True, show_inherit_ring: bool = False,
+                     show_border: bool = True, show_fetch_ring: bool = False,
                      held_label: Optional[str] = None, show_arrow: bool = True):
         """Draw the player.
 
         Args:
-            show_inherit_ring: Reserved for inherit-state visual effects.
+            show_fetch_ring: Reserved for fetch-state visual effects.
         """
         scale = cell_size / CELL_SIZE
         gx, gy = player.pos
@@ -1266,41 +1266,41 @@ class ArcadeRenderer:
                 arcade.draw_line(sx, sy, ex, ey, color, width)
             pos += period
 
-    def _draw_inherited_hold_hint(self, start_x: int, start_y: int,
+    def _draw_fetched_hold_hint(self, start_x: int, start_y: int,
                                    preview_state: BranchState,
                                    main_branch: BranchState,
                                    sub_branch: BranchState,
                                    current_focus: int,
                                    animation_frame: int,
                                    cell_size: int):
-        """Show inherited hold hint for merge preview."""
+        """Show fetched hold hint for merge preview."""
         focused = sub_branch if current_focus == 1 else main_branch
         other = main_branch if current_focus == 1 else sub_branch
 
         other_held = set(other.get_held_items())
         focused_held = set(focused.get_held_items())
-        inherited = other_held if not focused_held else set()
+        fetched = other_held if not focused_held else set()
 
-        if not inherited:
+        if not fetched:
             return
 
         from timeline_system import Physics
 
         scale = cell_size / CELL_SIZE
-        inherit_line_color = ORANGE
+        fetch_line_color = ORANGE
         converge_line_color = (50, 220, 50)
         slow_offset = animation_frame * 0.25
 
-        for uid in inherited:
+        for uid in fetched:
             ghost_pos = preview_state.player.pos
             gx, gy = ghost_pos
 
-            # Inherit line: other branch player -> focused ghost position
+            # fetch line: other branch player -> focused ghost position
             other_px, other_py = other.player.pos
             other_cx, other_cy = self._grid_to_screen(start_x, start_y, other_px, other_py, cell_size)
             ghost_cx, ghost_cy = self._grid_to_screen(start_x, start_y, gx, gy, cell_size)
             self._draw_dashed_line(other_cx, other_cy, ghost_cx, ghost_cy,
-                                   inherit_line_color, max(1, int(3 * scale)),
+                                   fetch_line_color, max(1, int(3 * scale)),
                                    int(12 * scale), slow_offset)
 
             # Ghost box
@@ -1343,9 +1343,9 @@ class ArcadeRenderer:
             # Pulsing lock corners
             pulse = math.sin(animation_frame / 20) * 0.3 + 0.7
             lock_color = (
-                int(inherit_line_color[0] * pulse),
-                int(inherit_line_color[1] * pulse),
-                int(inherit_line_color[2] * pulse)
+                int(fetch_line_color[0] * pulse),
+                int(fetch_line_color[1] * pulse),
+                int(fetch_line_color[2] * pulse)
             )
             self._draw_lock_corners(start_x, start_y, (other_px, other_py), lock_color,
                                    cell_size, size=int(24 * scale),
@@ -1650,11 +1650,11 @@ class ArcadeRenderer:
         self._draw_cached_text(cache_key, text, text_x, text_y, text_color,
                               font_size=16, anchor_x="center", anchor_y="center")
 
-    def _draw_merge_hint(self, can_inherit: bool = False):
-        """Draw 'V 合併' or 'V 繼承合併' hint at center bottom.
+    def _draw_merge_hint(self, can_fetch: bool = False):
+        """Draw 'V 合併' or 'V 抓取合併' hint at center bottom.
 
         Args:
-            can_inherit: If True, show orange "V 繼承合併" instead of blue "V 合併"
+            can_fetch: If True, show orange "V 抓取合併" instead of blue "V 合併"
         """
         from presentation_model import ViewModelBuilder
         B = ViewModelBuilder
@@ -1665,13 +1665,13 @@ class ArcadeRenderer:
         x = (WINDOW_WIDTH - box_width) // 2
         y = (WINDOW_HEIGHT + GRID_HEIGHT) // 2 + 15
 
-        if can_inherit:
-            # Orange inherit merge hint
+        if can_fetch:
+            # Orange fetch merge hint
             bg_color = (255, 140, 0, 200)
             border_color = (255, 180, 0)
             text_color = (60,30,0)
-            text = 'V 繼承合併'
-            cache_key = 'inherit_merge_hint'
+            text = 'V 抓取合併'
+            cache_key = 'fetch_merge_hint'
         else:
             # Blue normal merge hint
             bg_color = (40, 80, 120, 200)
@@ -1758,8 +1758,8 @@ class ArcadeRenderer:
         if is_victory:
             self._overlay_texts['victory_hint'].draw()
 
-    def _draw_inherit_mode_indicator(self, enabled: bool):
-        """Draw the inherit mode indicator, fixed at the bottom and aligned with the main view's static left edge."""
+    def _draw_fetch_mode_indicator(self, enabled: bool):
+        """Draw the fetch mode indicator, fixed at the bottom and aligned with the main view's static left edge."""
         indicator_width = 120
         indicator_height = 40
         
@@ -1786,16 +1786,17 @@ class ArcadeRenderer:
         self._draw_rect_outline(x, y, indicator_width, indicator_height, border_color, 2)
 
         # Text
-        text = "C 繼承: ON" if enabled else "C 繼承: OFF"
+        text = "F 抓取: ON" if enabled else "F 抓取: OFF"
         text_x = x + indicator_width // 2
         text_y = self._flip_y(y + indicator_height // 2)
 
         self._draw_cached_text(
-            f'inherit_indicator_{enabled}',
+            f'fetch_indicator_{enabled}',
             text,
             text_x, text_y,
             text_color,
             font_size=16,
             anchor_x="center", anchor_y="center"
         )
+
 

@@ -261,8 +261,8 @@ class GameController:
 
         return self._merge_branches(mode="normal")
 
-    def try_inherit_merge(self) -> bool:
-        """Attempt to merge branches with inheritance (Shift+C).
+    def try_fetch_merge(self) -> bool:
+        """Attempt to merge branches with fetch semantics (Shift+C).
 
         Unlike normal merge, this automatically settles all held items
         to the focused player's position.
@@ -274,10 +274,10 @@ class GameController:
         Returns:
             True if merge successful, False otherwise
         """
-        return self._merge_branches(mode="inherit")
+        return self._merge_branches(mode="fetch")
 
-    def can_show_inherit_hint(self) -> bool:
-        """Check if inherit merge is possible and would inherit items."""
+    def can_show_fetch_hint(self) -> bool:
+        """Check if fetch merge is possible and would fetch items."""
         if not self.has_branched:
             return False
 
@@ -296,23 +296,23 @@ class GameController:
         return total_items <= capacity
 
     def _merge_branches(self, mode: str) -> bool:
-        """Merge branches with optional inherit mode."""
+        """Merge branches with optional fetch mode."""
         if not self.has_branched:
             return False
 
         focused = self.get_active_branch()
         other = self.sub_branch if self.current_focus == 0 else self.main_branch
 
-        if mode == "inherit":
+        if mode == "fetch":
             focused_held = set(focused.get_held_items())
             other_held = set(other.get_held_items())
             total_items = len(focused_held | other_held)
             capacity = Physics.effective_capacity(focused)
             if total_items > capacity:
-                return False  # Not enough capacity to inherit
-            items_to_inherit = focused_held | other_held
-            merged = Timeline.merge_inherit(focused, other, items_to_inherit)
-            log_char = 'I'
+                return False  # Not enough capacity to fetch
+            items_to_fetch = focused_held | other_held
+            merged = Timeline.merge_fetch(focused, other, items_to_fetch)
+            log_char = 'F'
         else:
             merged = Timeline.merge_normal(focused, other)
             log_char = 'C'
@@ -551,17 +551,18 @@ class GameController:
         focused_held = set(focused.get_held_items())
         other_held = set(other.get_held_items())
 
-        # Case 1: Both holding different items → must use inherit merge
+        # Case 1: Both holding different items → must use fetch merge
         if focused_held and other_held and focused_held != other_held:
-            return 'Shift+C 繼承合併'
+            return 'F 抓取合併'
 
         # Case 2: Only other branch holding items
         if not focused_held and other_held:
             # Check if focused is on NO_CARRY
             if focused.terrain.get(focused.player.pos) == TerrainType.NO_CARRY:
-                return 'C 合併  [繼承禁止]'
+                return 'C 合併  [抓取禁止]'
             else:
-                return 'C 合併  Shift+C 繼承'
+                return 'C 合併  F 抓取'
 
         # Case 3: Normal merge available
         return 'C 合併'
+

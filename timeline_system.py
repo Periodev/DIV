@@ -357,11 +357,11 @@ class Timeline:
         return merged
 
     @staticmethod
-    def merge_inherit(main: BranchState, sub: BranchState, inherit_uids: Set[int]) -> BranchState:
-        """Full inherit merge: converge + mark inherit items + settle."""
+    def merge_fetch(main: BranchState, sub: BranchState, fetch_uids: Set[int]) -> BranchState:
+        """Full fetch merge: converge + mark fetch items + settle."""
         merged = Timeline.converge(main, sub)
-        if inherit_uids:
-            for uid in inherit_uids:
+        if fetch_uids:
+            for uid in fetch_uids:
                 for e in merged.entities:
                     if e.uid == uid:
                         e.holder = 0
@@ -548,3 +548,4 @@ def init_branch_from_source(source: LevelSource) -> BranchState:
 
     state.next_uid = source.next_uid
     return state
+

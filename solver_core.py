@@ -19,16 +19,16 @@ def _build_system_action_table() -> dict:
     for has_branched in (False, True):
         for on_branch_point in (False, True):
             for allow_diverge in (False, True):
-                for allow_inherit in (False, True):
+                for allow_fetch in (False, True):
                     actions = []
                     if not has_branched:
                         if allow_diverge and on_branch_point:
                             actions.append('V')
                     else:
                         actions.extend(['C', 'T'])
-                        if allow_inherit:
-                            actions.append('I')
-                    table[(has_branched, on_branch_point, allow_diverge, allow_inherit)] = tuple(actions)
+                        if allow_fetch:
+                            actions.append('F')
+                    table[(has_branched, on_branch_point, allow_diverge, allow_fetch)] = tuple(actions)
     return table
 
 
@@ -165,11 +165,11 @@ def _is_noop(ctrl: GameController, action: str, last_action: str = None,
         if ctrl.has_branched and _branch_key(ctrl.main_branch) == _branch_key(ctrl.sub_branch):
             return True  # branches are still symmetric
 
-    # Pattern: V->C/I (branch then immediately merge)
-    if action in ('C', 'I') and last_action == 'V':
+    # Pattern: V->C/F (branch then immediately merge)
+    if action in ('C', 'F') and last_action == 'V':
         return True
 
-    # Short oscillation pruning: ABAB on system actions (e.g., TCTC, TITI).
+    # Short oscillation pruning: ABAB on system actions (e.g., TCTC, TFTF).
     if raw_path and len(raw_path) >= 3:
         a = raw_path[-3]
         b = raw_path[-2]
@@ -179,8 +179,8 @@ def _is_noop(ctrl: GameController, action: str, last_action: str = None,
             pair = (a, b)
             if pair in {
                 ('T', 'C'), ('C', 'T'),
-                ('T', 'I'), ('I', 'T'),
-                ('C', 'I'), ('I', 'C'),
+                ('T', 'F'), ('F', 'T'),
+                ('C', 'F'), ('F', 'C'),
             }:
                 return True
 
@@ -223,7 +223,7 @@ def _is_noop(ctrl: GameController, action: str, last_action: str = None,
     if action in ('C', 'T'):
         return not ctrl.has_branched  # can't merge/switch if not branched
 
-    if action == 'I':
+    if action == 'F':
         if not ctrl.has_branched:
             return True
         focused = ctrl.get_active_branch()
@@ -233,10 +233,10 @@ def _is_noop(ctrl: GameController, action: str, last_action: str = None,
         total_items = len(focused_held | other_held)
         capacity = Physics.effective_capacity(focused)
 
-        # Inherit merge will fail.
+        # fetch merge will fail.
         if total_items > capacity:
             return True
-        # If other branch carries nothing, inherit is equivalent to normal merge C.
+        # If other branch carries nothing, fetch is equivalent to normal merge C.
         if not other_held:
             return True
         return False
@@ -356,7 +356,7 @@ def _legal_actions_for_state(ctrl: GameController, hints: dict) -> list:
             ctrl.has_branched,
             on_branch_point,
             bool(hints.get('diverge')),
-            bool(hints.get('inherit')),
+            bool(hints.get('fetch')),
         )]
     )
 
@@ -457,7 +457,7 @@ def _ordered_actions(ctrl: GameController, hints: dict) -> list[str]:
         'X': 0, 'P': 0, 'O': 0,
         'U': 1, 'D': 1, 'L': 1, 'R': 1,
         'V': 2,
-        'C': 3, 'I': 3,
+        'C': 3, 'F': 3,
         'T': 4,
     }
     return sorted(actions, key=lambda action: (priority.get(action, 9), action))
@@ -488,7 +488,7 @@ def solve_fast(level_dict: dict, max_depth: int = 60,
     Returns a valid solution quickly in hard levels; does not guarantee shortest path.
     """
     hints = level_dict.get('hints') or {
-        'diverge': True, 'converge': True, 'pickup': True, 'inherit': True,
+        'diverge': True, 'converge': True, 'pickup': True, 'fetch': True,
     }
     source = parse_dual_layer(level_dict['floor_map'], level_dict['object_map'])
     initial = GameController(source, solver_mode=True)
@@ -581,7 +581,7 @@ def solve(level_dict: dict, max_depth: int = 60,
         progress_cb:  optional callable(states_visited) for progress reporting
     """
     hints = level_dict.get('hints') or {
-        'diverge': True, 'converge': True, 'pickup': True, 'inherit': True,
+        'diverge': True, 'converge': True, 'pickup': True, 'fetch': True,
     }
     source = parse_dual_layer(level_dict['floor_map'], level_dict['object_map'])
     initial = GameController(source, solver_mode=True)
@@ -645,3 +645,4 @@ def solve(level_dict: dict, max_depth: int = 60,
                 queue.append((new_ctrl, child_id, new_depth, child_tail))
 
     return None
+

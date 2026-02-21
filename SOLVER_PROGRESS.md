@@ -43,7 +43,7 @@
 | V→C/I 連續 | 分裂後立刻合併（terrain 已遞減但無實質進展） |
 | 反向移動（無推箱） | L 後立刻 R，若沒有箱子被推過則必定回到已 visited 狀態 |
 | X/P/O 完整預檢查 | 前方無目標、持物狀態不符等情況直接略過 |
-| I 等效於 C | 若 other branch 無持物，inherit merge 結果與 normal merge 相同 |
+| I 等效於 C | 若 other branch 無持物，fetch merge 結果與 normal merge 相同 |
 
 ### 階段二：嘗試 A*（失敗，原因已分析）
 
@@ -210,3 +210,4 @@ if any(e.fused_from for e in active.entities):
 - `timeline_system.py` — `BranchState.is_shadow()`, `Timeline.converge()`, `Timeline.try_fuse()`, `Timeline.resolve_fusion_toward_fusion/sources()`
 - `render_arc.py` — fusion 顯示格式
 - `level_constructor.py` — `MAIN_LEVELS`（含 hints 欄位）
+

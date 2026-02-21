@@ -10,7 +10,7 @@ TEST_HINTS = {
     "pickup": True,
     "diverge": True,
     "converge": True,
-    "inherit": True,
+    "fetch": True,
 }
 
 # Set to True for fast iteration by editing maps in this file.
@@ -87,3 +87,4 @@ if __name__ == "__main__":
         launch_ascii_test_main()
     except Exception as e:
         print(f"Launch failed: {e}")
+

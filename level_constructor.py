@@ -8,7 +8,7 @@ BASE_HINTS = {
     "diverge": True,
     "pickup": False,
     "converge": False,
-    "inherit": False,
+    "fetch": False,
 }
 
 
@@ -38,7 +38,7 @@ def _parse_sections(text: str):
         hints_match = re.search(r"^\s*hints\s*=\s*(.+?)\s*$", content, flags=re.MULTILINE)
         if hints_match:
             tokens = hints_match.group(1).strip().split()
-            parsed_hints = {"diverge": False, "pickup": False, "converge": False, "inherit": False}
+            parsed_hints = {"diverge": False, "pickup": False, "converge": False, "fetch": False}
             if tokens != ["none"]:
                 for token in tokens:
                     if token in parsed_hints:
@@ -74,7 +74,7 @@ def _hints_for_level(world_num: int, level_num: int):
 
     # Zone 4 unlock
     if world_num >= 4:
-        hints["inherit"] = True
+        hints["fetch"] = True
 
     return hints
 
@@ -121,3 +121,4 @@ def load_main_levels(level_dir: str | None = None):
 
 
 MAIN_LEVELS = load_main_levels()
+

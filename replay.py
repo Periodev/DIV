@@ -49,7 +49,7 @@ if __name__ == '__main__':
         print("  U D L R  move")
         print("  V        branch (diverge)")
         print("  C        normal merge")
-        print("  I        inherit merge")
+        print("  I        fetch merge")
         print("  T        switch focus (Tab)")
         print("  X        adaptive action (converge / pickup)")
         print("  P        pickup")
@@ -70,3 +70,4 @@ if __name__ == '__main__':
     ok = launch_replay(level, sequence, auto_play=auto_play)
     if not ok:
         sys.exit(2)
+

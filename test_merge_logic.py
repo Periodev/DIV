@@ -1,14 +1,14 @@
 """
-Unit tests for merge logic (normal and inherit merge)
+Unit tests for merge logic (normal and fetch merge)
 
 Test cases based on specification:
-Focus | Sub | merge | drop | Inherit
+Focus | Sub | merge | drop | fetch
 B1    | 0   | F+B1  | 0    | x
 B1    | B1  | F+B1  | 0    | x
 B1    | B2  | F+B1  | B2   | x
 0     | B2  | 0     | 0    | F+B2
 
-Note: "Inherit only when focus not carry"
+Note: "fetch only when focus not carry"
 These tests assume focus is on empty ground (not on NO_CARRY tile)
 """
 
@@ -175,9 +175,9 @@ def test_case_4_focus_empty_sub_b2_normal_merge():
     print("[OK] PASS: Focus empty, B2 dropped")
 
 
-def test_case_4_focus_empty_sub_b2_inherit_merge():
-    """Test: Focus=empty, Sub=B2 → inherit merge: F+B2"""
-    print("\n[Test 4b] Focus=empty, Sub=B2 → Inherit merge")
+def test_case_4_focus_empty_sub_b2_fetch_merge():
+    """Test: Focus=empty, Sub=B2 → fetch merge: F+B2"""
+    print("\n[Test 4b] Focus=empty, Sub=B2 → fetch merge")
 
     main, sub = create_test_level(focus_holding_uid=None, sub_holding_uid=2,
                                   focus_pos=(2, 2), sub_pos=(2, 3))
@@ -186,16 +186,16 @@ def test_case_4_focus_empty_sub_b2_inherit_merge():
     capacity = Physics.effective_capacity(main)
     assert capacity >= 1, f"Expected capacity >= 1, got {capacity}"
 
-    # Simulate inherit merge logic
+    # Simulate fetch merge logic
     focused_held = set(main.get_held_items())
     other_held = set(sub.get_held_items())
-    items_to_inherit = focused_held | other_held
+    items_to_fetch = focused_held | other_held
 
     # Execute merge
     merged = Timeline.converge(main, sub)
 
-    # Mark all items to inherit as held
-    for uid in items_to_inherit:
+    # Mark all items to fetch as held
+    for uid in items_to_fetch:
         instances = [e for e in merged.entities if e.uid == uid]
         for e in instances:
             e.holder = 0
@@ -214,26 +214,26 @@ def test_case_4_focus_empty_sub_b2_inherit_merge():
     assert b2_instances[0].pos == (2, 2), f"Expected B2 at focus pos (2,2), got {b2_instances[0].pos}"
     assert b2_instances[0].holder == 0, f"Expected B2 held, got holder={b2_instances[0].holder}"
 
-    print("[OK] PASS: Focus inherits B2")
+    print("[OK] PASS: Focus fetched B2")
 
 
-def test_inherit_blocked_when_focus_holding():
-    """Test: Inherit merge should fail when focus is already holding something"""
-    print("\n[Test 5] Inherit blocked when focus holding")
+def test_fetch_blocked_when_focus_holding():
+    """Test: fetch merge should fail when focus is already holding something"""
+    print("\n[Test 5] fetch blocked when focus holding")
 
     main, sub = create_test_level(focus_holding_uid=1, sub_holding_uid=2)
 
-    # Check if inherit would be allowed
+    # Check if fetch would be allowed
     focused_held = set(main.get_held_items())
     other_held = set(sub.get_held_items())
     total_items = len(focused_held | other_held)
     capacity = Physics.effective_capacity(main)
 
-    # Inherit should fail because total_items (2) > capacity (1)
+    # fetch should fail because total_items (2) > capacity (1)
     should_fail = total_items > capacity
-    assert should_fail, "Expected inherit merge to fail when focus already holding"
+    assert should_fail, "Expected fetch merge to fail when focus already holding"
 
-    print("[OK] PASS: Inherit correctly blocked when focus holding")
+    print("[OK] PASS: fetch correctly blocked when focus holding")
 
 
 def test_fused_entity_absorption_persists_after_merge():
@@ -285,8 +285,8 @@ def run_all_tests():
         test_case_2_focus_b1_sub_b1()
         test_case_3_focus_b1_sub_b2()
         test_case_4_focus_empty_sub_b2_normal_merge()
-        test_case_4_focus_empty_sub_b2_inherit_merge()
-        test_inherit_blocked_when_focus_holding()
+        test_case_4_focus_empty_sub_b2_fetch_merge()
+        test_fetch_blocked_when_focus_holding()
         test_fused_entity_absorption_persists_after_merge()
 
         print("\n" + "=" * 60)
@@ -309,3 +309,4 @@ def run_all_tests():
 if __name__ == "__main__":
     success = run_all_tests()
     sys.exit(0 if success else 1)
+

@@ -1,4 +1,4 @@
-﻿# presentation_model.py - Presentation Model Layer (Layer 2)
+# presentation_model.py - Presentation Model Layer (Layer 2)
 #
 # Transforms game state into visual specifications.
 # This layer decides WHAT to display, not HOW to display it.
@@ -28,7 +28,7 @@ class BranchViewSpec:
     timeline_hint: str
     highlight_branch_point: bool
     is_merge_preview: bool
-    show_inherit_hint: bool
+    show_fetch_hint: bool
     scale: float = 1.0
     pos_x: int = 0
     pos_y: int = 0
@@ -74,10 +74,10 @@ class FrameViewSpec:
     show_merge_preview_hint: bool = False  # Show "M ?汗" hint
     merge_preview_active: bool = False  # True when M preview mode is toggled on
     show_merge_hint: bool = False  # Show "V ?蔥" hint
-    show_inherit_indicator: bool = False  # Show orange player when inherit available
-    inherit_mode_enabled: bool = False  # Global inherit mode toggle (Shift key)
+    show_fetch_indicator: bool = False  # Show orange player when fetch available
+    fetch_mode_enabled: bool = False  # Global fetch mode toggle (Shift key)
     # Tutorial hint configuration (progressive unlock)
-    hints: dict = None  # {'pickup': bool, 'diverge': bool, 'converge': bool, 'inherit': bool}
+    hints: dict = None  # {'pickup': bool, 'diverge': bool, 'converge': bool, 'fetch': bool}
 
 
 class ViewModelBuilder:
@@ -119,10 +119,10 @@ class ViewModelBuilder:
               slide_progress: float = 0.0,
               slide_direction: int = 0,
               merge_preview_active: bool = False,
-              show_inherit_hint: bool = False,
+              show_fetch_hint: bool = False,
               merge_preview_progress: float = 0.0,
               merge_preview_swap_progress: float = 0.0,
-              inherit_mode_enabled: bool = False,
+              fetch_mode_enabled: bool = False,
               hints: dict = None) -> FrameViewSpec:
         """Build frame specification with slide animation and merge preview support."""
         import time
@@ -215,7 +215,7 @@ class ViewModelBuilder:
             timeline_hint=timeline_hint if focus == 0 else '',
             interaction_hint=interaction_hint if focus == 0 else None,
             is_merge_preview=is_merge_preview,
-            show_inherit_hint=show_inherit_hint and focus == 0,
+            show_fetch_hint=show_fetch_hint and focus == 0,
             has_branched=has_branched,
             scale=main_scale,
             pos_x=main_x,
@@ -234,7 +234,7 @@ class ViewModelBuilder:
                 timeline_hint=timeline_hint if focus == 1 else '',
                 interaction_hint=interaction_hint if focus == 1 else None,
                 is_merge_preview=is_merge_preview,
-                show_inherit_hint=show_inherit_hint and focus == 1,
+                show_fetch_hint=show_fetch_hint and focus == 1,
                 has_branched=has_branched,
                 scale=sub_scale,
                 pos_x=sub_x,
@@ -260,8 +260,8 @@ class ViewModelBuilder:
             show_merge_preview_hint=has_branched,
             merge_preview_active=merge_preview_active,
             show_merge_hint=has_branched,
-            show_inherit_indicator=has_branched and controller.can_show_inherit_hint(),
-            inherit_mode_enabled=inherit_mode_enabled,
+            show_fetch_indicator=has_branched and controller.can_show_fetch_hint(),
+            fetch_mode_enabled=fetch_mode_enabled,
             hints=hints
         )
 
@@ -441,7 +441,7 @@ class ViewModelBuilder:
         timeline_hint: str,
         interaction_hint: Optional[InteractionHint],
         is_merge_preview: bool,
-        show_inherit_hint: bool,
+        show_fetch_hint: bool,
         has_branched: bool,
         scale: float = 1.0,
         pos_x: int = 0,
@@ -460,7 +460,7 @@ class ViewModelBuilder:
             timeline_hint=timeline_hint,
             highlight_branch_point=highlight and is_focused,
             is_merge_preview=is_merge_preview,
-            show_inherit_hint=show_inherit_hint,
+            show_fetch_hint=show_fetch_hint,
             scale=scale,
             pos_x=pos_x,
             pos_y=pos_y,
@@ -491,5 +491,6 @@ class ViewModelBuilder:
         player_pos = state.player.pos
         terrain = state.terrain.get(player_pos)
         return terrain in ViewModelBuilder.BRANCH_TERRAINS
+
 
 

@@ -38,7 +38,7 @@ class GameView(arcade.View):
             'pickup': True,
             'diverge': True,
             'converge': True,
-            'inherit': True,
+            'fetch': True,
         }
 
         # Objective overlay state (ESC key — level name + task description)
@@ -69,8 +69,8 @@ class GameView(arcade.View):
         self.alt_held = False
         self.ctrl_held = False
 
-        # Global inherit mode toggle (Shift key)
-        self.inherit_mode_enabled = False
+        # Global fetch mode toggle (Shift key)
+        self.fetch_mode_enabled = False
 
         # Menu navigation context (for returning to menu)
         self.cursor_index = cursor_index
@@ -203,20 +203,20 @@ class GameView(arcade.View):
         if self.controller.collapsed or self.controller.victory:
             return
 
-        # Toggle inherit mode (Shift key)
-        if key == arcade.key.C:
-            if not self.hints.get('inherit', True):
-                self.inherit_mode_enabled = False
+        # Toggle fetch mode (F key)
+        if key == arcade.key.F:
+            if not self.hints.get('fetch', True):
+                self.fetch_mode_enabled = False
                 return
-            self.inherit_mode_enabled = not self.inherit_mode_enabled
+            self.fetch_mode_enabled = not self.fetch_mode_enabled
             return
 
         # Branch / Merge (V key)
         if key == arcade.key.V:
             if self.controller.has_branched:
-                if self.inherit_mode_enabled and self.hints.get('inherit', True):
-                    # Fallback to normal merge when inherit merge is not possible.
-                    if not self.controller.try_inherit_merge():
+                if self.fetch_mode_enabled and self.hints.get('fetch', True):
+                    # Fallback to normal merge when fetch merge is not possible.
+                    if not self.controller.try_fetch_merge():
                         self.controller.try_merge()
                 else:
                     self.controller.try_merge()
@@ -300,10 +300,10 @@ class GameView(arcade.View):
             slide_progress,
             self.slide_direction,
             self.merge_preview_active,
-            self.merge_preview_active and self.inherit_mode_enabled and self.controller.can_show_inherit_hint(),
+            self.merge_preview_active and self.fetch_mode_enabled and self.controller.can_show_fetch_hint(),
             merge_preview_progress,
             merge_preview_swap_progress,
-            self.inherit_mode_enabled,
+            self.fetch_mode_enabled,
             self.hints
         )
 
@@ -337,3 +337,4 @@ class GameView(arcade.View):
         from menu_view import MenuView
         menu_view = MenuView(self.all_levels, self.progress, self.cursor_index)
         self.window.show_view(menu_view)
+

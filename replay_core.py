@@ -27,8 +27,8 @@ def execute_action(controller, char: str, hints: dict):
         c.try_branch()
     elif char == 'C':
         c.try_merge()
-    elif char == 'I':
-        c.try_inherit_merge()
+    elif char == 'F':
+        c.try_fetch_merge()
     elif char == 'T':
         c.switch_focus()
     elif char == 'X':
@@ -52,7 +52,7 @@ class Replayer:
     def __init__(self, level_dict: dict):
         source = parse_dual_layer(level_dict['floor_map'], level_dict['object_map'])
         self.hints = level_dict.get('hints') or {
-            'diverge': True, 'converge': True, 'pickup': True, 'inherit': True,
+            'diverge': True, 'converge': True, 'pickup': True, 'fetch': True,
         }
         self._source = source
         self._controller = GameController(source)
@@ -119,3 +119,4 @@ class Replayer:
     @property
     def sequence(self) -> str:
         return self._sequence
+

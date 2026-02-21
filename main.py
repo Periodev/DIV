@@ -17,7 +17,7 @@ EMPTY_HINTS = {
     "diverge": False,
     "pickup": False,
     "converge": False,
-    "inherit": False,
+    "fetch": False,
 }
 
 
@@ -56,3 +56,4 @@ if __name__ == "__main__":
     menu_view = MenuView(all_levels, progress, cursor_index=0)
     window.show_view(menu_view)
     arcade.run()
+
