@@ -9,6 +9,7 @@ from map_parser import parse_dual_layer
 from game_controller import GameController
 from presentation_model import ViewModelBuilder
 from render_arc import ArcadeRenderer, WINDOW_WIDTH, WINDOW_HEIGHT
+from timeline_system import EntityType, Physics
 
 
 class GameView(arcade.View):
@@ -26,6 +27,7 @@ class GameView(arcade.View):
         # Parse map and create controller
         source = parse_dual_layer(floor_map, object_map)
         self.controller = GameController(source)
+        self._set_initial_facing()
 
         # Renderer
         self.renderer = ArcadeRenderer()
@@ -176,6 +178,7 @@ class GameView(arcade.View):
         # Reset
         if key == arcade.key.F5 or key == arcade.key.R:
             self.controller.reset()
+            self._set_initial_facing()
             self.slide_start_time = None
             self.slide_direction = 0
             self.merge_preview_active = False
@@ -311,6 +314,23 @@ class GameView(arcade.View):
         # Draw objective overlay if active (F1 key)
         if self.show_objective and self.objective:
             self.renderer._draw_tutorial(self.objective, close_hint='ESC / Enter / Space 關閉')
+
+    def _set_initial_facing(self):
+        """Face the player toward the nearest grounded box on level start."""
+        branch = self.controller.main_branch
+        player = branch.player
+        boxes = [e for e in branch.entities
+                 if e.uid != 0 and e.type == EntityType.BOX and Physics.grounded(e)]
+        if not boxes:
+            return
+        px, py = player.pos
+        nearest = min(boxes, key=lambda e: abs(e.pos[0] - px) + abs(e.pos[1] - py))
+        dx = nearest.pos[0] - px
+        dy = nearest.pos[1] - py
+        if abs(dx) >= abs(dy):
+            player.direction = (1 if dx > 0 else -1, 0)
+        else:
+            player.direction = (0, 1 if dy > 0 else -1)
 
     def _return_to_menu(self):
         """Switch back to MenuView, preserving cursor position."""

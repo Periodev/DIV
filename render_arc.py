@@ -442,7 +442,7 @@ class ArcadeRenderer:
         else:
             player_color = BLUE
         self._draw_player(start_x, start_y, state.player,
-                          player_color, held_uid, cell_size)
+                          player_color, held_uid, cell_size, show_arrow=False)
 
         # Grid lines
         self._draw_grid_lines(start_x, start_y, state, cell_size)
@@ -1028,7 +1028,7 @@ class ArcadeRenderer:
     def _draw_player(self, start_x: int, start_y: int, player,
                      color: Tuple, held_uid: Optional[int], cell_size: int, alpha: float = 1.0,
                      show_border: bool = True, show_inherit_ring: bool = False,
-                     held_label: Optional[str] = None):
+                     held_label: Optional[str] = None, show_arrow: bool = True):
         """Draw the player.
 
         Args:
@@ -1063,8 +1063,9 @@ class ArcadeRenderer:
                                    center_x, center_y, (*BLACK, int(alpha * 255)), font_size=int(14 * scale))
 
             # Arrow
-            arrow_size = int(21 * scale)
-            self._draw_arrow(arrow_cx, arrow_cy, dx, -dy, arrow_size, (*BLACK, int(alpha * 255)))
+            if show_arrow:
+                arrow_size = int(21 * scale)
+                self._draw_arrow(arrow_cx, arrow_cy, dx, -dy, arrow_size, (*BLACK, int(alpha * 255)))
         else:
             # Draw circle player
             radius = cell_size // 5
@@ -1076,8 +1077,9 @@ class ArcadeRenderer:
             else:
                 arcade.draw_circle_filled(center_x, center_y, radius, player_color)
 
-            arrow_size = int(21 * scale)
-            self._draw_arrow(arrow_cx, arrow_cy, dx, -dy, arrow_size, (*BLACK, int(alpha * 255)))
+            if show_arrow:
+                arrow_size = int(21 * scale)
+                self._draw_arrow(arrow_cx, arrow_cy, dx, -dy, arrow_size, (*BLACK, int(alpha * 255)))
 
     def _draw_arrow(self, cx: int, cy: int, dx: int, dy: int,
                     size: int, color: Tuple):
