@@ -5,10 +5,10 @@ from render_arc import ArcadeRenderer, WINDOW_WIDTH, WINDOW_HEIGHT
 from presentation_model import ViewModelBuilder as _B
 
 # ── Layout (top-down y: 0 = top of window) ───────────────────────────────────
-LEFT_W      = 200       # left panel width
+LEFT_W      = 300       # left panel width
 LPAD        = 12        # text left indent inside panel
 
-TITLE_CY    = 22        # top-down centre-y of window title bar
+TITLE_CY    = 30        # top-down centre-y of window title bar
 ZONE_HDR_CY = 56        # top-down centre-y of zone header row
 HDIVIDE_Y   = 72        # top-down y of horizontal rule under zone header
 LIST_TOP    = 80        # top-down y of first list-item top edge
@@ -95,7 +95,7 @@ class MenuView(arcade.View):
         self.clear()
 
         # Window title
-        self._t("DIV - Timeline Puzzle",
+        self._t("DIV",
                 WINDOW_WIDTH // 2, TITLE_CY, TITLE_C, 18, ax="center")
 
         # Vertical divider between panels
@@ -105,7 +105,7 @@ class MenuView(arcade.View):
         self._draw_preview()
 
         # Footer hint
-        self._t("↑↓ 選關  ←→ / Tab 切 Zone  Enter 進入  Esc 離開",
+        self._t("↑↓ 選關  ←→ 切換 Zone  Enter/Space 進入  Esc 離開",
                 WINDOW_WIDTH // 2, FOOTER_CY, MUTED_C, 11, ax="center")
 
     def _draw_panel(self):
@@ -163,11 +163,12 @@ class MenuView(arcade.View):
 
         self.renderer.draw_preview(state, GAME_X, GAME_Y, cell_sz)
 
-        # Level id + name label just below the grid
-        label_td_y = GAME_Y + grid_px + 14
+        # Level id + name label — centred in the gap between grid bottom and footer
+        grid_bottom_td = GAME_Y + grid_px          # e.g. 120+480 = 600
+        label_td_y = (grid_bottom_td + FOOTER_CY) // 2  # midpoint of gap ≈ 653
         self._t(f"{level['id']}  {level['name']}",
                 GAME_X + grid_px // 2, label_td_y,
-                TEXT_C, 13, ax="center")
+                TEXT_C, 14, ax="center", ay="center")
 
     # ── Text helper ───────────────────────────────────────────────────────────
 

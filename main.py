@@ -52,7 +52,7 @@ if __name__ == "__main__":
     all_levels = MAIN_LEVELS
     progress = set(load_progress().get("played", []))
 
-    window = arcade.Window(WINDOW_WIDTH, WINDOW_HEIGHT, "div - Timeline Puzzle")
+    window = arcade.Window(WINDOW_WIDTH, WINDOW_HEIGHT, "DIV")
     menu_view = MenuView(all_levels, progress, cursor_index=0)
     window.show_view(menu_view)
     arcade.run()

@@ -164,7 +164,7 @@ class ArcadeRenderer:
 
         # Fixed help hint (bottom-left corner)
         self._help_hint = arcade.Text(
-            "[ESC] 關卡說明   [F1] 返回選單    [R] 重置   [Z] 回復   [H] 提示",
+            "[ESC] 返回選單   [F1] 關卡說明    [R] 重置   [Z] 回復   [H] 提示",
             15, 15,
             (160, 160, 160),  # Light gray for dark background
             font_size=12,

@@ -138,27 +138,27 @@ class GameView(arcade.View):
 
     def on_key_press(self, key: int, modifiers: int):
         """Handle key press events."""
-        # ESC key — close objective overlay if open, otherwise open it
+        # ESC — close overlay first; if no overlay, return to menu
         if key == arcade.key.ESCAPE:
             if self.show_objective:
                 self.show_objective = False
                 return
-            if self.objective:
-                self.show_objective = True
-                return
+            self._return_to_menu()
+            return
 
-        # Enter / Space — also close objective overlay
+        # F1 — toggle level-info overlay
+        if key == arcade.key.F1:
+            if self.objective:
+                self.show_objective = not self.show_objective
+            return
+
+        # Enter / Space — also close level-info overlay
         if key in (arcade.key.ENTER, arcade.key.SPACE) and self.show_objective:
             self.show_objective = False
             return
 
-        # Block game input when objective overlay is shown
+        # Block game input when level-info overlay is shown
         if self.show_objective:
-            return
-
-        # Return to menu (F1 key)
-        if key == arcade.key.F1:
-            self._return_to_menu()
             return
 
         if key in (arcade.key.LALT, arcade.key.RALT):
@@ -235,12 +235,6 @@ class GameView(arcade.View):
                     self.merge_preview_active = True
                     self.merge_preview_start_time = time.time()
 
-        # Cancel merge preview (Esc)
-        elif key == arcade.key.ESCAPE:
-            if self.merge_preview_active:
-                self.merge_preview_active = False
-                self.merge_preview_start_time = None
-
         # Switch focus with slide animation (Tab)
         elif key == arcade.key.TAB:
             if self.controller.has_branched:
@@ -314,7 +308,7 @@ class GameView(arcade.View):
         self.renderer.peek_floor_mode = self.ctrl_held
         self.renderer.draw_frame(frame_spec)
 
-        # Draw objective overlay if active (ESC key)
+        # Draw objective overlay if active (F1 key)
         if self.show_objective and self.objective:
             self.renderer._draw_tutorial(self.objective, close_hint='ESC / Enter / Space 關閉')
 
