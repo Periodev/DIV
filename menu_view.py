@@ -1,31 +1,37 @@
-# menu_view.py - Level selector as arcade.View
+# menu_view.py - Level selector: left-panel list + centre map preview
 
 import arcade
-from render_arc import WINDOW_WIDTH, WINDOW_HEIGHT
+from render_arc import ArcadeRenderer, WINDOW_WIDTH, WINDOW_HEIGHT
+from presentation_model import ViewModelBuilder as _B
 
+# ── Layout (top-down y: 0 = top of window) ───────────────────────────────────
+LEFT_W      = 200       # left panel width
+LPAD        = 12        # text left indent inside panel
 
-BACKGROUND_COLOR = (20, 20, 25)
-TEXT_COLOR = (220, 220, 220)
-TITLE_COLOR = (96, 165, 250)
-HIGHLIGHT_COLOR = (96, 165, 250)
-HIGHLIGHT_BG = (40, 80, 120)
-SECTION_COLOR = (150, 150, 150)
-PLAYED_COLOR = (80, 200, 120)
-TAB_ACTIVE_COLOR = (96, 165, 250)
-TAB_ACTIVE_BG = (30, 60, 100)
-TAB_BG = (35, 40, 50)
+TITLE_CY    = 22        # top-down centre-y of window title bar
+ZONE_HDR_CY = 56        # top-down centre-y of zone header row
+HDIVIDE_Y   = 72        # top-down y of horizontal rule under zone header
+LIST_TOP    = 80        # top-down y of first list-item top edge
+ITEM_H      = 28        # px per list item
 
-TITLE_Y = 670
-TAB_BAR_Y = 625        # zone tab strip top edge
-TAB_HEIGHT = 30
-GRID_START_Y = 578     # first row of level cells
-CELL_HEIGHT = 40
-CELL_GAP_X = 10
-ROW_GAP = 6
-GRID_LEFT = 40
-GRID_RIGHT = 40
-CELL_INDENT = 0
-COLUMNS = 4
+FOOTER_CY   = WINDOW_HEIGHT - 14   # top-down centre-y of footer hint
+
+# Preview position matches the real game's focused-branch grid exactly.
+# Sourced live from presentation_model so they never drift.
+GAME_GRID_PX = _B.GRID_PX    # 480 px  (CELL_SIZE=80 × GRID_SIZE=6)
+GAME_X       = _B.CENTER_X   # 400 px  (focused grid left edge)
+GAME_Y       = _B.CENTER_Y   # 120 px  (focused grid top edge, top-down)
+
+# ── Colours ───────────────────────────────────────────────────────────────────
+BG_C        = (20,  20,  25)
+TEXT_C      = (220, 220, 220)
+MUTED_C     = (120, 120, 130)
+TITLE_C     = (96,  165, 250)
+SEL_BG_C    = (40,  80,  120)
+SEL_TEXT_C  = (96,  165, 250)
+DONE_C      = (80,  200, 120)
+DIV_C       = (50,  55,  65)
+ZONE_C      = (150, 200, 255)
 
 
 def _world_key(level_id: str):
@@ -37,194 +43,198 @@ def _world_key(level_id: str):
 
 
 class MenuView(arcade.View):
+
     def __init__(self, all_levels: list, progress: set, cursor_index: int = 0):
         super().__init__()
         self.levels = sorted(all_levels, key=lambda lv: _world_key(lv["id"]))
         self.progress = progress
-        self.text_cache = {}
+        self.renderer = ArcadeRenderer()
+        self._text_cache: dict = {}
 
-        # Build per-world index groups
-        grouped = {}
+        # Zone grouping
+        grouped: dict = {}
         for idx, lv in enumerate(self.levels):
             w = lv["id"].split("-")[0]
             grouped.setdefault(w, []).append(idx)
-        self.sorted_worlds = sorted(grouped.keys(), key=lambda x: int(x) if x.isdigit() else 999)
+        self.sorted_worlds = sorted(grouped, key=lambda x: int(x) if x.isdigit() else 999)
         self.world_indices = {w: grouped[w] for w in self.sorted_worlds}
 
-        # Derive starting zone from cursor_index
+        # Pre-build initial BranchState for every level (map preview)
+        self._states = self._prebuild_states()
+
+        # Restore cursor + derive zone
         self.current_index = cursor_index
-        start_zone = 0
+        self.current_zone = 0
         for z, w in enumerate(self.sorted_worlds):
             if cursor_index in self.world_indices[w]:
-                start_zone = z
+                self.current_zone = z
                 break
 
-        self.current_zone = -1         # force rebuild
-        self.nav_rows: list = []
-        self.index_pos: dict = {}
-        self._enter_zone(start_zone)
+    # ── Initialisation ────────────────────────────────────────────────────────
+
+    def _prebuild_states(self) -> dict:
+        """Parse every level once and cache its initial BranchState."""
+        from solver_core import parse_dual_layer
+        from game_controller import GameController
+        states = {}
+        for lv in self.levels:
+            try:
+                src  = parse_dual_layer(lv["floor_map"], lv["object_map"])
+                ctrl = GameController(src, solver_mode=True)
+                states[lv["id"]] = ctrl.main_branch
+            except Exception:
+                states[lv["id"]] = None
+        return states
 
     def on_show_view(self):
-        arcade.set_background_color(BACKGROUND_COLOR)
+        arcade.set_background_color(BG_C)
 
-    # ------------------------------------------------------------------ layout
-
-    def _enter_zone(self, zone_idx: int, preferred_col: int = 0):
-        self.current_zone = zone_idx % len(self.sorted_worlds)
-        world = self.sorted_worlds[self.current_zone]
-        indices = self.world_indices[world]
-
-        self.nav_rows = [indices[i:i + COLUMNS] for i in range(0, len(indices), COLUMNS)]
-        self.index_pos = {}
-        for r, row in enumerate(self.nav_rows):
-            for c, idx in enumerate(row):
-                self.index_pos[idx] = (r, c)
-
-        # Only move cursor when it's not already inside this zone
-        if self.current_index not in self.index_pos:
-            first_row = self.nav_rows[0]
-            col = min(preferred_col, len(first_row) - 1)
-            self.current_index = first_row[col]
-
-    # ------------------------------------------------------------------ draw
+    # ── Drawing ───────────────────────────────────────────────────────────────
 
     def on_draw(self):
         self.clear()
 
-        # Title
-        self._draw_text(
-            "DIV - Timeline Puzzle",
-            WINDOW_WIDTH // 2, TITLE_Y,
-            TITLE_COLOR, 26, anchor_x="center", bold=True,
-        )
+        # Window title
+        self._t("DIV - Timeline Puzzle",
+                WINDOW_WIDTH // 2, TITLE_CY, TITLE_C, 18, ax="center")
 
-        # Zone tab bar
-        self._draw_zone_tabs()
+        # Vertical divider between panels
+        arcade.draw_line(LEFT_W, 0, LEFT_W, WINDOW_HEIGHT, DIV_C, 1)
 
-        # Level grid for current zone
-        cell_width = (WINDOW_WIDTH - GRID_LEFT - GRID_RIGHT - (COLUMNS - 1) * CELL_GAP_X) // COLUMNS
-        y = GRID_START_Y
-        for row in self.nav_rows:
-            for col, idx in enumerate(row):
-                x = GRID_LEFT + col * (cell_width + CELL_GAP_X)
-                self._draw_level_item(idx, x, y, cell_width, CELL_HEIGHT)
-            y -= (CELL_HEIGHT + ROW_GAP)
+        self._draw_panel()
+        self._draw_preview()
 
-        # Footer
-        self._draw_text(
-            "WASD / 方向鍵 選關  |  Tab 切換 Zone  |  Enter / Space 進入  |  Esc 離開",
-            WINDOW_WIDTH // 2, 28,
-            SECTION_COLOR, 12, anchor_x="center",
-        )
+        # Footer hint
+        self._t("↑↓ 選關  ←→ / Tab 切 Zone  Enter 進入  Esc 離開",
+                WINDOW_WIDTH // 2, FOOTER_CY, MUTED_C, 11, ax="center")
 
-    def _draw_zone_tabs(self):
-        n = len(self.sorted_worlds)
-        total_w = WINDOW_WIDTH - GRID_LEFT - GRID_RIGHT
-        tab_w = (total_w - (n - 1) * 4) // n
+    def _draw_panel(self):
+        world = self.sorted_worlds[self.current_zone]
+        nz    = len(self.sorted_worlds)
 
-        for i, world in enumerate(self.sorted_worlds):
-            x = GRID_LEFT + i * (tab_w + 4)
-            y = TAB_BAR_Y
-            active = (i == self.current_zone)
-            bg = TAB_ACTIVE_BG if active else TAB_BG
-            arcade.draw_lrbt_rectangle_filled(x, x + tab_w, y - TAB_HEIGHT, y, bg)
-            if active:
-                arcade.draw_lrbt_rectangle_outline(
-                    x, x + tab_w, y - TAB_HEIGHT, y, TAB_ACTIVE_COLOR, 2
+        # Zone header with directional arrows
+        prefix = "← " if self.current_zone > 0 else "   "
+        suffix = " →" if self.current_zone < nz - 1 else "   "
+        self._t(f"{prefix}Zone {world}{suffix}",
+                LEFT_W // 2, ZONE_HDR_CY, ZONE_C, 13, ax="center", ay="center")
+
+        # Horizontal rule under header
+        rule_y = WINDOW_HEIGHT - HDIVIDE_Y
+        arcade.draw_line(0, rule_y, LEFT_W, rule_y, DIV_C, 1)
+
+        # Level list
+        for slot, idx in enumerate(self.world_indices[world]):
+            item_top = LIST_TOP + slot * ITEM_H   # top-down
+            item_cy  = item_top + ITEM_H // 2     # top-down centre
+
+            is_sel  = (idx == self.current_index)
+            is_done = (self.levels[idx]["id"] in self.progress)
+
+            # Selection highlight bar
+            if is_sel:
+                arcade.draw_lrbt_rectangle_filled(
+                    0, LEFT_W,
+                    WINDOW_HEIGHT - item_top - ITEM_H,  # screen bottom
+                    WINDOW_HEIGHT - item_top,            # screen top
+                    SEL_BG_C,
                 )
-            label = f"Zone {world}"
-            color = TAB_ACTIVE_COLOR if active else SECTION_COLOR
-            self._draw_text(
-                label, x + tab_w // 2, y - TAB_HEIGHT // 2,
-                color, 12, anchor_x="center", anchor_y="center", bold=active,
-            )
 
-    def _draw_level_item(self, index, x, y, width, height):
-        level = self.levels[index]
-        is_current = index == self.current_index
-        is_played = level["id"] in self.progress
+            # Done checkmark
+            x = LPAD
+            if is_done:
+                self._t("✓", x, item_cy, DONE_C, 12, ax="left", ay="center")
+                x += 16
 
-        bg = HIGHLIGHT_BG if is_current else (31, 39, 52)
-        arcade.draw_lrbt_rectangle_filled(x, x + width, y - height, y, bg)
+            # Level name
+            color = SEL_TEXT_C if is_sel else TEXT_C
+            size  = 13 if is_sel else 12
+            self._t(self.levels[idx]["name"], x, item_cy,
+                    color, size, ax="left", ay="center")
 
-        cy = y - height // 2
+    def _draw_preview(self):
+        level = self.levels[self.current_index]
+        state = self._states.get(level["id"])
+        if state is None:
+            return
 
-        if is_played:
-            self._draw_text("✓", x + 6, cy, PLAYED_COLOR, 15, anchor_y="center")
+        # Use the same cell_size as the real game's _scaled_cell_size(scale=1.0)
+        cell_sz = GAME_GRID_PX // state.grid_size
+        grid_px = cell_sz * state.grid_size   # may be < GAME_GRID_PX for non-6 grids
 
-        color = HIGHLIGHT_COLOR if is_current else TEXT_COLOR
-        font_size = 14 if is_current else 12
-        self._draw_text(level["name"], x + 26, cy, color, font_size, anchor_y="center")
+        self.renderer.draw_preview(state, GAME_X, GAME_Y, cell_sz)
 
-    def _draw_text(self, text, x, y, color, size,
-                   anchor_x="left", anchor_y="baseline", bold=False):
-        cache_key = f"{text}_{size}_{bold}_{anchor_x}_{anchor_y}"
-        if cache_key not in self.text_cache:
-            self.text_cache[cache_key] = arcade.Text(
-                text, x, y, color, size,
-                anchor_x=anchor_x, anchor_y=anchor_y,
-                font_name="Arial", bold=bold,
+        # Level id + name label just below the grid
+        label_td_y = GAME_Y + grid_px + 14
+        self._t(f"{level['id']}  {level['name']}",
+                GAME_X + grid_px // 2, label_td_y,
+                TEXT_C, 13, ax="center")
+
+    # ── Text helper ───────────────────────────────────────────────────────────
+
+    def _t(self, text, x, td_y, color, size,
+           ax="left", ay="baseline", bold=False):
+        """Draw text.  td_y is top-down y (0 = top of window)."""
+        screen_y = WINDOW_HEIGHT - td_y
+        key = f"{text}|{size}|{bold}|{ax}|{ay}"
+        if key not in self._text_cache:
+            self._text_cache[key] = arcade.Text(
+                text, x, screen_y, color, size,
+                anchor_x=ax, anchor_y=ay,
+                font_name="Microsoft YaHei", bold=bold,
             )
         else:
-            t = self.text_cache[cache_key]
+            t = self._text_cache[key]
             t.x = x
-            t.y = y
+            t.y = screen_y
             t.color = color
-        self.text_cache[cache_key].draw()
+        self._text_cache[key].draw()
 
-    # ------------------------------------------------------------------ input
+    # ── Input ─────────────────────────────────────────────────────────────────
 
     def on_key_press(self, key, modifiers):
         if key == arcade.key.ESCAPE:
             arcade.exit()
-        elif key == arcade.key.TAB:
-            _, col = self.index_pos[self.current_index]
-            delta = -1 if (modifiers & arcade.key.MOD_SHIFT) else 1
-            self._enter_zone(self.current_zone + delta, preferred_col=col)
         elif key in (arcade.key.LEFT, arcade.key.A):
-            self._move_horizontal(-1)
+            self._switch_zone(-1)
         elif key in (arcade.key.RIGHT, arcade.key.D):
-            self._move_horizontal(1)
+            self._switch_zone(1)
+        elif key == arcade.key.TAB:
+            delta = -1 if (modifiers & arcade.key.MOD_SHIFT) else 1
+            self._switch_zone(delta)
         elif key in (arcade.key.UP, arcade.key.W):
-            self._move_vertical(-1)
+            self._move_cursor(-1)
         elif key in (arcade.key.DOWN, arcade.key.S):
-            self._move_vertical(1)
+            self._move_cursor(1)
         elif key in (arcade.key.ENTER, arcade.key.SPACE):
-            self._launch_selected()
+            self._launch()
 
-    def _launch_selected(self):
+    def _switch_zone(self, delta: int):
+        self.current_zone = (self.current_zone + delta) % len(self.sorted_worlds)
+        # Move cursor to first level of the new zone
+        self.current_index = self.world_indices[self.sorted_worlds[self.current_zone]][0]
+
+    def _move_cursor(self, delta: int):
+        indices = self.world_indices[self.sorted_worlds[self.current_zone]]
+        if self.current_index not in indices:
+            self.current_index = indices[0]
+            return
+        pos = indices.index(self.current_index)
+        self.current_index = indices[(pos + delta) % len(indices)]
+
+    def _launch(self):
         from game_window import GameView
         from main import EMPTY_HINTS
-
-        level = self.levels[self.current_index]
+        level    = self.levels[self.current_index]
         level_id = level["id"]
-        first_time = level_id not in self.progress
-
         game_view = GameView(
             level["floor_map"],
             level["object_map"],
             hints=level.get("hints") or EMPTY_HINTS.copy(),
             objective=level.get("objective"),
-            first_time=first_time,
+            first_time=level_id not in self.progress,
             cursor_index=self.current_index,
             all_levels=self.levels,
             progress=self.progress,
             level_id=level_id,
         )
         self.window.show_view(game_view)
-
-    def _move_horizontal(self, delta):
-        row_idx, col_idx = self.index_pos[self.current_index]
-        row = self.nav_rows[row_idx]
-        new_col = col_idx + delta
-        if 0 <= new_col < len(row):
-            self.current_index = row[new_col]
-
-    def _move_vertical(self, delta):
-        row_idx, col_idx = self.index_pos[self.current_index]
-        row_count = len(self.nav_rows)
-        if row_count == 0:
-            return
-        new_row_idx = (row_idx + delta) % row_count
-        new_row = self.nav_rows[new_row_idx]
-        self.current_index = new_row[min(col_idx, len(new_row) - 1)]

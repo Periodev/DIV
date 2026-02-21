@@ -411,6 +411,42 @@ class ArcadeRenderer:
                 if terrain == TerrainType.NO_CARRY:
                     pass
 
+    def draw_preview(self, state: 'BranchState', start_x: int, start_y: int, cell_size: int):
+        """Draw a static level preview for the menu.
+
+        Uses the same rendering pipeline as the real game (_build_terrain_spritelist,
+        _draw_entity, _draw_player) so colours and styles are identical.
+        start_x / start_y use the same top-down convention as all other draw methods.
+        """
+        self.set_grid_size(state.grid_size)
+
+        # Terrain — SpriteList path (same as _draw_branch)
+        terrain_sprites, dynamic_cells = self._build_terrain_spritelist(
+            state, start_x, start_y, cell_size,
+            goal_active=False, has_branched=False, highlight_branch_point=False,
+        )
+        terrain_sprites.draw()
+        self._draw_dynamic_terrain(start_x, start_y, state, cell_size,
+                                   dynamic_cells, has_branched=False)
+
+        # Boxes (same sort order as _draw_branch)
+        for e in sorted(state.entities, key=lambda e: e.z):
+            if e.uid != 0 and e.type == EntityType.BOX:
+                self._draw_entity(start_x, start_y, e, state, cell_size, is_focused=True)
+
+        # Player — same colour logic as _draw_branch (focused, not holding)
+        held_items = state.get_held_items()
+        held_uid = held_items[0] if held_items else None
+        if held_uid:
+            player_color = BOX_COLORS[(held_uid - 1) % len(BOX_COLORS)]
+        else:
+            player_color = BLUE
+        self._draw_player(start_x, start_y, state.player,
+                          player_color, held_uid, cell_size)
+
+        # Grid lines
+        self._draw_grid_lines(start_x, start_y, state, cell_size)
+
     def draw_frame(self, spec: 'FrameViewSpec'):
         """Main entry point for rendering a complete frame.
 
