@@ -14,7 +14,7 @@ _OPPOSITES = {'U': 'D', 'D': 'U', 'L': 'R', 'R': 'L'}
 
 
 def _build_system_action_table() -> dict:
-    """Precompute legal system actions (V/C/T/I) by coarse state flags."""
+    """Precompute legal system actions (V/C/T/F) by coarse state flags."""
     table = {}
     for has_branched in (False, True):
         for on_branch_point in (False, True):
