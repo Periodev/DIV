@@ -571,10 +571,7 @@ class ArcadeRenderer:
             self._draw_merge_preview_hint(spec.merge_preview_active)
         if spec.show_merge_hint and merge_hint_on:
             # Show inherit hint if inherit mode enabled and inherit is available
-            self._draw_merge_hint(
-                spec.inherit_mode_enabled and spec.show_inherit_indicator,
-                spec.merge_hint_active
-            )
+            self._draw_merge_hint(spec.inherit_mode_enabled and spec.show_inherit_indicator)
 
         # 4. Debug info hidden by request.
 
@@ -1615,7 +1612,7 @@ class ArcadeRenderer:
         self._draw_cached_text(cache_key, text, text_x, text_y, text_color,
                               font_size=16, anchor_x="center", anchor_y="center")
 
-    def _draw_merge_hint(self, can_inherit: bool = False, is_active: bool = True):
+    def _draw_merge_hint(self, can_inherit: bool = False):
         """Draw 'V 合併' or 'V 繼承合併' hint at center bottom.
 
         Args:
@@ -1630,13 +1627,7 @@ class ArcadeRenderer:
         x = (WINDOW_WIDTH - box_width) // 2
         y = (WINDOW_HEIGHT + GRID_HEIGHT) // 2 + 15
 
-        if not is_active:
-            bg_color = (60, 60, 60, 200)
-            border_color = (120, 120, 120)
-            text_color = (180, 180, 180)
-            text = 'V 合併'
-            cache_key = 'merge_hint_disabled'
-        elif can_inherit:
+        if can_inherit:
             # Orange inherit merge hint
             bg_color = (255, 140, 0, 200)
             border_color = (255, 180, 0)
