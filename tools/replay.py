@@ -4,7 +4,7 @@
 #   python replay.py <level_id> <sequence> [--pause]
 #   python replay.py 1-1 RRRDVTLLL
 
-import sys
+import sys, os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from level_constructor import MAIN_LEVELS
 
 

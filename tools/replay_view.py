@@ -1,5 +1,6 @@
 # replay_view.py - Visual replay using existing renderer
 
+import sys, os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import arcade
 from render_arc import ArcadeRenderer, WINDOW_WIDTH, WINDOW_HEIGHT
 from presentation_model import ViewModelBuilder

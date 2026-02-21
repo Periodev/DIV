@@ -74,7 +74,7 @@ class MenuView(arcade.View):
 
     def _prebuild_states(self) -> dict:
         """Parse every level once and cache its initial BranchState."""
-        from solver_core import parse_dual_layer
+        from map_parser import parse_dual_layer
         from game_controller import GameController
         states = {}
         for lv in self.levels:

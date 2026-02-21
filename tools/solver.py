@@ -6,7 +6,7 @@
 #   python solver.py 1-3 80
 #   python solver.py 3-9 80 --fast
 
-import sys
+import sys, os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import time
 from level_constructor import MAIN_LEVELS
 from solver_core import solve, solve_fast

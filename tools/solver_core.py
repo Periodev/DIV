@@ -1,5 +1,6 @@
 # solver_core.py - BFS / Fast(A*) level solver (pure logic, no Arcade dependency)
 
+import sys, os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from collections import deque
 from array import array
 from heapq import heappop, heappush
