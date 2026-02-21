@@ -8,6 +8,11 @@ class GameLogic:
     @staticmethod
     def can_move(state: BranchState, direction: tuple) -> bool:
         """Check if movement is possible"""
+        # Player trapped inside a grounded box (e.g. after overlap merge drops a box
+        # onto the player's own tile).  Must Undo to escape.
+        if state.has_box_at(state.player.pos):
+            return False
+
         px, py = state.player.pos
         dx, dy = direction
         new_pos = (px + dx, py + dy)
