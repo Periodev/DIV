@@ -303,12 +303,22 @@ class Timeline:
         result.grid_size = main.grid_size
         result.next_uid = max(main.next_uid, sub.next_uid)
 
-        # Find items held by sub (non-focused) branch that need to be dropped
-        sub_held_uids = set(sub.get_held_items())
+        # Find items held by each branch
+        main_held_uids = set(main.get_held_items())
+        sub_held_uids  = set(sub.get_held_items())
 
-        # Collect all non-player entities from both branches
-        all_entities = [e for e in main.entities if e.uid != 0] + \
-                       [e for e in sub.entities if e.uid != 0]
+        # If both branches hold the same uid, sub's held copy is redundant —
+        # main's instance wins. Exclude sub's copy so it neither drops as a
+        # shadow nor triggers a spurious fusion.
+        both_held_uids = main_held_uids & sub_held_uids
+        sub_only_held  = sub_held_uids - both_held_uids
+
+        # Collect all non-player entities from both branches,
+        # skipping sub's held copies of any uid that main also holds.
+        main_entities = [e for e in main.entities if e.uid != 0]
+        sub_entities  = [e for e in sub.entities  if e.uid != 0
+                         if not (e.uid in both_held_uids and e.holder == 0)]
+        all_entities  = main_entities + sub_entities
 
         # Group by (uid, pos, z) - include z so underground and grounded instances are kept separate.
         # Fusion paradox: if one branch fused boxes that still exist in the other branch,
@@ -323,13 +333,11 @@ class Timeline:
             best = max(instances, key=Timeline._entity_priority)
             copied = Timeline._copy_entity(best)
 
-            # Drop sub's held items at sub player's position
-            # Only drop if the box was held by sub (at sub's position)
-            if copied.uid in sub_held_uids and copied.holder == 0 and copied.pos == sub.player.pos:
+            # Drop sub's exclusive held items at sub player's position
+            if copied.uid in sub_only_held and copied.holder == 0 and copied.pos == sub.player.pos:
                 copied.holder = None
                 copied.z = 0
                 copied.collision = 1
-                # pos is already sub.player.pos
 
             result.entities.append(copied)
 
