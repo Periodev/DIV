@@ -606,7 +606,7 @@ class ArcadeRenderer:
         if spec.show_merge_preview_hint and merge_hint_on:
             self._draw_merge_preview_hint(spec.merge_preview_active)
         if spec.show_merge_hint and merge_hint_on:
-            self._draw_merge_hint(spec.show_fetch_indicator)
+            self._draw_merge_hint()
 
         # 4. Debug info hidden by request.
 
@@ -1587,44 +1587,19 @@ class ArcadeRenderer:
         self._draw_cached_text(cache_key, text, text_x, text_y, text_color,
                               font_size=16, anchor_x="center", anchor_y="center")
 
-    def _draw_merge_hint(self, can_fetch: bool = False):
-        """Draw 'V 合併' or 'V 抓取合併' hint at center bottom.
-
-        Args:
-            can_fetch: If True, show orange "V 抓取合併" instead of blue "V 合併"
-        """
-        from presentation_model import ViewModelBuilder
-        B = ViewModelBuilder
-
-        # Match timeline hint ("V 分裂") size and position: just below map
+    def _draw_merge_hint(self):
+        """Draw 'V 合併' hint at center bottom."""
         box_width = 150
         box_height = 40
         x = (WINDOW_WIDTH - box_width) // 2
         y = (WINDOW_HEIGHT + GRID_HEIGHT) // 2 + 15
 
-        if can_fetch:
-            # Orange fetch merge hint
-            bg_color = (255, 140, 0, 200)
-            border_color = (255, 180, 0)
-            text_color = (60,30,0)
-            text = 'V 抓取合併'
-            cache_key = 'fetch_merge_hint'
-        else:
-            # Blue normal merge hint
-            bg_color = (40, 80, 120, 200)
-            border_color = (75, 150, 200)
-            text_color = (255, 255, 255)
-            text = 'V 合併'
-            cache_key = 'merge_hint'
+        self._draw_rect_filled(x, y, box_width, box_height, (40, 80, 120, 200))
+        self._draw_rect_outline(x, y, box_width, box_height, (75, 150, 200), 2)
 
-        # Background
-        self._draw_rect_filled(x, y, box_width, box_height, bg_color)
-        self._draw_rect_outline(x, y, box_width, box_height, border_color, 2)
-
-        # Text
         text_x = x + box_width // 2
         text_y = self._flip_y(y + box_height // 2)
-        self._draw_cached_text(cache_key, text, text_x, text_y, text_color,
+        self._draw_cached_text('merge_hint', 'V 合併', text_x, text_y, (255, 255, 255),
                               font_size=16, anchor_x="center", anchor_y="center")
 
     def _draw_merge_progress(self, progress: float):
@@ -1723,7 +1698,7 @@ class ArcadeRenderer:
         self._draw_rect_outline(x, y, indicator_width, indicator_height, border_color, 2)
 
         # Text — orange = fetchable, gray = not fetchable
-        text = "F 抓取"
+        text = "F 抓取合併"
         text_x = x + indicator_width // 2
         text_y = self._flip_y(y + indicator_height // 2)
 
