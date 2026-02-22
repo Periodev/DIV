@@ -68,9 +68,7 @@ class GameView(arcade.View):
         self.held_keys = set()
         self.alt_held = False
         self.ctrl_held = False
-
-        # Global fetch mode toggle (Shift key)
-        self.fetch_mode_enabled = False
+        self.c_held = False  # C key: peek floor
 
         # Menu navigation context (for returning to menu)
         self.cursor_index = cursor_index
@@ -167,7 +165,10 @@ class GameView(arcade.View):
             self.alt_held = True
             return
         if key in (arcade.key.LCTRL, arcade.key.RCTRL):
-            self.ctrl_held = True
+            self.ctrl_held = True  # Only active in M preview mode (fetch lines)
+            return
+        if key == arcade.key.C:
+            self.c_held = True    # Peek floor
             return
         # Movement keys - add to held set
         if key in (arcade.key.UP, arcade.key.DOWN, arcade.key.LEFT, arcade.key.RIGHT,
@@ -203,23 +204,16 @@ class GameView(arcade.View):
         if self.controller.collapsed or self.controller.victory:
             return
 
-        # Toggle fetch mode (F key)
+        # Fetch merge (F key — direct action, no toggle)
         if key == arcade.key.F:
-            if not self.hints.get('fetch', True):
-                self.fetch_mode_enabled = False
-                return
-            self.fetch_mode_enabled = not self.fetch_mode_enabled
+            if self.controller.has_branched and self.hints.get('fetch', True):
+                self.controller.try_fetch_merge()
             return
 
         # Branch / Merge (V key)
         if key == arcade.key.V:
             if self.controller.has_branched:
-                if self.fetch_mode_enabled and self.hints.get('fetch', True):
-                    # Fallback to normal merge when fetch merge is not possible.
-                    if not self.controller.try_fetch_merge():
-                        self.controller.try_merge()
-                else:
-                    self.controller.try_merge()
+                self.controller.try_merge()
             else:
                 self.controller.try_branch()
             # Clear any lingering merge preview state
@@ -268,6 +262,9 @@ class GameView(arcade.View):
         if key in (arcade.key.LCTRL, arcade.key.RCTRL):
             self.ctrl_held = False
             return
+        if key == arcade.key.C:
+            self.c_held = False
+            return
         if key in self.held_keys:
             self.held_keys.discard(key)
 
@@ -300,15 +297,15 @@ class GameView(arcade.View):
             slide_progress,
             self.slide_direction,
             self.merge_preview_active,
-            self.merge_preview_active and self.fetch_mode_enabled and self.controller.can_show_fetch_hint(),
+            self.merge_preview_active and self.ctrl_held and self.controller.can_show_fetch_hint(),
             merge_preview_progress,
             merge_preview_swap_progress,
-            self.fetch_mode_enabled,
+            self.controller.can_show_fetch_hint(),  # capability indicator (not a mode toggle)
             self.hints
         )
 
         # Render
-        self.renderer.peek_floor_mode = self.ctrl_held
+        self.renderer.peek_floor_mode = self.c_held
         self.renderer.draw_frame(frame_spec)
 
         # Draw objective overlay if active (F1 key)

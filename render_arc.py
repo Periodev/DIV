@@ -164,7 +164,7 @@ class ArcadeRenderer:
 
         # Fixed help hint (bottom-left corner)
         self._help_hint = arcade.Text(
-            "[ESC] 返回選單   [F1] 關卡說明    [R] 重置   [Z] 回復   [H] 提示",
+            "[ESC] 返回選單   [F1] 關卡說明    [R] 重置   [Z] 回復   [C] 透視",
             15, 15,
             (160, 160, 160),  # Light gray for dark background
             font_size=12,
@@ -606,13 +606,12 @@ class ArcadeRenderer:
         if spec.show_merge_preview_hint and merge_hint_on:
             self._draw_merge_preview_hint(spec.merge_preview_active)
         if spec.show_merge_hint and merge_hint_on:
-            # Show fetch hint if fetch mode enabled and fetch is available
-            self._draw_merge_hint(spec.fetch_mode_enabled and spec.show_fetch_indicator)
+            self._draw_merge_hint(spec.show_fetch_indicator)
 
         # 4. Debug info hidden by request.
 
-        # 5. Draw fetch mode indicator (fetch hints)
-        if self.current_hints.get('fetch', True):
+        # 5. Draw fetch mode indicator (fetch hints) — only when branched
+        if self.current_hints.get('fetch', True) and spec.has_branched:
             self._draw_fetch_mode_indicator(spec.fetch_mode_enabled)
 
         # 6. Overlay (collapsed or victory)
@@ -1723,8 +1722,8 @@ class ArcadeRenderer:
         # Border
         self._draw_rect_outline(x, y, indicator_width, indicator_height, border_color, 2)
 
-        # Text
-        text = "F 抓取: ON" if enabled else "F 抓取: OFF"
+        # Text — orange = fetchable, gray = not fetchable
+        text = "F 抓取"
         text_x = x + indicator_width // 2
         text_y = self._flip_y(y + indicator_height // 2)
 
