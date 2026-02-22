@@ -100,7 +100,7 @@ object_map = '''
 # Support 支撐
 
 objective = '''
-對著方塊按住 [Ctrl] 可看到方塊下方的地面
+對著方塊按住 [C] 可看到方塊下方的地面
 '''
 
 floor_map = '''
