@@ -1705,8 +1705,8 @@ class ArcadeRenderer:
         # that aligns with the main grid's left edge when centered.
         x = ViewModelBuilder.CENTER_X
         
-        # Position 20 pixels from the bottom of the window (to match other hint boxes).
-        y = WINDOW_HEIGHT - 60
+        # Align vertically with V 分裂/合併 hint box.
+        y = (WINDOW_HEIGHT + GRID_HEIGHT) // 2 + 15
 
         bg_color = (60, 60, 60, 200) # Dark gray background
         text_color = LIGHT_GRAY
