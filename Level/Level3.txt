@@ -204,9 +204,9 @@ object_map = '''
 floor_map = '''
 ######
 G.##..
-SHHH..
+SHHHV.
 ##H.##
-##.x##
+##.v##
 ######
 '''
 
