@@ -17,19 +17,19 @@ TEST_HINTS = {
 USE_INLINE_MAP = True
 
 floor_map = '''
-####S
-####v
-Gv.cc
-####S
-#####
+.#S#.
+ScvcS
+#c#c#
+..#..
+G.#.v
 '''
 
 object_map = '''
 .....
 .....
-P.B..
 .....
-.....
+.B.B.
+....P
 '''
 
 
