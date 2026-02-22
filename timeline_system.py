@@ -338,6 +338,11 @@ class Timeline:
                 copied.holder = None
                 copied.z = 0
                 copied.collision = 1
+                # If main already has this uid grounded at the same position,
+                # the drop would create a duplicate — discard sub's copy.
+                if any(e.uid == copied.uid and e.pos == copied.pos
+                       for e in result.entities):
+                    continue
 
             result.entities.append(copied)
 
