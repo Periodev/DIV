@@ -148,11 +148,12 @@ static func build(
 	var hint_text: String  = hint_d.get("text", "") as String
 	var ih = null
 	if hint_text != "":
+		var is_inset: bool = bool(hint_d.get("is_drop", hint_d.get("is_inset", false)))
 		ih = InteractionHint.new(
 			hint_text,
 			hint_d.get("color", Color.WHITE) as Color,
 			hint_d.get("target_pos", Vector2i(-1, -1)) as Vector2i,
-			false)
+			is_inset)
 
 	# Build main branch spec (DIV 0)
 	spec.main_branch = _make_spec(

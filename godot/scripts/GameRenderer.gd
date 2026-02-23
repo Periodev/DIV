@@ -29,6 +29,7 @@ const COLOR_PLAYER_RING  := Color8(120, 145, 170)
 const COLOR_TEXT         := Color8(0, 0, 0)
 const COLOR_FLASH        := Color8(255, 80, 80)
 const COLOR_TITLE        := Color8(220, 220, 220)
+const COLOR_INTERACT_GRAY := Color8(100, 100, 100)
 
 # Per-UID box colour palette (matches Python BOX_COLORS, uid-1 mod 10)
 const BOX_COLORS: Array[Color] = [
@@ -88,14 +89,14 @@ func _draw() -> void:
 	# Grid lines (over terrain, under entities)
 	_draw_grid(gs, eff, a)
 
-	# Interaction hint highlight
-	if _spec.interaction_hint != null:
-		var ih = _spec.interaction_hint
-		if ih.target_pos != Vector2i(-1, -1):
-			_draw_hint_highlight(ih.target_pos, ih.color, eff, a)
-
 	# Entities
 	_draw_entities(eff, a)
+
+	# Interaction hint highlight (draw over entities)
+	if _spec.interaction_hint != null:
+		var ih: PresentationModel.InteractionHint = _spec.interaction_hint as PresentationModel.InteractionHint
+		if ih != null and ih.target_pos != Vector2i(-1, -1):
+			_draw_hint_highlight(ih.target_pos, ih.text, ih.color, ih.is_inset, eff, a)
 
 	# Flash overlay
 	if _spec.flash_intensity > 0.0 and _spec.flash_pos != Vector2i(-1, -1):
@@ -468,14 +469,115 @@ func _find_first_entity_by_uid(uid: int) -> Entity:
 # Interaction hint highlight
 # ---------------------------------------------------------------------------
 
-func _draw_hint_highlight(pos: Vector2i, col: Color, eff: float, a: float) -> void:
+func _draw_hint_highlight(
+		pos: Vector2i, hint_text: String, _hint_col: Color, is_inset: bool, eff: float, a: float) -> void:
 	var rect := Rect2(pos.x * eff, pos.y * eff, eff, eff)
-	var fill := col
-	fill.a    = 0.25 * a
-	draw_rect(rect, fill)
-	var border := col
-	border.a   = 0.85 * a
-	draw_rect(rect, border, false, maxf(2.0, 2.0 * (eff / 80.0)))
+	var cell_scale: float = eff / 80.0
+	var center: Vector2 = rect.get_center()
+	var font_size: int = maxi(10, int(12.0 * cell_scale))
+	var white_col: Color = Color(1.0, 1.0, 1.0, a)
+	var black_col: Color = Color(0.0, 0.0, 0.0, a)
+	var outline_px: float = maxf(1.0, round(2.0 * cell_scale))
+
+	# Hint text (matches render_arc layout).
+	_draw_center_text_outlined(
+		"[SPACE]",
+		Vector2(center.x, center.y + 8.0 * cell_scale),
+		font_size,
+		white_col,
+		black_col,
+		outline_px)
+	_draw_center_text_outlined(
+		hint_text,
+		Vector2(center.x, center.y - 12.0 * cell_scale),
+		font_size,
+		white_col,
+		black_col,
+		outline_px)
+
+	# Drop hint: only show inset dashed mini-frame, no lock corners.
+	if is_inset:
+		var margin: float = maxf(2.0, 8.0 * cell_scale)
+		var inset_rect: Rect2 = rect.grow(-margin)
+		var frame_col: Color = COLOR_INTERACT_GRAY
+		frame_col.a = 0.9 * a
+		_draw_dashed_rect(
+			_pixel_snap_rect(inset_rect),
+			frame_col,
+			float(maxi(1, int(round(2.0 * cell_scale)))))
+		return
+
+	var corner_color: Color = COLOR_INTERACT_GRAY
+	corner_color.a = 0.95 * a
+	_draw_lock_corners(
+		rect,
+		corner_color,
+		maxf(8.0, 24.0 * cell_scale),
+		maxf(1.0, 4.0 * cell_scale),
+		-3.0 * cell_scale)
+
+
+func _draw_lock_corners(
+		rect: Rect2, col: Color, corner_size: float, thickness: float, margin: float = 0.0) -> void:
+	var r: Rect2 = _pixel_snap_rect(rect.grow(margin))
+	var left: float = r.position.x
+	var top: float = r.position.y
+	var right: float = r.position.x + r.size.x
+	var bottom: float = r.position.y + r.size.y
+	var size: float = minf(corner_size, minf(r.size.x * 0.5, r.size.y * 0.5))
+
+	# Top-left
+	draw_line(Vector2(left, top), Vector2(left + size, top), col, thickness, true)
+	draw_line(Vector2(left, top), Vector2(left, top + size), col, thickness, true)
+	# Top-right
+	draw_line(Vector2(right - size, top), Vector2(right, top), col, thickness, true)
+	draw_line(Vector2(right, top), Vector2(right, top + size), col, thickness, true)
+	# Bottom-left
+	draw_line(Vector2(left, bottom - size), Vector2(left, bottom), col, thickness, true)
+	draw_line(Vector2(left, bottom), Vector2(left + size, bottom), col, thickness, true)
+	# Bottom-right
+	draw_line(Vector2(right - size, bottom), Vector2(right, bottom), col, thickness, true)
+	draw_line(Vector2(right, bottom - size), Vector2(right, bottom), col, thickness, true)
+
+
+func _draw_center_text_outlined(
+		text: String,
+		center: Vector2,
+		font_size: int,
+		text_col: Color,
+		outline_col: Color,
+		outline_width: float) -> void:
+	if text == "":
+		return
+	var font: Font = ThemeDB.fallback_font
+	if font == null:
+		return
+	var ascent: float = font.get_ascent(font_size)
+	var descent: float = font.get_descent(font_size)
+	var baseline_y: float = center.y + (ascent - descent) * 0.5
+	var offsets: Array[Vector2] = [
+		Vector2(-outline_width, 0.0), Vector2(outline_width, 0.0),
+		Vector2(0.0, -outline_width), Vector2(0.0, outline_width),
+		Vector2(-outline_width, -outline_width), Vector2(-outline_width, outline_width),
+		Vector2(outline_width, -outline_width), Vector2(outline_width, outline_width),
+	]
+	for off in offsets:
+		draw_string(
+			font,
+			Vector2(center.x + off.x, baseline_y + off.y),
+			text,
+			HORIZONTAL_ALIGNMENT_CENTER,
+			-1.0,
+			font_size,
+			outline_col)
+	draw_string(
+		font,
+		Vector2(center.x, baseline_y),
+		text,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		-1.0,
+		font_size,
+		text_col)
 
 
 # ---------------------------------------------------------------------------
