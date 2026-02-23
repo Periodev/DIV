@@ -57,7 +57,7 @@ func _ready() -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
     if not (event is InputEventKey):
         return
-    var ke := event as InputEventKey
+    var ke: InputEventKey = event as InputEventKey
     if not ke.pressed or ke.echo:
         return
 
@@ -79,8 +79,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 
 func _draw() -> void:
-    var w := size.x
-    var h := size.y
+    var w: float = size.x
+    var h: float = size.y
 
     draw_rect(Rect2(0, 0, w, h), BG_C)
     draw_line(Vector2(LEFT_W, 0), Vector2(LEFT_W, h), DIV_C, 1.0)
@@ -88,7 +88,7 @@ func _draw() -> void:
     _draw_text_td("DIV", w * 0.5, TITLE_CY, TITLE_C, 18, HORIZONTAL_ALIGNMENT_CENTER, true)
     _draw_panel()
 
-    var footer := "Arrows/WASD: select   Tab: zone   Enter/Space: start   Esc: exit"
+    var footer: String = "Arrows/WASD: select   Tab: zone   Enter/Space: start   Esc: exit"
     _draw_text_td(footer, w * 0.5, FOOTER_CY, MUTED_C, 11, HORIZONTAL_ALIGNMENT_CENTER, true)
     _draw_preview_label()
 
@@ -99,9 +99,9 @@ func _draw_panel() -> void:
         return
 
     var world: int = sorted_worlds[current_zone]
-    var world_text := "Zone %d" % world
-    var prefix := "< " if current_zone > 0 else "  "
-    var suffix := " >" if current_zone < sorted_worlds.size() - 1 else "  "
+    var world_text: String = "Zone %d" % world
+    var prefix: String = "< " if current_zone > 0 else "  "
+    var suffix: String = " >" if current_zone < sorted_worlds.size() - 1 else "  "
     _draw_text_td(prefix + world_text + suffix, LEFT_W * 0.5, ZONE_HDR_CY, ZONE_C, 13, HORIZONTAL_ALIGNMENT_CENTER, true)
 
     draw_line(Vector2(0, HDIVIDE_Y), Vector2(LEFT_W, HDIVIDE_Y), DIV_C, 1.0)
@@ -109,23 +109,23 @@ func _draw_panel() -> void:
     var indices: Array = world_indices.get(world, [])
     for slot in indices.size():
         var idx: int = indices[slot]
-        var item_top := LIST_TOP + slot * ITEM_H
-        var item_cy := item_top + ITEM_H * 0.5
-        var selected := idx == current_index
+        var item_top: float = LIST_TOP + slot * ITEM_H
+        var item_cy: float = item_top + ITEM_H * 0.5
+        var selected: bool = idx == current_index
 
         if selected:
             draw_rect(Rect2(0, item_top, LEFT_W, ITEM_H), SEL_BG_C)
 
-        var level := levels[idx] as Dictionary
-        var level_id := str(level.get("id", ""))
-        var x := LPAD
+        var level: Dictionary = levels[idx] as Dictionary
+        var level_id: String = str(level.get("id", ""))
+        var x: float = LPAD
         if GameData.is_level_played(level_id):
             _draw_text_td("Done", x, item_cy, DONE_C, 10, HORIZONTAL_ALIGNMENT_LEFT, true)
             x += 38.0
 
-        var name_text := str(level.get("name", "Level %d" % idx))
-        var name_color := SEL_TEXT_C if selected else TEXT_C
-        var name_size := 13 if selected else 12
+        var name_text: String = str(level.get("name", "Level %d" % idx))
+        var name_color: Color = SEL_TEXT_C if selected else TEXT_C
+        var name_size: int = 13 if selected else 12
         _draw_text_td(name_text, x, item_cy, name_color, name_size, HORIZONTAL_ALIGNMENT_LEFT, true)
 
 
@@ -133,14 +133,14 @@ func _draw_preview_label() -> void:
     if levels.is_empty() or current_index < 0 or current_index >= levels.size():
         return
 
-    var level := levels[current_index] as Dictionary
-    var level_id := str(level.get("id", ""))
-    var name_text := str(level.get("name", ""))
-    var grid_px := preview.get_grid_px()
+    var level: Dictionary = levels[current_index] as Dictionary
+    var level_id: String = str(level.get("id", ""))
+    var name_text: String = str(level.get("name", ""))
+    var grid_px: int = preview.get_grid_px()
     if grid_px <= 0:
         grid_px = PREVIEW_GRID_PX
 
-    var label_y := (PREVIEW_Y + grid_px + FOOTER_CY) * 0.5
+    var label_y: float = (PREVIEW_Y + grid_px + FOOTER_CY) * 0.5
     _draw_text_td(
         "%s  %s" % [level_id, name_text],
         PREVIEW_X + grid_px * 0.5,
@@ -163,11 +163,11 @@ func _draw_text_td(
 ) -> void:
     if text == "":
         return
-    var font := ThemeDB.fallback_font
+    var font: Font = ThemeDB.fallback_font
     if font == null:
         return
 
-    var baseline_y := y_td
+    var baseline_y: float = y_td
     if center_y:
         baseline_y += font_size * 0.35
 
@@ -175,18 +175,18 @@ func _draw_text_td(
 
 
 func _load_levels_if_needed() -> void:
-    var needs_rebuild := GameData.all_levels.is_empty()
+    var needs_rebuild: bool = GameData.all_levels.is_empty()
     if not needs_rebuild:
         var first_raw = GameData.all_levels[0]
         if typeof(first_raw) != TYPE_DICTIONARY:
             needs_rebuild = true
         else:
-            var first := first_raw as Dictionary
+            var first: Dictionary = first_raw as Dictionary
             needs_rebuild = not first.has("id") or not first.has("zone")
 
     if needs_rebuild:
         var built_levels: Array = []
-        var zone_files := [
+        var zone_files: Array[String] = [
             "res://Level/Level0.txt",
             "res://Level/Level1.txt",
             "res://Level/Level2.txt",
@@ -195,9 +195,9 @@ func _load_levels_if_needed() -> void:
         ]
 
         for world in zone_files.size():
-            var parsed := MapParser.parse_level_resource(zone_files[world])
+            var parsed: Array = MapParser.parse_level_resource(zone_files[world])
             for i in parsed.size():
-                var lv := (parsed[i] as Dictionary).duplicate(true)
+                var lv: Dictionary = (parsed[i] as Dictionary).duplicate(true)
                 lv["id"] = "%d-%d" % [world, i + 1]
                 lv["zone"] = world
                 built_levels.append(lv)
@@ -212,7 +212,7 @@ func _build_zone_groups() -> void:
     world_indices.clear()
 
     for i in levels.size():
-        var level := levels[i] as Dictionary
+        var level: Dictionary = levels[i] as Dictionary
         var world: int = int(level.get("zone", 0))
         if not world_indices.has(world):
             world_indices[world] = []
@@ -220,7 +220,7 @@ func _build_zone_groups() -> void:
         arr.append(i)
         world_indices[world] = arr
 
-    var worlds := world_indices.keys()
+    var worlds: Array = world_indices.keys()
     worlds.sort()
     for w in worlds:
         sorted_worlds.append(int(w))
@@ -268,7 +268,7 @@ func _move_cursor(delta: int) -> void:
     if indices.is_empty():
         return
 
-    var pos := indices.find(current_index)
+    var pos: int = indices.find(current_index)
     if pos == -1:
         current_index = indices[0]
     else:
@@ -283,14 +283,14 @@ func _refresh_preview() -> void:
         preview.set_state(null)
         return
 
-    var level := levels[current_index] as Dictionary
-    var level_id := str(level.get("id", ""))
+    var level: Dictionary = levels[current_index] as Dictionary
+    var level_id: String = str(level.get("id", ""))
     if level_id == "":
         preview.set_state(null)
         return
 
     if not preview_states.has(level_id):
-        var source := MapParser.parse_dual_layer(
+        var source: LevelSource = MapParser.parse_dual_layer(
             str(level.get("floor_map", "")),
             str(level.get("object_map", ""))
         )
@@ -299,7 +299,7 @@ func _refresh_preview() -> void:
     preview.position = Vector2(PREVIEW_X, PREVIEW_Y)
     preview.map_pixel_size = PREVIEW_GRID_PX
     var state_obj = preview_states[level_id]
-    var state := state_obj as BranchState
+    var state: BranchState = state_obj as BranchState
     preview.set_state(state)
 
 
