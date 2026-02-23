@@ -50,7 +50,7 @@ const BORDER_W := 3.0
 # Current spec (set by draw_frame)
 # ---------------------------------------------------------------------------
 
-var _spec = null  # PresentationModel.BranchViewSpec or null
+var _spec: PresentationModel.BranchViewSpec = null
 
 
 # ---------------------------------------------------------------------------
@@ -59,7 +59,7 @@ var _spec = null  # PresentationModel.BranchViewSpec or null
 
 ## Called by GameScene every time the visual state changes.
 ## Sets this node's position from the spec and triggers a redraw.
-func draw_frame(spec) -> void:
+func draw_frame(spec: PresentationModel.BranchViewSpec) -> void:
 	_spec = spec
 	if spec != null:
 		position = Vector2(spec.pos_x, spec.pos_y)
@@ -74,10 +74,10 @@ func _draw() -> void:
 	if _spec == null or _spec.state == null:
 		return
 
-	var gs  := _spec.state.grid_size
-	var eff := _spec.cell_size * _spec.scale   # effective pixel size per cell
-	var gpx := eff * gs                         # total panel size in pixels
-	var a   := _spec.alpha
+	var gs:  int   = _spec.state.grid_size
+	var eff: float = _spec.cell_size * _spec.scale   # effective pixel size per cell
+	var gpx: float = eff * gs                         # total panel size in pixels
+	var a:   float = _spec.alpha
 
 	# Background
 	draw_rect(Rect2(0, 0, gpx, gpx), _col(COLOR_BG, a))
@@ -90,7 +90,7 @@ func _draw() -> void:
 
 	# Interaction hint highlight
 	if _spec.interaction_hint != null:
-		var ih := _spec.interaction_hint
+		var ih = _spec.interaction_hint
 		if ih.target_pos != Vector2i(-1, -1):
 			_draw_hint_highlight(ih.target_pos, ih.color, eff, a)
 
@@ -113,7 +113,7 @@ func _draw() -> void:
 # ---------------------------------------------------------------------------
 
 func _draw_terrain(gs: int, eff: float, a: float) -> void:
-	var blink_on := (_spec.animation_frame % 2) == 0
+	var blink_on: bool = (_spec.animation_frame % 2) == 0
 
 	for y in gs:
 		for x in gs:
@@ -350,7 +350,7 @@ func _draw_border(gpx: float, a: float) -> void:
 
 func _draw_title(gpx: float, a: float) -> void:
 	var col  := _col(COLOR_TITLE, a)
-	var eff  := float(_spec.cell_size) * _spec.scale
+	var eff: float = _spec.cell_size * _spec.scale
 	var size := int(16.0 * (eff / 80.0))
 	_draw_center_text(_spec.title, Vector2(gpx * 0.5, -8.0), size, col)
 
