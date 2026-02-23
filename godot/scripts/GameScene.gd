@@ -35,6 +35,10 @@ const SLIDE_DURATION := 0.25  # seconds
 var merge_preview_active: bool = false
 var peek_floor_active: bool = false
 
+# Held-key movement (mirrors Python game_window.py on_update + move_cooldown)
+const MOVE_REPEAT_DELAY := 0.10  # seconds between repeats (~6 frames @ 60 fps)
+var _move_cooldown: float = 0.0
+
 
 # ---------------------------------------------------------------------------
 # Lifecycle
@@ -86,6 +90,7 @@ func _start_level(idx: int) -> void:
 	_set_peek_floor_mode(false)
 	slide_progress        = 0.0
 	slide_active          = false
+	_move_cooldown        = 0.0
 
 	_apply_frame_spec()
 	_update_ui()
@@ -117,6 +122,17 @@ func _process(delta: float) -> void:
 			not controller.falling_boxes.is_empty() or
 			controller.failed_action_pos != Vector2i(-1, -1)):
 		needs_redraw = true
+
+	# Held-key movement — mirrors Python game_window.py on_update + move_cooldown.
+	# Movement keys are NOT handled in _input(); they are polled here every frame
+	# so that holding a direction gives smooth continuous movement.
+	if controller != null and not controller.collapsed and not controller.victory:
+		_move_cooldown -= delta
+		if _move_cooldown <= 0.0:
+			var dir := _get_held_direction()
+			if dir != Vector2i(0, 0):
+				controller.handle_move(dir)
+				_move_cooldown = MOVE_REPEAT_DELAY
 
 	if needs_redraw:
 		_apply_frame_spec()
@@ -165,14 +181,7 @@ func _input(event: InputEvent) -> void:
 		return
 
 	match key:
-		KEY_W, KEY_UP:
-			controller.handle_move(Vector2i(0, -1))
-		KEY_S, KEY_DOWN:
-			controller.handle_move(Vector2i(0, 1))
-		KEY_A, KEY_LEFT:
-			controller.handle_move(Vector2i(-1, 0))
-		KEY_D, KEY_RIGHT:
-			controller.handle_move(Vector2i(1, 0))
+		# Movement keys are polled in _process() for held-key repeat — not here.
 
 		KEY_V:
 			if controller.has_branched:
@@ -228,6 +237,19 @@ func _start_slide() -> void:
 	slide_direction = 1 if controller.current_focus == 1 else -1
 	slide_progress  = 0.0
 	slide_active    = true
+
+
+# Returns the movement direction currently held by the player, or (0,0) if none.
+func _get_held_direction() -> Vector2i:
+	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
+		return Vector2i(0, -1)
+	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN):
+		return Vector2i(0, 1)
+	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
+		return Vector2i(-1, 0)
+	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
+		return Vector2i(1, 0)
+	return Vector2i(0, 0)
 
 
 # ---------------------------------------------------------------------------
