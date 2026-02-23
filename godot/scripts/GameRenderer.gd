@@ -25,6 +25,8 @@ const COLOR_NO_CARRY     := Color8(255, 100, 100)
 const COLOR_BRANCH       := Color8(50, 150, 50)
 const COLOR_GRID         := Color8(200, 200, 200)
 const COLOR_PLAYER       := Color8(0, 100, 200)
+const COLOR_PLAYER_INACTIVE := Color8(200, 200, 200)
+const COLOR_PLAYER_RING  := Color8(120, 145, 170)
 const COLOR_TEXT         := Color8(0, 0, 0)
 const COLOR_FLASH        := Color8(255, 80, 80)
 const COLOR_TITLE        := Color8(220, 220, 220)
@@ -95,7 +97,7 @@ func _draw() -> void:
 			_draw_hint_highlight(ih.target_pos, ih.color, eff, a)
 
 	# Entities
-	_draw_entities(gs, eff, a)
+	_draw_entities(eff, a)
 
 	# Flash overlay
 	if _spec.flash_intensity > 0.0 and _spec.flash_pos != Vector2i(-1, -1):
@@ -221,66 +223,80 @@ func _draw_grid(gs: int, eff: float, a: float) -> void:
 # Entities
 # ---------------------------------------------------------------------------
 
-func _draw_entities(gs: int, eff: float, a: float) -> void:
-	var player := _spec.state.get_player()
+func _draw_entities(eff: float, a: float) -> void:
+	var player: Entity = _spec.state.get_player()
+	var overlap_labels: Dictionary = _build_overlap_labels()
 
-	# Boxes first, player on top
+	# Boxes first (sorted by z), player on top.
+	var boxes: Array[Entity] = []
 	for e in _spec.state.entities:
-		var ent := e as Entity
-		if ent.uid == 0:
+		var ent: Entity = e as Entity
+		if ent == null:
 			continue
-		_draw_box(ent, eff, a)
+		if ent.uid != 0 and ent.type == Enums.EntityType.BOX:
+			boxes.append(ent)
+	boxes.sort_custom(func(left: Entity, right: Entity) -> bool: return left.z < right.z)
+
+	for ent in boxes:
+		_draw_box(ent, eff, a, overlap_labels)
 
 	_draw_player(player, eff, a)
 
 
-func _draw_box(ent: Entity, eff: float, a: float) -> void:
-	if ent.z == -1:
-		return  # underground / inside hole
-
+func _draw_box(ent: Entity, eff: float, a: float, overlap_labels: Dictionary) -> void:
 	var cell_scale := eff / 80.0
 	var is_held    := ent.z == 1
 	var is_shadow  := _spec.state.is_shadow(ent.uid)
+	var is_transparent_branch: bool = _spec.alpha < 0.9
 
-	# Padding: 9px base, increase when falling for visual shrink
-	var pad_base := 9.0
-	var pad      := pad_base * cell_scale
+	# Padding: normal box=9px, underground box=15px.
+	var pad_base: float = 15.0 if ent.z == -1 else 9.0
+	var pad: float = pad_base * cell_scale
 
 	# Falling animation: shift downward
-	var fall_key := [ent.uid, ent.pos]
+	var fall_key: Array = [ent.uid, ent.pos]
 	var fall_prog: float = _spec.falling_progress.get(fall_key, -1.0)
-	var fall_off := 0.0
+	var fall_off: float = 0.0
 	if fall_prog >= 0.0:
 		fall_off  = fall_prog * eff
-		pad      += 6.0 * cell_scale * fall_prog  # shrink while falling
+		var animated_pad: float = (9.0 + (15.0 - 9.0) * fall_prog) * cell_scale
+		pad = animated_pad
 
-	var rect := Rect2(
+	var rect: Rect2 = Rect2(
 		ent.pos.x * eff + pad,
 		ent.pos.y * eff + pad + fall_off,
 		eff - pad * 2, eff - pad * 2)
 
 	# Box colour
-	var base_col := BOX_COLORS[(ent.uid - 1) % BOX_COLORS.size()]
+	var base_col: Color = BOX_COLORS[(ent.uid - 1) % BOX_COLORS.size()]
 	var fill_col: Color
-	if is_shadow:
+	if is_transparent_branch:
+		fill_col = _desaturate(base_col, 0.3)
+		fill_col.a = a
+	elif is_shadow and not _spec.is_focused:
 		fill_col = _desaturate(base_col, 0.5)
-		fill_col.a = 0.65 * a
-	elif is_held:
-		fill_col = base_col.lightened(0.25)
 		fill_col.a = a
 	else:
 		fill_col = base_col
 		fill_col.a = a
+	if is_held:
+		fill_col = fill_col.lightened(0.1)
 
 	draw_rect(rect, fill_col)
 
-	# Shadow gets a dashed outline
-	if is_shadow:
-		draw_rect(rect, _col(Color8(255, 255, 255, 100), a), false, maxf(1.0, 2.0 * cell_scale))
+	# Border: none for transparent branch, dashed for shadow, solid otherwise.
+	var border_color: Color = _col(COLOR_TEXT, a)
+	var border_thick: float = maxf(1.0, 2.0 * cell_scale)
+	if not is_transparent_branch:
+		if is_shadow:
+			_draw_dashed_rect(rect, border_color, border_thick)
+		else:
+			draw_rect(rect, border_color, false, border_thick)
 
-	# UID label
+	# Label: fusion label > overlap label > uid
+	var label: String = _entity_label(ent, overlap_labels)
 	_draw_center_text(
-		str(ent.uid), rect.get_center(),
+		label, rect.get_center(),
 		int(14.0 * cell_scale), _col(COLOR_TEXT, a))
 
 
@@ -288,22 +304,159 @@ func _draw_player(player: Entity, eff: float, a: float) -> void:
 	if player == null:
 		return
 	var cell_scale := eff / 80.0
-	var center := Vector2(
+	var center: Vector2 = Vector2(
 		player.pos.x * eff + eff * 0.5,
 		player.pos.y * eff + eff * 0.5)
-	var radius := eff * 0.20
+	var held_items: Array[int] = _spec.state.get_held_items()
+	var held_uid: int = held_items[0] if not held_items.is_empty() else -1
 
-	var col := _col(COLOR_PLAYER, a)
-	if _spec.is_focused:
-		col = _col(Color8(50, 140, 240), a)  # slightly brighter when focused
-	draw_circle(center, radius, col)
+	var dx: int = player.direction.x
+	var dy: int = player.direction.y
+	var arrow_offset: float = 8.0 * cell_scale
+	var arrow_center: Vector2 = Vector2(
+		center.x + dx * arrow_offset,
+		center.y + dy * arrow_offset)
 
-	# Direction arrow
-	var dx := float(player.direction.x)
-	var dy := float(player.direction.y)
-	var tip := center + Vector2(dx, dy) * radius
-	draw_line(center, tip, _col(Color8(255, 255, 255, 200), a),
-		maxf(2.0, 3.0 * cell_scale), true)
+	if held_uid != -1:
+		# Holding item: player becomes box-shaped with held UID color.
+		var color_index: int = (held_uid - 1) % BOX_COLORS.size()
+		var player_color: Color = _col(BOX_COLORS[color_index], a)
+
+		var pad: float = 5.0 * cell_scale
+		var rect: Rect2 = Rect2(
+			player.pos.x * eff + pad,
+			player.pos.y * eff + pad,
+			eff - pad * 2.0,
+			eff - pad * 2.0)
+		draw_rect(rect, player_color)
+		draw_rect(rect, _col(COLOR_TEXT, a), false, maxf(1.0, 3.0 * cell_scale))
+
+		var held_label: String = str(held_uid)
+		var held_entity: Entity = _find_first_entity_by_uid(held_uid)
+		if held_entity != null and held_entity.fused_from.size() > 0:
+			var pieces: Array[String] = []
+			for raw_uid in held_entity.fused_from:
+				pieces.append(str(raw_uid))
+			held_label = "+".join(pieces)
+		_draw_center_text(held_label, center, int(14.0 * cell_scale), _col(COLOR_TEXT, a))
+		_draw_arrow(arrow_center, dx, dy, int(21.0 * cell_scale), _col(COLOR_TEXT, a))
+	else:
+		# Normal player: focused blue fill, non-focused gray ring.
+		var radius: float = eff * 0.20
+		if _spec.is_focused:
+			draw_circle(center, radius, _col(COLOR_PLAYER, a))
+		else:
+			draw_arc(center, radius, 0.0, TAU, 28, _col(COLOR_PLAYER_RING, a), maxf(2.0, 3.0 * cell_scale), true)
+		_draw_arrow(arrow_center, dx, dy, int(21.0 * cell_scale), _col(COLOR_TEXT, a))
+
+
+func _draw_arrow(center: Vector2, dx: int, dy: int, size: int, col: Color) -> void:
+	var half: float = float(size) * 0.5
+	var points: PackedVector2Array
+	if dy < 0:  # up
+		points = PackedVector2Array([
+			Vector2(center.x, center.y - size),
+			Vector2(center.x - half, center.y - half),
+			Vector2(center.x + half, center.y - half),
+		])
+	elif dy > 0:  # down
+		points = PackedVector2Array([
+			Vector2(center.x, center.y + size),
+			Vector2(center.x - half, center.y + half),
+			Vector2(center.x + half, center.y + half),
+		])
+	elif dx < 0:  # left
+		points = PackedVector2Array([
+			Vector2(center.x - size, center.y),
+			Vector2(center.x - half, center.y - half),
+			Vector2(center.x - half, center.y + half),
+		])
+	else:  # right
+		points = PackedVector2Array([
+			Vector2(center.x + size, center.y),
+			Vector2(center.x + half, center.y - half),
+			Vector2(center.x + half, center.y + half),
+		])
+	draw_colored_polygon(points, col)
+
+
+func _draw_dashed_rect(rect: Rect2, col: Color, width: float) -> void:
+	var dash: float = 5.0
+	var gap: float = 5.0
+	var step: float = dash + gap
+
+	var x0: float = rect.position.x
+	var y0: float = rect.position.y
+	var x1: float = rect.position.x + rect.size.x
+	var y1: float = rect.position.y + rect.size.y
+
+	var i: float = 0.0
+	while i < rect.size.x:
+		var seg_end_x: float = minf(i + dash, rect.size.x)
+		draw_line(Vector2(x0 + i, y0), Vector2(x0 + seg_end_x, y0), col, width, true)
+		draw_line(Vector2(x0 + i, y1), Vector2(x0 + seg_end_x, y1), col, width, true)
+		i += step
+
+	i = 0.0
+	while i < rect.size.y:
+		var seg_end_y: float = minf(i + dash, rect.size.y)
+		draw_line(Vector2(x0, y0 + i), Vector2(x0, y0 + seg_end_y), col, width, true)
+		draw_line(Vector2(x1, y0 + i), Vector2(x1, y0 + seg_end_y), col, width, true)
+		i += step
+
+
+func _build_overlap_labels() -> Dictionary:
+	var by_pos: Dictionary = {}
+	for e in _spec.state.entities:
+		var ent: Entity = e as Entity
+		if ent == null:
+			continue
+		if ent.uid == 0 or ent.type != Enums.EntityType.BOX:
+			continue
+		var key: String = _entity_stack_key(ent.pos, ent.z)
+		if not by_pos.has(key):
+			by_pos[key] = {}
+		var seen: Dictionary = by_pos[key]
+		seen[ent.uid] = true
+		by_pos[key] = seen
+
+	var labels: Dictionary = {}
+	for key in by_pos.keys():
+		var seen: Dictionary = by_pos[key]
+		if seen.size() < 2:
+			continue
+		var uids: Array = seen.keys()
+		uids.sort()
+		var parts: Array[String] = []
+		for uid in uids:
+			parts.append(str(uid))
+		labels[key] = "|".join(parts)
+	return labels
+
+
+func _entity_label(ent: Entity, overlap_labels: Dictionary) -> String:
+	if ent.fused_from.size() > 0:
+		var pieces: Array[String] = []
+		for uid in ent.fused_from:
+			pieces.append(str(uid))
+		return "+".join(pieces)
+
+	var key: String = _entity_stack_key(ent.pos, ent.z)
+	if overlap_labels.has(key):
+		return str(overlap_labels[key])
+	return str(ent.uid)
+
+
+func _entity_stack_key(pos: Vector2i, z: int) -> String:
+	return "%d|%d|%d" % [pos.x, pos.y, z]
+
+
+func _find_first_entity_by_uid(uid: int) -> Entity:
+	for e in _spec.state.entities:
+		var ent: Entity = e as Entity
+		if ent != null and ent.uid == uid:
+			return ent
+	return null
 
 
 # ---------------------------------------------------------------------------
