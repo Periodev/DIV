@@ -1,2 +1,11 @@
 *.pyc
 .claude/settings.local.json
+
+# Build output
+build/
+dist/
+*.spec
+
+# Local game progress
+level_unlock.csv
+progress.json
