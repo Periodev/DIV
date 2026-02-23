@@ -506,12 +506,13 @@ func get_timeline_hint() -> String:
 	var o_held     := other.get_held_items()
 
 	if not f_held.is_empty() and not o_held.is_empty():
-		# Check if they hold different items
-		var different := false
-		for uid in f_held:
-			if not o_held.has(uid):
-				different = true
-				break
+		# Check if the held sets are unequal (symmetric — matches Python's focused_held != other_held)
+		var different := f_held.size() != o_held.size()
+		if not different:
+			for uid in f_held:
+				if not o_held.has(uid):
+					different = true
+					break
 		if different:
 			return "F 抓取合併"
 
