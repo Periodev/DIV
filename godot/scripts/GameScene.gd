@@ -36,8 +36,14 @@ var merge_preview_active: bool = false
 var peek_floor_active: bool = false
 
 # Held-key movement (mirrors Python game_window.py on_update + move_cooldown)
-const MOVE_REPEAT_DELAY := 0.10  # seconds between repeats (~6 frames @ 60 fps)
+const MOVE_REPEAT_DELAY := 0.20  # seconds between repeats (~6 frames @ 60 fps)
 var _move_cooldown: float = 0.0
+const DEBUG_VICTORY := true
+
+
+func _vlog(msg: String) -> void:
+	if DEBUG_VICTORY:
+		print("[VictoryDebug] %s" % msg)
 
 
 # ---------------------------------------------------------------------------
@@ -149,19 +155,24 @@ func _input(event: InputEvent) -> void:
 	if controller.collapsed or controller.victory:
 		if event is InputEventKey:
 			var end_key := event as InputEventKey
-			if end_key.pressed:
-				match end_key.keycode:
-					KEY_R:
-						controller.reset()
-						_full_refresh()
-					KEY_Z:
-						controller.undo()
-						_full_refresh()
-					KEY_SPACE, KEY_ESCAPE:
-						var gd = _get_game_data()
-						if gd != null:
-							gd.selected_level_idx = current_level_idx
-						get_tree().change_scene_to_file("res://scenes/level_select.tscn")
+			# Guard against key-repeat from the same key that caused win/lose.
+			if not end_key.pressed or end_key.echo:
+				return
+			# End-screen hotkeys are only valid when the overlay is actually shown.
+			if not overlay_label.visible:
+				return
+			match end_key.keycode:
+				KEY_R:
+					controller.reset()
+					_full_refresh()
+				KEY_Z:
+					controller.undo()
+					_full_refresh()
+				KEY_SPACE, KEY_ESCAPE:
+					var gd = _get_game_data()
+					if gd != null:
+						gd.selected_level_idx = current_level_idx
+					get_tree().change_scene_to_file("res://scenes/level_select.tscn")
 		return
 
 	if not (event is InputEventKey):
@@ -257,13 +268,20 @@ func _get_held_direction() -> Vector2i:
 # ---------------------------------------------------------------------------
 
 func _on_state_changed() -> void:
+	_vlog("state_changed(before): collapsed=%s victory=%s branched=%s overlay=%s" % [
+		controller.collapsed, controller.victory, controller.has_branched, overlay_label.visible
+	])
 	controller.update_physics()
 	controller.check_victory()
+	_vlog("state_changed(after): collapsed=%s victory=%s branched=%s overlay=%s" % [
+		controller.collapsed, controller.victory, controller.has_branched, overlay_label.visible
+	])
 	_apply_frame_spec()
 	_update_ui()
 
 
 func _on_victory() -> void:
+	_vlog("_on_victory fired")
 	var level_dict: Dictionary = all_levels[current_level_idx] \
 		if current_level_idx >= 0 and current_level_idx < all_levels.size() else {}
 	var level_id: String = str(level_dict.get("id", ""))
@@ -282,8 +300,12 @@ func _on_collapse() -> void:
 
 
 func _full_refresh() -> void:
-	overlay_backdrop.visible = false
-	overlay_label.visible = false
+	var should_hide_overlay := controller == null or (not controller.victory and not controller.collapsed)
+	if should_hide_overlay:
+		overlay_backdrop.visible = false
+		overlay_label.visible = false
+	else:
+		_vlog("_full_refresh called in end-state; keep overlay visible")
 	_apply_frame_spec()
 	_update_ui()
 
