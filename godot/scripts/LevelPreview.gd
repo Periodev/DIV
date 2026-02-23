@@ -73,7 +73,7 @@ func _draw_terrain_cell(rect: Rect2, terrain_type: int, pos: Vector2i, cell_scal
 			draw_rect(rect, COLOR_WALL)
 		Enums.TerrainType.GOAL:
 			draw_rect(rect, COLOR_GOAL)
-			_draw_center_text("Goal", rect.get_center(), int(14 * cell_scale), COLOR_TEXT)
+			_draw_text_in_rect("Goal", rect, int(14 * cell_scale), COLOR_TEXT)
 		Enums.TerrainType.SWITCH:
 			var active: bool = branch_state.switch_activated(pos)
 			draw_rect(rect, COLOR_SWITCH_ON if active else COLOR_SWITCH_OFF)
@@ -128,7 +128,7 @@ func _draw_boxes(cell_size: int, cell_scale: float) -> void:
 		var fill: Color = BOX_COLORS[(ent.uid - 1) % BOX_COLORS.size()]
 		draw_rect(rect, fill)
 		draw_rect(rect, COLOR_TEXT, false, max(1.0, 2.0 * cell_scale))
-		_draw_center_text(str(ent.uid), rect.get_center(), int(14 * cell_scale), COLOR_TEXT)
+		_draw_text_in_rect(str(ent.uid), rect, int(14 * cell_scale), COLOR_TEXT)
 
 
 func _draw_player(cell_size: int) -> void:
@@ -173,12 +173,32 @@ func _draw_center_text(text: String, center: Vector2, font_size: int, color: Col
 	if font == null or text == "":
 		return
 	var ascent: float = font.get_ascent(font_size)
+	var descent: float = font.get_descent(font_size)
+	var baseline_y: float = center.y + (ascent - descent) * 0.5
 	draw_string(
 		font,
-		Vector2(center.x, center.y + ascent * 0.35),
+		Vector2(center.x, baseline_y),
 		text,
 		HORIZONTAL_ALIGNMENT_CENTER,
 		-1.0,
+		font_size,
+		color
+	)
+
+
+func _draw_text_in_rect(text: String, rect: Rect2, font_size: int, color: Color) -> void:
+	var font: Font = ThemeDB.fallback_font
+	if font == null or text == "":
+		return
+	var ascent: float = font.get_ascent(font_size)
+	var descent: float = font.get_descent(font_size)
+	var baseline_y: float = rect.position.y + (rect.size.y + ascent - descent) * 0.5
+	draw_string(
+		font,
+		Vector2(rect.position.x, baseline_y),
+		text,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		rect.size.x,
 		font_size,
 		color
 	)

@@ -19,7 +19,6 @@ const COLOR_SWITCH_OFF   := Color8(200, 200, 200)
 const COLOR_SWITCH_ON    := Color8(255, 200, 0)
 const COLOR_SWITCH_INNER := Color8(90, 90, 90)
 const COLOR_SWITCH_ON_B  := Color8(160, 120, 0)       # dark amber border (on)
-const COLOR_SWITCH_OFF_B := Color8(160, 160, 160)     # border (off)
 const COLOR_HOLE         := Color8(60, 40, 20)
 const COLOR_NO_CARRY     := Color8(255, 100, 100)
 const COLOR_BRANCH       := Color8(50, 150, 50)
@@ -80,7 +79,6 @@ func _draw() -> void:
 	var eff: float = _spec.cell_size * _spec.scale   # effective pixel size per cell
 	var gpx: float = eff * gs                         # total panel size in pixels
 	var a:   float = _spec.alpha
-
 	# Background
 	draw_rect(Rect2(0, 0, gpx, gpx), _col(COLOR_BG, a))
 
@@ -144,7 +142,7 @@ func _draw_terrain_cell(
 				draw_rect(br, _col(COLOR_GOAL_BORDER, a), false, maxf(1.0, 4.0 * cell_scale))
 			else:
 				draw_rect(rect, _col(COLOR_GOAL_OFF, a))
-			_draw_center_text("Goal", rect.get_center(), int(14.0 * cell_scale), _col(COLOR_TEXT, a))
+			_draw_text_in_rect("Goal", rect, int(14.0 * cell_scale), _col(COLOR_TEXT, a))
 
 		Enums.TerrainType.SWITCH:
 			var active := _spec.state.switch_activated(pos)
@@ -213,7 +211,7 @@ func _draw_grid(gs: int, eff: float, a: float) -> void:
 				var ir     := Rect2(
 					rect.position.x + inset, rect.position.y + inset,
 					eff - inset * 2, eff - inset * 2)
-				var bc := COLOR_SWITCH_ON_B if active else COLOR_SWITCH_OFF_B
+				var bc := COLOR_SWITCH_ON_B if active else COLOR_SWITCH_INNER
 				draw_rect(ir, _col(bc, a), false, maxf(1.0, 3.0 * cell_scale))
 			else:
 				draw_rect(rect, _col(COLOR_GRID, a), false, thick)
@@ -251,7 +249,7 @@ func _draw_box(ent: Entity, eff: float, a: float, overlap_labels: Dictionary) ->
 
 	# Padding: normal box=9px, underground box=15px.
 	var pad_base: float = 15.0 if ent.z == -1 else 9.0
-	var pad: float = pad_base * cell_scale
+	var pad: float = float(int(round(pad_base * cell_scale)))
 
 	# Falling animation: shift downward
 	var fall_key: Array = [ent.uid, ent.pos]
@@ -266,6 +264,7 @@ func _draw_box(ent: Entity, eff: float, a: float, overlap_labels: Dictionary) ->
 		ent.pos.x * eff + pad,
 		ent.pos.y * eff + pad + fall_off,
 		eff - pad * 2, eff - pad * 2)
+	var snapped_rect: Rect2 = _pixel_snap_rect(rect)
 
 	# Box colour
 	var base_col: Color = BOX_COLORS[(ent.uid - 1) % BOX_COLORS.size()]
@@ -282,22 +281,20 @@ func _draw_box(ent: Entity, eff: float, a: float, overlap_labels: Dictionary) ->
 	if is_held:
 		fill_col = fill_col.lightened(0.1)
 
-	draw_rect(rect, fill_col)
+	draw_rect(snapped_rect, fill_col)
 
 	# Border: none for transparent branch, dashed for shadow, solid otherwise.
 	var border_color: Color = _col(COLOR_TEXT, a)
-	var border_thick: float = maxf(1.0, 2.0 * cell_scale)
+	var border_thick: float = float(maxi(1, int(round(2.0 * cell_scale))))
 	if not is_transparent_branch:
 		if is_shadow:
-			_draw_dashed_rect(rect, border_color, border_thick)
+			_draw_dashed_rect(snapped_rect, border_color, border_thick)
 		else:
-			draw_rect(rect, border_color, false, border_thick)
+			draw_rect(snapped_rect, border_color, false, border_thick)
 
 	# Label: fusion label > overlap label > uid
 	var label: String = _entity_label(ent, overlap_labels)
-	_draw_center_text(
-		label, rect.get_center(),
-		int(14.0 * cell_scale), _col(COLOR_TEXT, a))
+	_draw_text_in_rect(label, snapped_rect, int(14.0 * cell_scale), _col(COLOR_TEXT, a))
 
 
 func _draw_player(player: Entity, eff: float, a: float) -> void:
@@ -338,7 +335,7 @@ func _draw_player(player: Entity, eff: float, a: float) -> void:
 			for raw_uid in held_entity.fused_from:
 				pieces.append(str(raw_uid))
 			held_label = "+".join(pieces)
-		_draw_center_text(held_label, center, int(14.0 * cell_scale), _col(COLOR_TEXT, a))
+		_draw_text_in_rect(held_label, rect, int(14.0 * cell_scale), _col(COLOR_TEXT, a))
 		_draw_arrow(arrow_center, dx, dy, int(21.0 * cell_scale), _col(COLOR_TEXT, a))
 	else:
 		# Normal player: focused blue fill, non-focused gray ring.
@@ -403,6 +400,14 @@ func _draw_dashed_rect(rect: Rect2, col: Color, width: float) -> void:
 		draw_line(Vector2(x0, y0 + i), Vector2(x0, y0 + seg_end_y), col, width, true)
 		draw_line(Vector2(x1, y0 + i), Vector2(x1, y0 + seg_end_y), col, width, true)
 		i += step
+
+
+func _pixel_snap_rect(rect: Rect2) -> Rect2:
+	return Rect2(
+		round(rect.position.x),
+		round(rect.position.y),
+		round(rect.size.x),
+		round(rect.size.y))
 
 
 func _build_overlap_labels() -> Dictionary:
@@ -530,15 +535,36 @@ func _desaturate(c: Color, amount: float) -> Color:
 func _draw_center_text(text: String, center: Vector2, font_size: int, col: Color) -> void:
 	if text == "":
 		return
-	var font := ThemeDB.fallback_font
+	var font: Font = ThemeDB.fallback_font
 	if font == null:
 		return
-	var ascent := font.get_ascent(font_size)
+	var ascent: float = font.get_ascent(font_size)
+	var descent: float = font.get_descent(font_size)
+	var baseline_y: float = center.y + (ascent - descent) * 0.5
 	draw_string(
 		font,
-		Vector2(center.x, center.y + ascent * 0.35),
+		Vector2(center.x, baseline_y),
 		text,
 		HORIZONTAL_ALIGNMENT_CENTER,
 		-1.0,
+		font_size,
+		col)
+
+
+func _draw_text_in_rect(text: String, rect: Rect2, font_size: int, col: Color) -> void:
+	if text == "":
+		return
+	var font: Font = ThemeDB.fallback_font
+	if font == null:
+		return
+	var ascent: float = font.get_ascent(font_size)
+	var descent: float = font.get_descent(font_size)
+	var baseline_y: float = rect.position.y + (rect.size.y + ascent - descent) * 0.5
+	draw_string(
+		font,
+		Vector2(rect.position.x, baseline_y),
+		text,
+		HORIZONTAL_ALIGNMENT_CENTER,
+		rect.size.x,
 		font_size,
 		col)

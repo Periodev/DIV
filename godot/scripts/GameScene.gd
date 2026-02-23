@@ -9,6 +9,7 @@ class_name GameScene
 @onready var renderer0: GameRenderer = $Renderer0  # DIV 0 / MAIN
 @onready var renderer1: GameRenderer = $Renderer1  # DIV 1
 @onready var hint_label: Label        = $UI/HintLabel
+@onready var overlay_backdrop: ColorRect = $UI/OverlayBackdrop
 @onready var overlay_label: Label     = $UI/OverlayLabel
 
 # ---------------------------------------------------------------------------
@@ -66,6 +67,7 @@ func _start_level(idx: int) -> void:
 	controller.victory_achieved.connect(_on_victory)
 	controller.collapse_occurred.connect(_on_collapse)
 
+	overlay_backdrop.visible = false
 	overlay_label.visible = false
 	merge_preview_active  = false
 	slide_progress        = 0.0
@@ -214,18 +216,21 @@ func _on_state_changed() -> void:
 func _on_victory() -> void:
 	var level_dict: Dictionary = all_levels[current_level_idx] \
 		if current_level_idx >= 0 and current_level_idx < all_levels.size() else {}
-	var level_id := str(level_dict.get("id", ""))
+	var level_id: String = str(level_dict.get("id", ""))
 	GameData.mark_level_played(level_id)
+	overlay_backdrop.visible = true
 	overlay_label.text    = "LEVEL COMPLETE!\nR: restart   ]: next level   ESC: level select"
 	overlay_label.visible = true
 
 
 func _on_collapse() -> void:
+	overlay_backdrop.visible = true
 	overlay_label.text    = "FALL DOWN!\nR: restart   Z: undo"
 	overlay_label.visible = true
 
 
 func _full_refresh() -> void:
+	overlay_backdrop.visible = false
 	overlay_label.visible = false
 	_apply_frame_spec()
 	_update_ui()

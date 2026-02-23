@@ -73,6 +73,8 @@ const CENTER_Y  := (WINDOW_H - TARGET_PANEL) / 2    # 120
 const RIGHT_X   := CENTER_X + TARGET_PANEL + GAP    # 910
 const LEFT_X    := CENTER_X - GAP - SIDE_GRID       # 34
 const SIDE_Y    := (WINDOW_H - SIDE_GRID) / 2       # 192
+const BORDER_FOCUSED := Color(0.72, 0.72, 0.72)
+const BORDER_UNFOCUSED := Color(0.4, 0.4, 0.4)
 
 
 # ---------------------------------------------------------------------------
@@ -157,7 +159,7 @@ static func build(
 		controller.main_branch,
 		focus == 0,
 		"DIV 0" if has_branched else "MAIN",
-		Color(1.0, 0.55, 0.0) if (focus == 0) else Color(0.4, 0.4, 0.4),
+		BORDER_FOCUSED if (focus == 0) else BORDER_UNFOCUSED,
 		ih if (focus == 0) else null,
 		spec.timeline_hint if (focus == 0) else "",
 		has_branched, merge_preview_active, cell_sz,
@@ -173,7 +175,7 @@ static func build(
 			controller.sub_branch,
 			focus == 1,
 			"DIV 1",
-			Color(0.0, 0.86, 1.0) if (focus == 1) else Color(0.4, 0.4, 0.4),
+			BORDER_FOCUSED if (focus == 1) else BORDER_UNFOCUSED,
 			ih if (focus == 1) else null,
 			spec.timeline_hint if (focus == 1) else "",
 			has_branched, merge_preview_active, cell_sz,
