@@ -169,4 +169,4 @@ if __name__ == "__main__":
     level  = _load_level(sys.argv[1])
     moves  = sys.argv[2] if len(sys.argv) > 2 else ""
     trace  = run_trace(level, moves)
-    print(json.dumps(trace, indent=2, ensure_ascii=False))
+    print(json.dumps(trace, indent=2, sort_keys=True, ensure_ascii=False))
