@@ -1,5 +1,5 @@
 # GameScene.gd - Main game scene controller
-# Wires input → GameController → GameRenderer
+# Wires input -> GameController -> GameRenderer
 # Mirrors the game loop in Python's game_window.py / render_arc.py
 extends Node2D
 class_name GameScene
@@ -206,10 +206,10 @@ func _input(event: InputEvent) -> void:
 			GameData.selected_level_idx = current_level_idx
 			get_tree().change_scene_to_file("res://scenes/level_select.tscn")
 
-		KEY_BRACKETRIGHT:  # ] → next level
+		KEY_BRACKETRIGHT:  # ] -> next level
 			_start_level(current_level_idx + 1)
 			GameData.selected_level_idx = current_level_idx
-		KEY_BRACKETLEFT:   # [ → previous level
+		KEY_BRACKETLEFT:   # [ -> previous level
 			_start_level(current_level_idx - 1)
 			GameData.selected_level_idx = current_level_idx
 
@@ -219,7 +219,7 @@ func _input(event: InputEvent) -> void:
 # ---------------------------------------------------------------------------
 
 func _start_slide() -> void:
-	# direction: 1 = switching 0→1 (focus became 1), -1 = switching 1→0
+	# direction: 1 = switching 0->1 (focus became 1), -1 = switching 1->0
 	slide_direction = 1 if controller.current_focus == 1 else -1
 	slide_progress  = 0.0
 	slide_active    = true
@@ -238,12 +238,16 @@ func _on_state_changed() -> void:
 
 
 func _on_victory() -> void:
-	overlay_label.text    = "✓ 過關！\n\nR：重置　]：下一關"
+	var level_dict: Dictionary = all_levels[current_level_idx] if current_level_idx >= 0 and current_level_idx < all_levels.size() else {}
+	var level_id := str(level_dict.get("id", ""))
+	GameData.mark_level_played(level_id)
+
+	overlay_label.text    = "LEVEL COMPLETE!\nR: restart   ]: next level   ESC: level select"
 	overlay_label.visible = true
 
 
 func _on_collapse() -> void:
-	overlay_label.text    = "✗ 墜落！\n\nR：重置　Z：上一步"
+	overlay_label.text    = "FALL DOWN!\nR: restart   Z: undo"
 	overlay_label.visible = true
 
 
@@ -309,12 +313,12 @@ func _apply_static_layout(focus: int) -> void:
 func _apply_slide_layout(_focus: int) -> void:
 	var t: float = _ease_in_out(slide_progress)
 
-	if slide_direction == 1:  # focus 0→1: DIV0 shrinks left, DIV1 grows to center
+	if slide_direction == 1:  # focus 0->1: DIV0 shrinks left, DIV1 grows to center
 		renderer0.position    = Vector2(int(CENTER_X + (LEFT_X  - CENTER_X) * t), int(CENTER_Y + (SIDE_Y   - CENTER_Y) * t))
 		renderer0.panel_scale = FOCUS_SCALE + (SIDE_SCALE  - FOCUS_SCALE) * t
 		renderer1.position    = Vector2(int(RIGHT_X  + (CENTER_X - RIGHT_X)  * t), int(SIDE_Y   + (CENTER_Y - SIDE_Y)   * t))
 		renderer1.panel_scale = SIDE_SCALE  + (FOCUS_SCALE - SIDE_SCALE)  * t
-	else:  # focus 1→0: DIV0 grows to center, DIV1 shrinks right
+	else:  # focus 1->0: DIV0 grows to center, DIV1 shrinks right
 		renderer0.position    = Vector2(int(LEFT_X   + (CENTER_X - LEFT_X)   * t), int(SIDE_Y   + (CENTER_Y - SIDE_Y)   * t))
 		renderer0.panel_scale = SIDE_SCALE  + (FOCUS_SCALE - SIDE_SCALE)  * t
 		renderer1.position    = Vector2(int(CENTER_X + (RIGHT_X  - CENTER_X) * t), int(CENTER_Y + (SIDE_Y   - CENTER_Y) * t))
