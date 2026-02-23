@@ -60,6 +60,7 @@ const BOX_COLORS: Array[Color] = [
 ]
 
 const BORDER_W := 3.0
+const DASH_SCROLL_SPEED := 28.0
 
 
 # ---------------------------------------------------------------------------
@@ -318,6 +319,8 @@ func _draw_box(
 		fall_off  = fall_prog * eff
 		var animated_pad: float = (9.0 + (15.0 - 9.0) * fall_prog) * cell_scale
 		pad = animated_pad
+		pad += 4.0 * fall_prog * cell_scale
+		effective_alpha *= maxf(0.15, 1.0 - fall_prog * 0.75)
 
 	var rect: Rect2 = Rect2(
 		ent.pos.x * eff + pad,
@@ -436,7 +439,7 @@ func _draw_shadow_connections(eff: float, a: float) -> void:
 	var front_center: Vector2 = _grid_to_local_center(front_pos, eff)
 	var line_color: Color = Color8(50, 220, 50)
 	line_color.a *= a
-	var offset: float = float(_spec.animation_frame) * 0.25
+	var offset: float = _dash_offset()
 
 	for raw_uid in front_uids.keys():
 		var uid: int = int(raw_uid)
@@ -538,6 +541,10 @@ func _draw_dashed_line(
 			var p1: Vector2 = from_pos + dir * seg_end
 			draw_line(p0, p1, col, width, true)
 		pos += period
+
+
+func _dash_offset(speed: float = DASH_SCROLL_SPEED) -> float:
+	return (Time.get_ticks_msec() / 1000.0) * speed
 
 
 func _grid_to_local_center(pos: Vector2i, eff: float) -> Vector2:
@@ -767,12 +774,68 @@ func _draw_adaptive_hints(a: float) -> void:
 			_draw_timeline_hint_box(_spec.branch_hint_active, a)
 		return
 
+	_draw_tab_switch_hints(a)
 	if _spec.show_merge_preview_hint:
 		_draw_merge_preview_hint(_spec.is_merge_preview, a)
 	if _spec.show_merge_hint:
 		_draw_merge_hint(a)
 	if _spec.show_fetch_indicator:
 		_draw_fetch_mode_indicator(_spec.fetch_mode_enabled, a)
+
+
+func _draw_tab_switch_hints(a: float) -> void:
+	var box_w: float = 75.0
+	var box_h: float = 40.0
+	var y: float = PresentationModel.CENTER_Y + PresentationModel.TARGET_PANEL - box_h
+	var left_x: float = PresentationModel.CENTER_X - box_w - 10.0
+	var right_x: float = PresentationModel.CENTER_X + PresentationModel.TARGET_PANEL + 10.0
+
+	var left_rect: Rect2 = _global_rect_to_local(Rect2(left_x, y, box_w, box_h))
+	var right_rect: Rect2 = _global_rect_to_local(Rect2(right_x, y, box_w, box_h))
+
+	var focus_is_div0: bool = _spec.title != "DIV 1"
+	var left_active: bool = not focus_is_div0
+	var right_active: bool = focus_is_div0
+
+	var active_bg := Color8(20, 20, 200)
+	var active_bd := Color8(0, 0, 255)
+	var active_tx := Color8(255, 255, 255)
+	var inactive_bg := Color8(80, 80, 80)
+	var inactive_bd := Color8(120, 120, 120)
+	var inactive_tx := Color8(160, 160, 160)
+
+	_draw_tab_hint_box(left_rect, left_active, true, a, active_bg, active_bd, active_tx, inactive_bg, inactive_bd, inactive_tx)
+	_draw_tab_hint_box(right_rect, right_active, false, a, active_bg, active_bd, active_tx, inactive_bg, inactive_bd, inactive_tx)
+
+
+func _draw_tab_hint_box(
+		rect: Rect2,
+		active: bool,
+		is_left: bool,
+		a: float,
+		active_bg: Color,
+		active_bd: Color,
+		active_tx: Color,
+		inactive_bg: Color,
+		inactive_bd: Color,
+		inactive_tx: Color) -> void:
+	var bg: Color = _col(active_bg if active else inactive_bg, a * 0.8)
+	var bd: Color = _col(active_bd if active else inactive_bd, a)
+	var tx: Color = _col(active_tx if active else inactive_tx, a)
+
+	draw_rect(rect, bg)
+	draw_rect(rect, bd, false, 2.0)
+
+	var arrow_size: int = 11
+	var text_size: int = 18
+	if is_left:
+		var ac := Vector2(rect.position.x + 20.0, rect.get_center().y)
+		_draw_arrow(ac, -1, 0, arrow_size, tx)
+		_draw_center_text("Tab", Vector2(rect.position.x + 46.0, rect.get_center().y), text_size, tx)
+	else:
+		var ac := Vector2(rect.position.x + rect.size.x - 20.0, rect.get_center().y)
+		_draw_arrow(ac, 1, 0, arrow_size, tx)
+		_draw_center_text("Tab", Vector2(rect.position.x + 28.0, rect.get_center().y), text_size, tx)
 
 
 func _draw_timeline_hint_box(is_active: bool, a: float) -> void:

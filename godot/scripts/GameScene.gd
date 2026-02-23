@@ -33,6 +33,8 @@ const SLIDE_DURATION := 0.25  # seconds
 
 # Merge preview toggle
 var merge_preview_active: bool = false
+var merge_preview_progress: float = 0.0
+const MERGE_PREVIEW_DURATION := 0.20
 var peek_floor_active: bool = false
 
 # Held-key movement (mirrors Python game_window.py on_update + move_cooldown)
@@ -93,6 +95,7 @@ func _start_level(idx: int) -> void:
 	overlay_label.visible = false
 	hint_overlay.clear_overlay()
 	merge_preview_active  = false
+	merge_preview_progress = 0.0
 	_set_peek_floor_mode(false)
 	slide_progress        = 0.0
 	slide_active          = false
@@ -128,6 +131,27 @@ func _process(delta: float) -> void:
 			not controller.falling_boxes.is_empty() or
 			controller.failed_action_pos != Vector2i(-1, -1)):
 		needs_redraw = true
+
+	# Merge preview animation (M): side branch slides/scales into overlap.
+	if controller != null:
+		if not controller.has_branched:
+			merge_preview_active = false
+		var preview_target: float = 1.0 if (controller.has_branched and merge_preview_active) else 0.0
+		if not is_equal_approx(merge_preview_progress, preview_target):
+			merge_preview_progress = move_toward(
+				merge_preview_progress,
+				preview_target,
+				delta / MERGE_PREVIEW_DURATION)
+			needs_redraw = true
+
+	# Keep animation effects smooth: merge-preview lines and shadow links.
+	if controller != null and not controller.collapsed and not controller.victory:
+		var preview_on := merge_preview_progress > 0.0
+		var needs_effect := _branch_has_shadow_front(controller.get_active_branch())
+		if controller.has_branched and preview_on:
+			needs_effect = true
+		if needs_effect:
+			needs_redraw = true
 
 	# Held-key movement — mirrors Python game_window.py on_update + move_cooldown.
 	# Movement keys are NOT handled in _input(); they are polled here every frame
@@ -225,7 +249,8 @@ func _input(event: InputEvent) -> void:
 			_full_refresh()
 
 		KEY_M:
-			merge_preview_active = not merge_preview_active
+			if controller.has_branched:
+				merge_preview_active = not merge_preview_active
 			_apply_frame_spec()
 
 		KEY_ESCAPE:
@@ -261,6 +286,31 @@ func _get_held_direction() -> Vector2i:
 	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
 		return Vector2i(1, 0)
 	return Vector2i(0, 0)
+
+
+func _branch_has_shadow_front(branch: BranchState) -> bool:
+	if branch == null:
+		return false
+	if not branch.get_held_items().is_empty():
+		return false
+	var player := branch.get_player()
+	if player == null:
+		return false
+	var front_pos := player.pos + player.direction
+	var front_uids: Dictionary = {}
+	for e in branch.entities:
+		var ent := e as Entity
+		if ent == null:
+			continue
+		if ent.uid == 0 or ent.type != Enums.EntityType.BOX or not ent.is_grounded():
+			continue
+		if ent.pos == front_pos:
+			front_uids[ent.uid] = true
+	for raw_uid in front_uids.keys():
+		var uid := int(raw_uid)
+		if branch.is_shadow(uid):
+			return true
+	return false
 
 
 # ---------------------------------------------------------------------------
@@ -320,12 +370,16 @@ func _apply_frame_spec() -> void:
 			hint_overlay.clear_overlay()
 		return
 
+	var preview_on := merge_preview_progress > 0.0
 	var spec := PresentationModel.build(
 		controller,
 		animation_frame,
 		slide_progress if slide_active else 0.0,
 		slide_direction,
-		merge_preview_active)
+		merge_preview_active,
+		merge_preview_progress)
+
+	_update_renderer_layering(preview_on)
 
 	renderer0.draw_frame(spec.main_branch)
 
@@ -336,7 +390,26 @@ func _apply_frame_spec() -> void:
 		renderer1.visible = false
 
 	if hint_overlay != null:
-		hint_overlay.update_overlay(spec, controller, merge_preview_active, animation_frame)
+		hint_overlay.update_overlay(spec, controller, preview_on, animation_frame)
+
+
+func _update_renderer_layering(preview_on: bool) -> void:
+	if controller == null or not controller.has_branched:
+		renderer0.z_index = 0
+		renderer1.z_index = 0
+		return
+
+	var focused_is_main := controller.current_focus == 0
+	# render_arc parity:
+	# - normal mode: focused branch on top
+	# - merge preview: non-focused branch on top
+	var top_main := (focused_is_main and not preview_on) or ((not focused_is_main) and preview_on)
+	if top_main:
+		renderer0.z_index = 2
+		renderer1.z_index = 1
+	else:
+		renderer0.z_index = 1
+		renderer1.z_index = 2
 
 
 # ---------------------------------------------------------------------------

@@ -5,6 +5,7 @@ class_name HintOverlay
 const COLOR_CONVERGE := Color8(75, 150, 200)
 const COLOR_FETCH := Color8(255, 150, 50)
 const ENABLE_CROSS_SPACE_CONVERGE := false
+const DASH_SCROLL_SPEED := 28.0
 
 var _frame_spec: PresentationModel.FrameViewSpec = null
 var _controller: GameController = null
@@ -72,7 +73,7 @@ func _draw_converge_lines(
 
 	var target_pos: Vector2i = focused_state.get_player().pos
 	var target_center: Vector2 = _grid_to_screen(focused_spec, target_pos)
-	var offset: float = float(_animation_frame) * 0.25
+	var offset: float = _dash_offset()
 
 	for uid in held_uids:
 		var others: Array = other_state.get_non_held_instances(uid)
@@ -96,10 +97,13 @@ func _draw_fetch_and_converge_lines(
 
 	var focused_player_center: Vector2 = _grid_to_screen(focused_spec, focused_state.get_player().pos)
 	var other_player_center: Vector2 = _grid_to_screen(other_spec, other_state.get_player().pos)
-	var offset: float = float(_animation_frame) * 0.25
+	var offset: float = _dash_offset()
+	var pulse: float = 0.65 + 0.35 * (0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * 4.0))
+	var fetch_col := COLOR_FETCH
+	fetch_col.a = pulse
 
 	# Fetch line: other branch player -> focused player.
-	_draw_dashed_line(other_player_center, focused_player_center, COLOR_FETCH, 3.0, 12.0, offset)
+	_draw_dashed_line(other_player_center, focused_player_center, fetch_col, 3.0, 12.0, offset)
 
 	# Converge lines for fetched UIDs: focused instances -> focused player.
 	var seen: Dictionary = {}
@@ -145,3 +149,7 @@ func _draw_dashed_line(
 			var p1: Vector2 = from_pos + dir * seg_end
 			draw_line(p0, p1, col, width, true)
 		pos += period
+
+
+func _dash_offset(speed: float = DASH_SCROLL_SPEED) -> float:
+	return (Time.get_ticks_msec() / 1000.0) * speed

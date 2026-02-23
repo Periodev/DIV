@@ -92,7 +92,8 @@ static func build(
 		animation_frame: int,
 		slide_progress:       float = 0.0,
 		slide_direction:      int   = 0,
-		merge_preview_active: bool  = false) -> FrameViewSpec:
+		merge_preview_active: bool  = false,
+		merge_preview_progress: float = 0.0) -> FrameViewSpec:
 
 	var spec := FrameViewSpec.new()
 	spec.has_branched  = controller.has_branched
@@ -144,8 +145,15 @@ static func build(
 	var sub_x  := RIGHT_X;  var sub_y  := SIDE_Y;   var sub_s  := SIDE_SCALE
 	var main_a := 1.0;      var sub_a  := 1.0
 
+	var preview_on := merge_preview_active or merge_preview_progress > 0.0
+
 	if not has_branched:
 		main_x = CENTER_X; main_y = CENTER_Y; main_s = FOCUS_SCALE
+	elif preview_on:
+		var p := _calc_merge_preview_positions(focus, merge_preview_progress)
+		main_x = p[0]; main_y = p[1]; main_s = p[2]
+		sub_x  = p[3]; sub_y  = p[4]; sub_s  = p[5]
+		main_a = p[6]; sub_a  = p[7]
 	elif slide_progress > 0.0:
 		var p := _calc_slide_positions(focus, slide_progress, slide_direction)
 		main_x = p[0]; main_y = p[1]; main_s = p[2]
@@ -178,7 +186,7 @@ static func build(
 		BORDER_FOCUSED if (focus == 0) else BORDER_UNFOCUSED,
 		ih if (focus == 0) else null,
 		spec.timeline_hint if (focus == 0) else "",
-		has_branched, merge_preview_active, cell_sz,
+		has_branched, preview_on, cell_sz,
 		main_s, main_x, main_y, main_a,
 		goal_ok, animation_frame,
 		flash_pos if (focus == 0) else Vector2i(-1, -1),
@@ -199,7 +207,7 @@ static func build(
 			BORDER_FOCUSED if (focus == 1) else BORDER_UNFOCUSED,
 			ih if (focus == 1) else null,
 			spec.timeline_hint if (focus == 1) else "",
-			has_branched, merge_preview_active, cell_sz,
+			has_branched, preview_on, cell_sz,
 			sub_s, sub_x, sub_y, sub_a,
 			goal_ok, animation_frame,
 			flash_pos if (focus == 1) else Vector2i(-1, -1),
@@ -265,6 +273,34 @@ static func _make_spec(
 	s.show_fetch_indicator   = p_show_fetch_indicator
 	s.fetch_mode_enabled     = p_fetch_mode_enabled
 	return s
+
+
+static func _calc_merge_preview_positions(focus: int, progress: float) -> Array:
+	# Returns [main_x, main_y, main_scale, sub_x, sub_y, sub_scale, main_alpha, sub_alpha]
+	var t := _ease_in_out(clampf(progress, 0.0, 1.0))
+	var offset_x := 2
+	var offset_y := 2
+	var main_x: int; var main_y: int; var main_s: float; var main_a: float
+	var sub_x: int;  var sub_y: int;  var sub_s: float;  var sub_a: float
+
+	if focus == 0:
+		# Focused DIV0 stays centered and opaque.
+		main_x = CENTER_X; main_y = CENTER_Y; main_s = FOCUS_SCALE; main_a = 1.0
+		# DIV1 slides/grows from side to center+offset and fades to preview alpha.
+		sub_x = int(lerpf(RIGHT_X, CENTER_X + offset_x, t))
+		sub_y = int(lerpf(SIDE_Y, CENTER_Y + offset_y, t))
+		sub_s = lerpf(SIDE_SCALE, FOCUS_SCALE, t)
+		sub_a = lerpf(1.0, 0.7, t)
+	else:
+		# Focused DIV1 stays centered and opaque.
+		sub_x = CENTER_X; sub_y = CENTER_Y; sub_s = FOCUS_SCALE; sub_a = 1.0
+		# DIV0 slides/grows from side to center+offset and fades to preview alpha.
+		main_x = int(lerpf(LEFT_X, CENTER_X + offset_x, t))
+		main_y = int(lerpf(SIDE_Y, CENTER_Y + offset_y, t))
+		main_s = lerpf(SIDE_SCALE, FOCUS_SCALE, t)
+		main_a = lerpf(1.0, 0.7, t)
+
+	return [main_x, main_y, main_s, sub_x, sub_y, sub_s, main_a, sub_a]
 
 
 static func _calc_slide_positions(
