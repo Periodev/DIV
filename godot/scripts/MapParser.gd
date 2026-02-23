@@ -67,6 +67,9 @@ static func parse_dual_layer(floor_map_str: String, object_map_str: String) -> L
 
 ## Parse a level file (Level0.txt, etc.) → Array of level dicts.
 ## Each dict: { name, floor_map, object_map, hints, objective }
+## Infers world_num from filename (LevelN.txt → world_num=N) so that levels
+## without an explicit "hints = ..." line get progressive-unlock defaults,
+## matching Python's level_constructor._hints_for_level logic.
 static func parse_level_file(path: String) -> Array:
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
@@ -75,7 +78,23 @@ static func parse_level_file(path: String) -> Array:
 
 	var text := file.get_as_text()
 	file.close()
-	return _parse_sections(text)
+
+	# Infer world number from filename (e.g. "Level3.txt" → 3)
+	var world_num := -1
+	var noext := path.get_file().get_basename()  # "Level3"
+	var digits := noext.substr(5)                # strip leading "Level"
+	if digits.is_valid_int():
+		world_num = digits.to_int()
+
+	var levels := _parse_sections(text)
+
+	# Back-fill hints for sections that had no explicit "hints = ..." line
+	# (those have hints == null after parsing).
+	for level in levels:
+		if level.get("hints") == null:
+			level["hints"] = _hints_for_level(world_num)
+
+	return levels
 
 
 ## Parse levels from a res:// path (using Godot's resource system).
@@ -97,6 +116,20 @@ static func _clean_lines(block: String) -> Array:
 	while lines.size() > 0 and (lines[-1] as String).strip_edges() == "":
 		lines.pop_back()
 	return lines
+
+
+## Progressive hint unlocks by world number.
+## Mirrors Python's level_constructor._hints_for_level exactly.
+## world_num = -1 (unknown) → base hints only (diverge=true, rest false).
+static func _hints_for_level(world_num: int) -> Dictionary:
+	var h := {"diverge": true, "pickup": false, "converge": false, "fetch": false}
+	if world_num >= 1:
+		h["converge"] = true
+	if world_num >= 3:
+		h["pickup"] = true
+	if world_num >= 4:
+		h["fetch"] = true
+	return h
 
 
 static func _parse_sections(text: String) -> Array:
@@ -146,16 +179,17 @@ static func _parse_one_section(text: String) -> Dictionary:
 			name_val = stripped.trim_prefix("#").strip_edges()
 			break
 
-	# Extract hints
+	# Extract hints — null means no explicit line (caller will apply world defaults)
 	var hints_match := RegEx.new()
 	hints_match.compile("(?m)^\\s*hints\\s*=\\s*(.+?)\\s*$")
 	var hints_result := hints_match.search(text)
-	var parsed_hints := {"diverge": false, "pickup": false, "converge": false, "fetch": false}
+	var parsed_hints = null
 	if hints_result != null:
+		parsed_hints = {"diverge": false, "pickup": false, "converge": false, "fetch": false}
 		var tokens := hints_result.get_string(1).strip_edges().split(" ")
 		if tokens.size() > 0 and tokens[0] != "none":
 			for token in tokens:
-				if parsed_hints.has(token):
+				if (parsed_hints as Dictionary).has(token):
 					parsed_hints[token] = true
 
 	# Extract objective
