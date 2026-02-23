@@ -108,8 +108,10 @@ static func build(
 		branch_hint_active = _is_on_branch_point(controller.get_active_branch())
 	var show_merge_preview_hint: bool = has_branched
 	var show_merge_hint: bool = has_branched
-	var show_fetch_indicator: bool = has_branched and controller.can_show_fetch_hint()
-	var fetch_mode_enabled: bool = false
+	# F indicator is always shown in branched state.
+	# Color indicates whether fetch merge is currently usable.
+	var show_fetch_indicator: bool = has_branched
+	var fetch_mode_enabled: bool = has_branched and controller.can_show_fetch_hint()
 
 	# Goal active (check merge-preview state so both panels reflect win condition)
 	var preview := controller.get_merge_preview()

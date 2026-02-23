@@ -22,6 +22,7 @@ const COLOR_SWITCH_ON_B  := Color8(160, 120, 0)       # dark amber border (on)
 const COLOR_HOLE         := Color8(60, 40, 20)
 const COLOR_NO_CARRY     := Color8(255, 100, 100)
 const COLOR_BRANCH       := Color8(50, 150, 50)
+const COLOR_BRANCH_HIGHLIGHT_BG := Color8(150, 255, 150)
 const COLOR_GRID         := Color8(200, 200, 200)
 const COLOR_PLAYER       := Color8(0, 100, 200)
 const COLOR_PLAYER_INACTIVE := Color8(200, 200, 200)
@@ -42,6 +43,7 @@ const COLOR_HINT_V_BD    := Color8(75, 150, 200)
 const COLOR_HINT_F_BD    := Color8(100, 100, 100)
 const COLOR_HINT_F_ON_BG := Color8(255, 140, 0)
 const COLOR_HINT_F_ON_BD := Color8(255, 180, 0)
+const TITLE_MARGIN_BASE  := 22.0
 
 # Per-UID box colour palette (matches Python BOX_COLORS, uid-1 mod 10)
 const BOX_COLORS: Array[Color] = [
@@ -67,6 +69,7 @@ const BORDER_W := 3.0
 var _spec: PresentationModel.BranchViewSpec = null
 var _hint_space_label: Label = null
 var _hint_action_label: Label = null
+var _peek_floor_mode: bool = false
 
 
 # ---------------------------------------------------------------------------
@@ -79,6 +82,13 @@ func draw_frame(spec: PresentationModel.BranchViewSpec) -> void:
 	_spec = spec
 	if spec != null:
 		position = Vector2(spec.pos_x, spec.pos_y)
+	queue_redraw()
+
+
+func set_peek_floor_mode(enabled: bool) -> void:
+	if _peek_floor_mode == enabled:
+		return
+	_peek_floor_mode = enabled
 	queue_redraw()
 
 
@@ -112,7 +122,9 @@ func _draw() -> void:
 	_draw_entities(eff, a)
 
 	# Interaction hint highlight (draw over entities)
-	if _spec.interaction_hint != null:
+	if _peek_floor_mode:
+		_set_hint_labels_visible(false)
+	elif _spec.interaction_hint != null:
 		var ih: PresentationModel.InteractionHint = _spec.interaction_hint as PresentationModel.InteractionHint
 		if ih != null and ih.target_pos != Vector2i(-1, -1):
 			_draw_hint_highlight(ih.target_pos, ih.text, ih.color, ih.is_inset, eff, a)
@@ -191,7 +203,8 @@ func _draw_terrain_cell(
 
 		Enums.TerrainType.BRANCH1, Enums.TerrainType.BRANCH2, \
 		Enums.TerrainType.BRANCH3, Enums.TerrainType.BRANCH4:
-			draw_rect(rect, _col(COLOR_FLOOR, a))
+			var is_highlighted_branch := _spec.highlight_branch_point and pos == _spec.state.get_player().pos
+			draw_rect(rect, _col(COLOR_BRANCH_HIGHLIGHT_BG if is_highlighted_branch else COLOR_FLOOR, a))
 			_draw_branch_marker(rect.get_center(), tt, eff, a)
 
 		_:  # FLOOR and anything else
@@ -252,6 +265,7 @@ func _draw_grid(gs: int, eff: float, a: float) -> void:
 func _draw_entities(eff: float, a: float) -> void:
 	var player: Entity = _spec.state.get_player()
 	var overlap_labels: Dictionary = _build_overlap_labels()
+	var front_pos: Vector2i = player.pos + player.direction
 
 	# Boxes first (sorted by z), player on top.
 	var boxes: Array[Entity] = []
@@ -264,16 +278,33 @@ func _draw_entities(eff: float, a: float) -> void:
 	boxes.sort_custom(func(left: Entity, right: Entity) -> bool: return left.z < right.z)
 
 	for ent in boxes:
-		_draw_box(ent, eff, a, overlap_labels)
+		var fade_front := (
+			_peek_floor_mode
+			and _spec.is_focused
+			and _spec.scale >= 1.0
+			and ent.z == 0
+			and ent.pos == front_pos
+		)
+		_draw_box(ent, eff, a, overlap_labels, fade_front)
+
+	# Shadow connections (focused full-size branch, before drawing player).
+	if _spec.is_focused and _spec.scale >= 1.0:
+		_draw_shadow_connections(eff, a)
 
 	_draw_player(player, eff, a)
 
 
-func _draw_box(ent: Entity, eff: float, a: float, overlap_labels: Dictionary) -> void:
+func _draw_box(
+		ent: Entity,
+		eff: float,
+		a: float,
+		overlap_labels: Dictionary,
+		fade_front: bool = false) -> void:
 	var cell_scale := eff / 80.0
 	var is_held    := ent.z == 1
 	var is_shadow  := _spec.state.is_shadow(ent.uid)
 	var is_transparent_branch: bool = _spec.alpha < 0.9
+	var effective_alpha: float = a * (0.18 if fade_front else 1.0)
 
 	# Padding: normal box=9px, underground box=15px.
 	var pad_base: float = 15.0 if ent.z == -1 else 9.0
@@ -299,20 +330,21 @@ func _draw_box(ent: Entity, eff: float, a: float, overlap_labels: Dictionary) ->
 	var fill_col: Color
 	if is_transparent_branch:
 		fill_col = _desaturate(base_col, 0.3)
-		fill_col.a = a
+		fill_col.a = effective_alpha
 	elif is_shadow and not _spec.is_focused:
 		fill_col = _desaturate(base_col, 0.5)
-		fill_col.a = a
+		fill_col.a = effective_alpha
 	else:
 		fill_col = base_col
-		fill_col.a = a
+		fill_col.a = effective_alpha
 	if is_held:
 		fill_col = fill_col.lightened(0.1)
+		fill_col.a = effective_alpha
 
 	draw_rect(snapped_rect, fill_col)
 
 	# Border: none for transparent branch, dashed for shadow, solid otherwise.
-	var border_color: Color = _col(COLOR_TEXT, a)
+	var border_color: Color = _col(COLOR_TEXT, effective_alpha)
 	var border_thick: float = float(maxi(1, int(round(2.0 * cell_scale))))
 	if not is_transparent_branch:
 		if is_shadow:
@@ -322,7 +354,10 @@ func _draw_box(ent: Entity, eff: float, a: float, overlap_labels: Dictionary) ->
 
 	# Label: fusion label > overlap label > uid
 	var label: String = _entity_label(ent, overlap_labels)
-	_draw_text_in_rect(label, snapped_rect, int(14.0 * cell_scale), _col(COLOR_TEXT, a))
+	var text_alpha: float = maxf(0.0, effective_alpha - 0.16) if fade_front else effective_alpha
+	var text_col := COLOR_TEXT
+	text_col.a = text_alpha
+	_draw_text_in_rect(label, snapped_rect, int(14.0 * cell_scale), text_col)
 
 
 func _draw_player(player: Entity, eff: float, a: float) -> void:
@@ -373,6 +408,58 @@ func _draw_player(player: Entity, eff: float, a: float) -> void:
 		else:
 			draw_arc(center, radius, 0.0, TAU, 28, _col(COLOR_PLAYER_RING, a), maxf(2.0, 3.0 * cell_scale), true)
 		_draw_arrow(arrow_center, dx, dy, int(21.0 * cell_scale), _col(COLOR_TEXT, a))
+
+
+func _draw_shadow_connections(eff: float, a: float) -> void:
+	if not _spec.state.get_held_items().is_empty():
+		return
+
+	var player: Entity = _spec.state.get_player()
+	if player == null:
+		return
+
+	var front_pos: Vector2i = player.pos + player.direction
+	var entities_at_front: Array[Entity] = []
+	for e in _spec.state.entities:
+		var ent: Entity = e as Entity
+		if ent == null:
+			continue
+		if ent.pos == front_pos and ent.is_grounded():
+			entities_at_front.append(ent)
+	if entities_at_front.is_empty():
+		return
+
+	var front_uids: Dictionary = {}
+	for ent in entities_at_front:
+		front_uids[ent.uid] = true
+
+	var front_center: Vector2 = _grid_to_local_center(front_pos, eff)
+	var line_color: Color = Color8(50, 220, 50)
+	line_color.a *= a
+	var offset: float = float(_spec.animation_frame) * 0.25
+
+	for raw_uid in front_uids.keys():
+		var uid: int = int(raw_uid)
+		if not _spec.state.is_shadow(uid):
+			continue
+
+		var instances: Array = _spec.state.get_entities_by_uid(uid)
+		var positions: Dictionary = {}
+		for raw in instances:
+			var inst: Entity = raw as Entity
+			if inst == null:
+				continue
+			positions[inst.pos] = true
+
+		if positions.size() <= 1:
+			continue
+
+		for raw_pos in positions.keys():
+			var pos: Vector2i = raw_pos as Vector2i
+			if pos == front_pos:
+				continue
+			var other_center: Vector2 = _grid_to_local_center(pos, eff)
+			_draw_dashed_line(other_center, front_center, line_color, 3.0, 12.0, offset)
 
 
 func _draw_arrow(center: Vector2, dx: int, dy: int, size: int, col: Color) -> void:
@@ -428,6 +515,35 @@ func _draw_dashed_rect(rect: Rect2, col: Color, width: float) -> void:
 		draw_line(Vector2(x0, y0 + i), Vector2(x0, y0 + seg_end_y), col, width, true)
 		draw_line(Vector2(x1, y0 + i), Vector2(x1, y0 + seg_end_y), col, width, true)
 		i += step
+
+
+func _draw_dashed_line(
+		from_pos: Vector2,
+		to_pos: Vector2,
+		col: Color,
+		width: float = 3.0,
+		dash_len: float = 9.0,
+		offset: float = 0.0) -> void:
+	var dist: float = from_pos.distance_to(to_pos)
+	if dist <= 0.001:
+		return
+	var dir: Vector2 = (to_pos - from_pos) / dist
+	var period: float = dash_len * 2.0
+	var pos: float = fmod(offset, period)
+	while pos < dist:
+		var seg_start: float = maxf(0.0, pos)
+		var seg_end: float = minf(dist, pos + dash_len)
+		if seg_end > seg_start:
+			var p0: Vector2 = from_pos + dir * seg_start
+			var p1: Vector2 = from_pos + dir * seg_end
+			draw_line(p0, p1, col, width, true)
+		pos += period
+
+
+func _grid_to_local_center(pos: Vector2i, eff: float) -> Vector2:
+	return Vector2(
+		(float(pos.x) + 0.5) * eff,
+		(float(pos.y) + 0.5) * eff)
 
 
 func _pixel_snap_rect(rect: Rect2) -> Rect2:
@@ -641,7 +757,8 @@ func _draw_title(gpx: float, a: float) -> void:
 	var col  := _col(COLOR_TITLE, a)
 	var eff: float = _spec.cell_size * _spec.scale
 	var size := int(16.0 * (eff / 80.0))
-	_draw_center_text(_spec.title, Vector2(gpx * 0.5, -8.0), size, col)
+	var title_y: float = -maxf(14.0, TITLE_MARGIN_BASE * (eff / 80.0))
+	_draw_center_text(_spec.title, Vector2(gpx * 0.5, title_y), size, col)
 
 
 func _draw_adaptive_hints(a: float) -> void:
@@ -756,14 +873,15 @@ func _draw_center_text(text: String, center: Vector2, font_size: int, col: Color
 	var font: Font = ThemeDB.fallback_font
 	if font == null:
 		return
+	var text_w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
 	var ascent: float = font.get_ascent(font_size)
 	var descent: float = font.get_descent(font_size)
 	var baseline_y: float = center.y + (ascent - descent) * 0.5
 	draw_string(
 		font,
-		Vector2(center.x, baseline_y),
+		Vector2(center.x - text_w * 0.5, baseline_y),
 		text,
-		HORIZONTAL_ALIGNMENT_CENTER,
+		HORIZONTAL_ALIGNMENT_LEFT,
 		-1.0,
 		font_size,
 		col)

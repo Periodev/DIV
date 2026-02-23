@@ -517,10 +517,10 @@ func get_timeline_hint() -> String:
 
 	if f_held.is_empty() and not o_held.is_empty():
 		if focused.terrain.get(focused.get_player().pos, Enums.TerrainType.FLOOR) == Enums.TerrainType.NO_CARRY:
-			return "C 合併  [抓取禁止]"
-		return "C 合併  F 抓取"
+			return "V 合併  [抓取禁止]"
+		return "V 合併  F 抓取"
 
-	return "C 合併"
+	return "V 合併"
 
 
 # ---------------------------------------------------------------------------

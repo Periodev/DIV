@@ -39,16 +39,20 @@ var current_index: int = 0
 
 func _ready() -> void:
     set_process_unhandled_key_input(true)
+    var gd = _get_game_data()
+    if gd == null:
+        push_error("LevelSelect: missing /root/GameData autoload")
+        return
 
     _load_levels_if_needed()
     _build_zone_groups()
-    GameData.load_progress()
+    gd.load_progress()
 
     if levels.is_empty():
         queue_redraw()
         return
 
-    current_index = clampi(GameData.selected_level_idx, 0, levels.size() - 1)
+    current_index = clampi(gd.selected_level_idx, 0, levels.size() - 1)
     _sync_zone_from_index()
     _refresh_preview()
     queue_redraw()
@@ -97,6 +101,7 @@ func _draw_panel() -> void:
     if levels.is_empty() or sorted_worlds.is_empty():
         _draw_text_td("No levels found", LEFT_W * 0.5, LIST_TOP, Color8(255, 120, 120), 14, HORIZONTAL_ALIGNMENT_CENTER)
         return
+    var gd = _get_game_data()
 
     var world: int = sorted_worlds[current_zone]
     var world_text: String = "Zone %d" % world
@@ -119,7 +124,7 @@ func _draw_panel() -> void:
         var level: Dictionary = levels[idx] as Dictionary
         var level_id: String = str(level.get("id", ""))
         var x: float = LPAD
-        if GameData.is_level_played(level_id):
+        if gd != null and gd.is_level_played(level_id):
             _draw_text_td("Done", x, item_cy, DONE_C, 10, HORIZONTAL_ALIGNMENT_LEFT, true)
             x += 38.0
 
@@ -166,18 +171,28 @@ func _draw_text_td(
     var font: Font = ThemeDB.fallback_font
     if font == null:
         return
+    var text_w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
 
-    var baseline_y: float = y_td
-    if center_y:
-        baseline_y += font_size * 0.35
+    var baseline_y: float = y_td + (font_size * 0.35 if center_y else 0.0)
+    var draw_x: float = x
+    if align == HORIZONTAL_ALIGNMENT_CENTER:
+        draw_x = x - text_w * 0.5
+    elif align == HORIZONTAL_ALIGNMENT_RIGHT:
+        draw_x = x - text_w
 
-    draw_string(font, Vector2(x, baseline_y), text, align, -1.0, font_size, color)
+    draw_string(font, Vector2(draw_x, baseline_y), text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, color)
 
 
 func _load_levels_if_needed() -> void:
-    var needs_rebuild: bool = GameData.all_levels.is_empty()
+    var gd = _get_game_data()
+    if gd == null:
+        push_error("LevelSelect: missing /root/GameData autoload")
+        levels = []
+        return
+
+    var needs_rebuild: bool = gd.all_levels.is_empty()
     if not needs_rebuild:
-        var first_raw = GameData.all_levels[0]
+        var first_raw = gd.all_levels[0]
         if typeof(first_raw) != TYPE_DICTIONARY:
             needs_rebuild = true
         else:
@@ -202,9 +217,9 @@ func _load_levels_if_needed() -> void:
                 lv["zone"] = world
                 built_levels.append(lv)
 
-        GameData.all_levels = built_levels
+        gd.all_levels = built_levels
 
-    levels = GameData.all_levels
+    levels = gd.all_levels
 
 
 func _build_zone_groups() -> void:
@@ -306,5 +321,11 @@ func _refresh_preview() -> void:
 func _start_level() -> void:
     if levels.is_empty():
         return
-    GameData.selected_level_idx = current_index
+    var gd = _get_game_data()
+    if gd != null:
+        gd.selected_level_idx = current_index
     get_tree().change_scene_to_file("res://scenes/game_scene.tscn")
+
+
+func _get_game_data():
+    return get_node_or_null("/root/GameData")

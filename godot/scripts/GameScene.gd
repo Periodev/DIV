@@ -1,5 +1,5 @@
 # GameScene.gd - Main game scene controller
-# Wires input → GameController → PresentationModel → GameRenderer
+# Wires input ??GameController ??PresentationModel ??GameRenderer
 extends Node2D
 class_name GameScene
 
@@ -11,6 +11,7 @@ class_name GameScene
 @onready var hint_label: Label        = $UI/HintLabel
 @onready var overlay_backdrop: ColorRect = $UI/OverlayBackdrop
 @onready var overlay_label: Label     = $UI/OverlayLabel
+var hint_overlay: HintOverlay = null
 
 # ---------------------------------------------------------------------------
 # State
@@ -31,6 +32,7 @@ const SLIDE_DURATION := 0.25  # seconds
 
 # Merge preview toggle
 var merge_preview_active: bool = false
+var peek_floor_active: bool = false
 
 
 # ---------------------------------------------------------------------------
@@ -38,15 +40,21 @@ var merge_preview_active: bool = false
 # ---------------------------------------------------------------------------
 
 func _ready() -> void:
-	if GameData.all_levels.is_empty():
+	_ensure_hint_overlay()
+	var gd = _get_game_data()
+	if gd == null:
+		push_error("GameScene: missing /root/GameData autoload")
+		return
+
+	if gd.all_levels.is_empty():
 		var zone_files := ["res://Level/Level0.txt", "res://Level/Level1.txt",
 						   "res://Level/Level2.txt", "res://Level/Level3.txt",
 						   "res://Level/Level4.txt"]
 		for path in zone_files:
-			GameData.all_levels.append_array(MapParser.parse_level_resource(path))
+			gd.all_levels.append_array(MapParser.parse_level_resource(path))
 
-	all_levels = GameData.all_levels
-	_start_level(GameData.selected_level_idx)
+	all_levels = gd.all_levels
+	_start_level(gd.selected_level_idx)
 
 
 func _start_level(idx: int) -> void:
@@ -69,7 +77,9 @@ func _start_level(idx: int) -> void:
 
 	overlay_backdrop.visible = false
 	overlay_label.visible = false
+	hint_overlay.clear_overlay()
 	merge_preview_active  = false
+	_set_peek_floor_mode(false)
 	slide_progress        = 0.0
 	slide_active          = false
 
@@ -113,7 +123,10 @@ func _process(delta: float) -> void:
 # ---------------------------------------------------------------------------
 
 func _input(event: InputEvent) -> void:
-	if controller == null or controller.collapsed or controller.victory:
+	if controller == null:
+		return
+
+	if controller.collapsed or controller.victory:
 		if event is InputEventKey:
 			var end_key := event as InputEventKey
 			if end_key.pressed:
@@ -121,19 +134,31 @@ func _input(event: InputEvent) -> void:
 					KEY_R:
 						controller.reset()
 						_full_refresh()
-					KEY_BRACKETRIGHT:
-						_start_level(current_level_idx + 1)
-						GameData.selected_level_idx = current_level_idx
-					KEY_ESCAPE:
+					KEY_Z:
+						controller.undo()
+						_full_refresh()
+					KEY_SPACE, KEY_ESCAPE:
+						var gd = _get_game_data()
+						if gd != null:
+							gd.selected_level_idx = current_level_idx
 						get_tree().change_scene_to_file("res://scenes/level_select.tscn")
 		return
 
-	if not (event is InputEventKey) or not event.pressed:
+	if not (event is InputEventKey):
 		return
 
 	var key_event := event as InputEventKey
-	var key: int    = key_event.keycode
-	var shift: bool = key_event.shift_pressed
+	var key: int = key_event.keycode
+
+	# Hold C to peek the floor under the front box.
+	if key == KEY_C:
+		if key_event.echo:
+			return
+		_set_peek_floor_mode(key_event.pressed)
+		return
+
+	if not key_event.pressed:
+		return
 
 	match key:
 		KEY_W, KEY_UP:
@@ -146,15 +171,11 @@ func _input(event: InputEvent) -> void:
 			controller.handle_move(Vector2i(1, 0))
 
 		KEY_V:
-			if controller.try_branch():
-				_full_refresh()
-
-		KEY_C:
-			if shift:
-				if controller.try_fetch_merge():
+			if controller.has_branched:
+				if controller.try_merge():
 					_full_refresh()
 			else:
-				if controller.try_merge():
+				if controller.try_branch():
 					_full_refresh()
 
 		KEY_F:
@@ -181,15 +202,15 @@ func _input(event: InputEvent) -> void:
 			_apply_frame_spec()
 
 		KEY_ESCAPE:
-			GameData.selected_level_idx = current_level_idx
+			_save_selected_level_idx()
 			get_tree().change_scene_to_file("res://scenes/level_select.tscn")
 
-		KEY_BRACKETRIGHT:  # ] → next level
+		KEY_BRACKETRIGHT:  # ] ??next level
 			_start_level(current_level_idx + 1)
-			GameData.selected_level_idx = current_level_idx
-		KEY_BRACKETLEFT:   # [ → previous level
+			_save_selected_level_idx()
+		KEY_BRACKETLEFT:   # [ ??previous level
 			_start_level(current_level_idx - 1)
-			GameData.selected_level_idx = current_level_idx
+			_save_selected_level_idx()
 
 
 # ---------------------------------------------------------------------------
@@ -217,15 +238,17 @@ func _on_victory() -> void:
 	var level_dict: Dictionary = all_levels[current_level_idx] \
 		if current_level_idx >= 0 and current_level_idx < all_levels.size() else {}
 	var level_id: String = str(level_dict.get("id", ""))
-	GameData.mark_level_played(level_id)
+	var gd = _get_game_data()
+	if gd != null:
+		gd.mark_level_played(level_id)
 	overlay_backdrop.visible = true
-	overlay_label.text    = "LEVEL COMPLETE!\nR: restart   ]: next level   ESC: level select"
+	overlay_label.text    = "LEVEL COMPLETE!\nR: restart   Z: undo   SPACE/ESC: level select"
 	overlay_label.visible = true
 
 
 func _on_collapse() -> void:
 	overlay_backdrop.visible = true
-	overlay_label.text    = "FALL DOWN!\nR: restart   Z: undo"
+	overlay_label.text    = "FALL DOWN!\nR: restart   Z: undo   ESC: level select"
 	overlay_label.visible = true
 
 
@@ -242,6 +265,8 @@ func _full_refresh() -> void:
 
 func _apply_frame_spec() -> void:
 	if controller == null:
+		if hint_overlay != null:
+			hint_overlay.clear_overlay()
 		return
 
 	var spec := PresentationModel.build(
@@ -259,6 +284,9 @@ func _apply_frame_spec() -> void:
 	else:
 		renderer1.visible = false
 
+	if hint_overlay != null:
+		hint_overlay.update_overlay(spec, controller, merge_preview_active, animation_frame)
+
 
 # ---------------------------------------------------------------------------
 # UI label
@@ -268,3 +296,31 @@ func _update_ui() -> void:
 	if controller == null:
 		return
 	hint_label.text = ""
+
+
+func _ensure_hint_overlay() -> void:
+	if hint_overlay != null:
+		return
+	hint_overlay = HintOverlay.new()
+	hint_overlay.name = "HintOverlay"
+	hint_overlay.z_as_relative = false
+	hint_overlay.z_index = 100
+	add_child(hint_overlay)
+
+
+func _set_peek_floor_mode(enabled: bool) -> void:
+	if peek_floor_active == enabled:
+		return
+	peek_floor_active = enabled
+	renderer0.set_peek_floor_mode(enabled)
+	renderer1.set_peek_floor_mode(enabled)
+
+
+func _save_selected_level_idx() -> void:
+	var gd = _get_game_data()
+	if gd != null:
+		gd.selected_level_idx = current_level_idx
+
+
+func _get_game_data():
+	return get_node_or_null("/root/GameData")
