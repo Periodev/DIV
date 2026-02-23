@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128">
+  <rect width="128" height="128" fill="#1a1a2e"/>
+  <circle cx="64" cy="64" r="40" fill="none" stroke="#4488ff" stroke-width="6"/>
+  <line x1="64" y1="24" x2="64" y2="104" stroke="#ff8800" stroke-width="3"/>
+  <line x1="24" y1="64" x2="104" y2="64" stroke="#ff8800" stroke-width="3"/>
+  <text x="64" y="70" text-anchor="middle" font-size="28" font-family="monospace" fill="white">DIV</text>
+</svg>
