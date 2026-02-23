@@ -267,4 +267,4 @@ func _apply_frame_spec() -> void:
 func _update_ui() -> void:
 	if controller == null:
 		return
-	hint_label.text = controller.get_timeline_hint()
+	hint_label.text = ""

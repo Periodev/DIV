@@ -30,6 +30,18 @@ const COLOR_TEXT         := Color8(0, 0, 0)
 const COLOR_FLASH        := Color8(255, 80, 80)
 const COLOR_TITLE        := Color8(220, 220, 220)
 const COLOR_INTERACT_GRAY := Color8(100, 100, 100)
+const COLOR_HINT_DARK    := Color8(60, 60, 60)
+const COLOR_HINT_GRAY_B  := Color8(120, 120, 120)
+const COLOR_HINT_TEXT_G  := Color8(180, 180, 180)
+const COLOR_HINT_GREEN   := Color8(50, 150, 50)
+const COLOR_HINT_GREEN_B := Color8(100, 255, 100)
+const COLOR_HINT_M_BG    := Color8(110, 50, 110)
+const COLOR_HINT_M_BD    := Color8(110, 50, 200)
+const COLOR_HINT_V_BG    := Color8(40, 80, 120)
+const COLOR_HINT_V_BD    := Color8(75, 150, 200)
+const COLOR_HINT_F_BD    := Color8(100, 100, 100)
+const COLOR_HINT_F_ON_BG := Color8(255, 140, 0)
+const COLOR_HINT_F_ON_BD := Color8(255, 180, 0)
 
 # Per-UID box colour palette (matches Python BOX_COLORS, uid-1 mod 10)
 const BOX_COLORS: Array[Color] = [
@@ -53,6 +65,8 @@ const BORDER_W := 3.0
 # ---------------------------------------------------------------------------
 
 var _spec: PresentationModel.BranchViewSpec = null
+var _hint_space_label: Label = null
+var _hint_action_label: Label = null
 
 
 # ---------------------------------------------------------------------------
@@ -66,6 +80,11 @@ func draw_frame(spec: PresentationModel.BranchViewSpec) -> void:
 	if spec != null:
 		position = Vector2(spec.pos_x, spec.pos_y)
 	queue_redraw()
+
+
+func _ready() -> void:
+	_ensure_hint_labels()
+	_set_hint_labels_visible(false)
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +116,10 @@ func _draw() -> void:
 		var ih: PresentationModel.InteractionHint = _spec.interaction_hint as PresentationModel.InteractionHint
 		if ih != null and ih.target_pos != Vector2i(-1, -1):
 			_draw_hint_highlight(ih.target_pos, ih.text, ih.color, ih.is_inset, eff, a)
+		else:
+			_set_hint_labels_visible(false)
+	else:
+		_set_hint_labels_visible(false)
 
 	# Flash overlay
 	if _spec.flash_intensity > 0.0 and _spec.flash_pos != Vector2i(-1, -1):
@@ -107,6 +130,10 @@ func _draw() -> void:
 
 	# Title above panel
 	_draw_title(gpx, a)
+
+	# Adaptive hint boxes (draw once by focused branch).
+	if _spec.is_focused:
+		_draw_adaptive_hints(a)
 
 
 # ---------------------------------------------------------------------------
@@ -474,26 +501,7 @@ func _draw_hint_highlight(
 	var rect := Rect2(pos.x * eff, pos.y * eff, eff, eff)
 	var cell_scale: float = eff / 80.0
 	var center: Vector2 = rect.get_center()
-	var font_size: int = maxi(10, int(12.0 * cell_scale))
-	var white_col: Color = Color(1.0, 1.0, 1.0, a)
-	var black_col: Color = Color(0.0, 0.0, 0.0, a)
-	var outline_px: float = maxf(1.0, round(2.0 * cell_scale))
-
-	# Hint text (matches render_arc layout).
-	_draw_center_text_outlined(
-		"[SPACE]",
-		Vector2(center.x, center.y + 8.0 * cell_scale),
-		font_size,
-		white_col,
-		black_col,
-		outline_px)
-	_draw_center_text_outlined(
-		hint_text,
-		Vector2(center.x, center.y - 12.0 * cell_scale),
-		font_size,
-		white_col,
-		black_col,
-		outline_px)
+	_update_hint_text_overlay(hint_text, center, cell_scale, a)
 
 	# Drop hint: only show inset dashed mini-frame, no lock corners.
 	if is_inset:
@@ -540,44 +548,65 @@ func _draw_lock_corners(
 	draw_line(Vector2(right, bottom - size), Vector2(right, bottom), col, thickness, true)
 
 
-func _draw_center_text_outlined(
-		text: String,
-		center: Vector2,
-		font_size: int,
-		text_col: Color,
-		outline_col: Color,
-		outline_width: float) -> void:
-	if text == "":
-		return
-	var font: Font = ThemeDB.fallback_font
-	if font == null:
-		return
-	var ascent: float = font.get_ascent(font_size)
-	var descent: float = font.get_descent(font_size)
-	var baseline_y: float = center.y + (ascent - descent) * 0.5
-	var offsets: Array[Vector2] = [
-		Vector2(-outline_width, 0.0), Vector2(outline_width, 0.0),
-		Vector2(0.0, -outline_width), Vector2(0.0, outline_width),
-		Vector2(-outline_width, -outline_width), Vector2(-outline_width, outline_width),
-		Vector2(outline_width, -outline_width), Vector2(outline_width, outline_width),
-	]
-	for off in offsets:
-		draw_string(
-			font,
-			Vector2(center.x + off.x, baseline_y + off.y),
-			text,
-			HORIZONTAL_ALIGNMENT_CENTER,
-			-1.0,
-			font_size,
-			outline_col)
-	draw_string(
-		font,
-		Vector2(center.x, baseline_y),
-		text,
-		HORIZONTAL_ALIGNMENT_CENTER,
-		-1.0,
-		font_size,
-		text_col)
+func _ensure_hint_labels() -> void:
+	if _hint_space_label == null:
+		_hint_space_label = _create_hint_label()
+		_hint_space_label.text = "[SPACE]"
+		add_child(_hint_space_label)
+	if _hint_action_label == null:
+		_hint_action_label = _create_hint_label()
+		add_child(_hint_action_label)
+
+
+func _create_hint_label() -> Label:
+	var label: Label = Label.new()
+	label.visible = false
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	return label
+
+
+func _set_hint_labels_visible(v: bool) -> void:
+	if _hint_space_label != null:
+		_hint_space_label.visible = v
+	if _hint_action_label != null:
+		_hint_action_label.visible = v
+
+
+func _update_hint_text_overlay(hint_text: String, center: Vector2, cell_scale: float, a: float) -> void:
+	_ensure_hint_labels()
+
+	var font_size: int = maxi(10, int(round(12.0 * cell_scale)))
+	var outline_size: int = maxi(2, int(round(2.4 * cell_scale)))
+	var label_w: float = round(maxf(90.0, 130.0 * cell_scale))
+	var label_h: float = round(maxf(16.0, 22.0 * cell_scale))
+	var top_center: Vector2 = Vector2(center.x, center.y + 8.0 * cell_scale)
+	var bottom_center: Vector2 = Vector2(center.x, center.y - 12.0 * cell_scale)
+
+	_apply_hint_label_style(_hint_space_label, font_size, outline_size, a)
+	_apply_hint_label_style(_hint_action_label, font_size, outline_size, a)
+
+	_hint_action_label.text = hint_text
+	_layout_hint_label(_hint_space_label, top_center, label_w, label_h)
+	_layout_hint_label(_hint_action_label, bottom_center, label_w, label_h)
+	_set_hint_labels_visible(true)
+
+
+func _apply_hint_label_style(label: Label, font_size: int, outline_size: int, a: float) -> void:
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_constant_override("outline_size", outline_size)
+	label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, a))
+	label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, a))
+	label.add_theme_constant_override("shadow_outline_size", outline_size)
+	label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, a))
+	label.add_theme_constant_override("shadow_offset_x", 0)
+	label.add_theme_constant_override("shadow_offset_y", 0)
+
+
+func _layout_hint_label(ctrl: Control, center: Vector2, w: float, h: float) -> void:
+	ctrl.position = Vector2(round(center.x - w * 0.5), round(center.y - h * 0.5))
+	ctrl.size = Vector2(w, h)
 
 
 # ---------------------------------------------------------------------------
@@ -615,6 +644,85 @@ func _draw_title(gpx: float, a: float) -> void:
 	_draw_center_text(_spec.title, Vector2(gpx * 0.5, -8.0), size, col)
 
 
+func _draw_adaptive_hints(a: float) -> void:
+	if not _spec.has_branched:
+		if _spec.timeline_hint != "":
+			_draw_timeline_hint_box(_spec.branch_hint_active, a)
+		return
+
+	if _spec.show_merge_preview_hint:
+		_draw_merge_preview_hint(_spec.is_merge_preview, a)
+	if _spec.show_merge_hint:
+		_draw_merge_hint(a)
+	if _spec.show_fetch_indicator:
+		_draw_fetch_mode_indicator(_spec.fetch_mode_enabled, a)
+
+
+func _draw_timeline_hint_box(is_active: bool, a: float) -> void:
+	var box_w: float = 150.0
+	var box_h: float = 40.0
+	var view_size: Vector2 = get_viewport_rect().size
+	var center_x: float = (view_size.x - box_w) * 0.5
+	var y: float = (view_size.y + PresentationModel.TARGET_PANEL) * 0.5 + 15.0
+	var x: float = center_x
+	var rect: Rect2 = _global_rect_to_local(Rect2(x, y, box_w, box_h))
+
+	var bg: Color = _col(COLOR_HINT_GREEN if is_active else COLOR_HINT_DARK, a * 0.8)
+	var border: Color = _col(COLOR_HINT_GREEN_B if is_active else COLOR_HINT_GRAY_B, a)
+	var text_col: Color = _col(Color8(60, 30, 0) if is_active else COLOR_HINT_TEXT_G, a)
+
+	draw_rect(rect, bg)
+	draw_rect(rect, border, false, 2.0)
+	_draw_text_in_rect("V Branch", rect, 16, text_col)
+
+
+func _draw_merge_preview_hint(is_active: bool, a: float) -> void:
+	var box_w: float = 130.0
+	var box_h: float = 40.0
+	var view_size: Vector2 = get_viewport_rect().size
+	var center_x: float = (view_size.x - PresentationModel.TARGET_PANEL) * 0.5
+	var center_y: float = (view_size.y - PresentationModel.TARGET_PANEL) * 0.5
+	var x: float = center_x + PresentationModel.TARGET_PANEL - box_w
+	var y: float = center_y + PresentationModel.TARGET_PANEL + 15.0
+	var rect: Rect2 = _global_rect_to_local(Rect2(x, y, box_w, box_h))
+
+	draw_rect(rect, _col(COLOR_HINT_M_BG, a * 0.8))
+	draw_rect(rect, _col(COLOR_HINT_M_BD, a), false, 2.0)
+	var text: String = "M Cancel Preview" if is_active else "M Preview Merge"
+	_draw_text_in_rect(text, rect, 14, _col(Color.WHITE, a))
+
+
+func _draw_merge_hint(a: float) -> void:
+	var box_w: float = 150.0
+	var box_h: float = 40.0
+	var view_size: Vector2 = get_viewport_rect().size
+	var x: float = (view_size.x - box_w) * 0.5
+	var y: float = (view_size.y + PresentationModel.TARGET_PANEL) * 0.5 + 15.0
+	var rect: Rect2 = _global_rect_to_local(Rect2(x, y, box_w, box_h))
+
+	draw_rect(rect, _col(COLOR_HINT_V_BG, a * 0.8))
+	draw_rect(rect, _col(COLOR_HINT_V_BD, a), false, 2.0)
+	_draw_text_in_rect("V Merge", rect, 16, _col(Color.WHITE, a))
+
+
+func _draw_fetch_mode_indicator(enabled: bool, a: float) -> void:
+	var box_w: float = 120.0
+	var box_h: float = 40.0
+	var view_size: Vector2 = get_viewport_rect().size
+	var center_x: float = (view_size.x - PresentationModel.TARGET_PANEL) * 0.5
+	var y: float = (view_size.y + PresentationModel.TARGET_PANEL) * 0.5 + 15.0
+	var x: float = center_x
+	var rect: Rect2 = _global_rect_to_local(Rect2(x, y, box_w, box_h))
+
+	var bg: Color = _col(COLOR_HINT_F_ON_BG if enabled else COLOR_HINT_DARK, a * 0.8)
+	var bd: Color = _col(COLOR_HINT_F_ON_BD if enabled else COLOR_HINT_F_BD, a)
+	var tx: Color = _col(Color8(60, 30, 0) if enabled else Color8(220, 220, 220), a)
+
+	draw_rect(rect, bg)
+	draw_rect(rect, bd, false, 2.0)
+	_draw_text_in_rect("F Fetch Merge", rect, 14, tx)
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -623,6 +731,14 @@ func _col(c: Color, a: float) -> Color:
 	var out := c
 	out.a   *= a
 	return out
+
+
+func _global_rect_to_local(rect: Rect2) -> Rect2:
+	return Rect2(
+		rect.position.x - position.x,
+		rect.position.y - position.y,
+		rect.size.x,
+		rect.size.y)
 
 
 func _desaturate(c: Color, amount: float) -> Color:

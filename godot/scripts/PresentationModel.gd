@@ -43,6 +43,12 @@ class BranchViewSpec:
 	var flash_pos:              Vector2i    = Vector2i(-1, -1)
 	var flash_intensity:        float       = 0.0
 	var falling_progress:       Dictionary  = {}
+	# Adaptive hint flags (mirrors render_arc high-level behavior)
+	var branch_hint_active:     bool        = false
+	var show_merge_preview_hint: bool       = false
+	var show_merge_hint:        bool        = false
+	var show_fetch_indicator:   bool        = false
+	var fetch_mode_enabled:     bool        = false
 
 
 ## Complete visual specification for one frame.
@@ -97,6 +103,13 @@ static func build(
 
 	var focus      := controller.current_focus
 	var has_branched := controller.has_branched
+	var branch_hint_active: bool = false
+	if not has_branched:
+		branch_hint_active = _is_on_branch_point(controller.get_active_branch())
+	var show_merge_preview_hint: bool = has_branched
+	var show_merge_hint: bool = has_branched
+	var show_fetch_indicator: bool = has_branched and controller.can_show_fetch_hint()
+	var fetch_mode_enabled: bool = false
 
 	# Goal active (check merge-preview state so both panels reflect win condition)
 	var preview := controller.get_merge_preview()
@@ -168,7 +181,12 @@ static func build(
 		goal_ok, animation_frame,
 		flash_pos if (focus == 0) else Vector2i(-1, -1),
 		flash_int if (focus == 0) else 0.0,
-		falling)
+		falling,
+		branch_hint_active if (focus == 0) else false,
+		show_merge_preview_hint,
+		show_merge_hint,
+		show_fetch_indicator,
+		fetch_mode_enabled)
 
 	# Build sub branch spec (DIV 1)
 	if has_branched and controller.sub_branch != null:
@@ -184,7 +202,12 @@ static func build(
 			goal_ok, animation_frame,
 			flash_pos if (focus == 1) else Vector2i(-1, -1),
 			flash_int if (focus == 1) else 0.0,
-			falling)
+			falling,
+			branch_hint_active if (focus == 1) else false,
+			show_merge_preview_hint,
+			show_merge_hint,
+			show_fetch_indicator,
+			fetch_mode_enabled)
 
 	return spec
 
@@ -207,7 +230,12 @@ static func _make_spec(
 		p_anim:       int,
 		p_flash:      Vector2i,
 		p_flash_i:    float,
-		p_falling:    Dictionary) -> BranchViewSpec:
+		p_falling:    Dictionary,
+		p_branch_hint_active: bool,
+		p_show_merge_preview_hint: bool,
+		p_show_merge_hint: bool,
+		p_show_fetch_indicator: bool,
+		p_fetch_mode_enabled: bool) -> BranchViewSpec:
 
 	var s := BranchViewSpec.new()
 	s.state                  = p_state
@@ -229,6 +257,11 @@ static func _make_spec(
 	s.flash_pos              = p_flash
 	s.flash_intensity        = p_flash_i
 	s.falling_progress       = p_falling
+	s.branch_hint_active     = p_branch_hint_active
+	s.show_merge_preview_hint = p_show_merge_preview_hint
+	s.show_merge_hint        = p_show_merge_hint
+	s.show_fetch_indicator   = p_show_fetch_indicator
+	s.fetch_mode_enabled     = p_fetch_mode_enabled
 	return s
 
 
