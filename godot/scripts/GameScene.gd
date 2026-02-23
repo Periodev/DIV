@@ -19,6 +19,7 @@ var hint_overlay: HintOverlay = null
 var controller: GameController = null
 var all_levels:  Array         = []
 var current_level_idx: int     = 0
+var _current_hints: Dictionary = {"diverge": true, "pickup": false, "converge": false, "fetch": false}
 
 # Animation
 var animation_timer: float = 0.0
@@ -62,6 +63,9 @@ func _start_level(idx: int) -> void:
 		return
 	current_level_idx = clampi(idx, 0, all_levels.size() - 1)
 	var level_dict: Dictionary = all_levels[current_level_idx]
+	var raw_hints = level_dict.get("hints")
+	_current_hints = raw_hints if raw_hints is Dictionary \
+		else {"diverge": true, "pickup": false, "converge": false, "fetch": false}
 	var source := MapParser.parse_dual_layer(
 		level_dict.get("floor_map", ""),
 		level_dict.get("object_map", "")
@@ -174,16 +178,19 @@ func _input(event: InputEvent) -> void:
 			if controller.has_branched:
 				if controller.try_merge():
 					_full_refresh()
-			else:
+			elif _current_hints.get("diverge", true):
 				if controller.try_branch():
 					_full_refresh()
 
 		KEY_F:
-			if controller.try_fetch_merge():
-				_full_refresh()
+			if _current_hints.get("fetch", false):
+				if controller.try_fetch_merge():
+					_full_refresh()
 
 		KEY_X, KEY_SPACE:
-			controller.handle_adaptive_action()
+			controller.handle_adaptive_action(
+				_current_hints.get("converge", false) as bool,
+				_current_hints.get("pickup",   false) as bool)
 
 		KEY_TAB:
 			if controller.switch_focus():
