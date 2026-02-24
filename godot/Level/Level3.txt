@@ -119,15 +119,15 @@ objective = '''
 
 floor_map = '''
 ###S
-GcSx
+GSc.
 ###c
-##S.
+#VSv
 '''
 
 object_map = '''
 ....
-.PB.
-....
+.P..
+...B
 ....
 '''
 
