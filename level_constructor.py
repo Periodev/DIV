@@ -81,7 +81,7 @@ def _hints_for_level(world_num: int, level_num: int):
 
 def load_main_levels(level_dir: str | None = None):
     base_dir = os.path.dirname(__file__)
-    folder = level_dir or os.path.join(base_dir, "Level")
+    folder = level_dir or os.path.join(base_dir, "godot", "Level")
 
     if not os.path.isdir(folder):
         return []

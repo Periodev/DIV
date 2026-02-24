@@ -55,8 +55,8 @@ objective = '''
 
 floor_map = '''
 ..#G
-VH#H
-H.H.
+vH#H
+HvH.
 .H.H
 '''
 

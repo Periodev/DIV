@@ -189,7 +189,7 @@ floor_map = '''
 ##HS#
 ##c##
 ##c##
-#.V##
+#vv##
 '''
 
 object_map = '''
