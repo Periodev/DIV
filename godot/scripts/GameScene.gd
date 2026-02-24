@@ -164,6 +164,17 @@ func _process(delta: float) -> void:
 				controller.handle_move(dir)
 				_move_cooldown = MOVE_REPEAT_DELAY
 
+	# Physics runs every frame — mirrors Python game_window.py on_update (line 117).
+	# update_physics() is called unconditionally each frame (not only on input),
+	# so future time-driven or multi-step physics settle correctly.
+	if controller != null and not controller.collapsed and not controller.victory:
+		controller.update_physics()
+		needs_redraw = true
+
+	# Victory check every frame — mirrors Python game_window.py on_update (line 120).
+	if controller != null and not controller.victory:
+		controller.check_victory()
+
 	if needs_redraw:
 		_apply_frame_spec()
 
@@ -318,14 +329,12 @@ func _branch_has_shadow_front(branch: BranchState) -> bool:
 # ---------------------------------------------------------------------------
 
 func _on_state_changed() -> void:
-	_vlog("state_changed(before): collapsed=%s victory=%s branched=%s overlay=%s" % [
+	_vlog("state_changed: collapsed=%s victory=%s branched=%s overlay=%s" % [
 		controller.collapsed, controller.victory, controller.has_branched, overlay_label.visible
 	])
-	controller.update_physics()
-	controller.check_victory()
-	_vlog("state_changed(after): collapsed=%s victory=%s branched=%s overlay=%s" % [
-		controller.collapsed, controller.victory, controller.has_branched, overlay_label.visible
-	])
+	# Physics and victory are now handled each frame in _process().
+	# _on_state_changed() only triggers an immediate redraw so the visual
+	# responds to input without waiting for the next _process() tick.
 	_apply_frame_spec()
 	_update_ui()
 
