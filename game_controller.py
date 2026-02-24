@@ -13,12 +13,14 @@ class GameSnapshot:
     sub_branch: Optional[BranchState]
     current_focus: int
     has_branched: bool
+    div_points: int
 
 
 class GameController:
     __slots__ = (
         'source', 'solver_mode',
         'main_branch', 'sub_branch', 'current_focus', 'has_branched',
+        'div_points',
         'collapsed', 'victory',
         'history', 'input_log',
         'failed_action_pos', 'failed_action_time',
@@ -65,6 +67,7 @@ class GameController:
         new.sub_branch = self.sub_branch.copy() if self.sub_branch else None
         new.current_focus = self.current_focus
         new.has_branched = self.has_branched
+        new.div_points = self.div_points
         new.collapsed = self.collapsed
         new.victory = self.victory
         new.history = []
@@ -82,12 +85,14 @@ class GameController:
         self.sub_branch = None
         self.current_focus = 0
         self.has_branched = False
+        self.div_points = 0
         self.collapsed = False
         self.victory = False
         self.history.clear()
         self.input_log.clear()
         self.failed_action_pos = None
         self.failed_action_time = 0.0
+        self._check_charge_pickup(self.main_branch)
         self._save_snapshot()  # Save initial state
 
     def _trigger_flash(self, pos: tuple):
@@ -137,7 +142,8 @@ class GameController:
             main_branch=self.main_branch.copy(),
             sub_branch=self.sub_branch.copy() if self.sub_branch else None,
             current_focus=self.current_focus,
-            has_branched=self.has_branched
+            has_branched=self.has_branched,
+            div_points=self.div_points,
         )
         self.history.append(snapshot)
 
@@ -155,6 +161,7 @@ class GameController:
         self.sub_branch = snapshot.sub_branch.copy() if snapshot.sub_branch else None
         self.current_focus = snapshot.current_focus
         self.has_branched = snapshot.has_branched
+        self.div_points = snapshot.div_points
         self.collapsed = False
         self.victory = False
 
@@ -221,12 +228,12 @@ class GameController:
         preview = Timeline.merge_normal(focused, other)
         return preview.copy()
 
-    # Branch point usage: decrement after use
-    BRANCH_DECREMENT = {
-        TerrainType.BRANCH4: TerrainType.BRANCH3,
-        TerrainType.BRANCH3: TerrainType.BRANCH2,
-        TerrainType.BRANCH2: TerrainType.BRANCH1,
-        TerrainType.BRANCH1: TerrainType.FLOOR,
+    # Charges awarded when stepping onto a branch tile (all at once)
+    BRANCH_CHARGE = {
+        TerrainType.BRANCH1: 1,
+        TerrainType.BRANCH2: 2,
+        TerrainType.BRANCH3: 3,
+        TerrainType.BRANCH4: 4,
     }
 
     def try_branch(self) -> bool:
@@ -234,22 +241,24 @@ class GameController:
         if self.has_branched:
             return False
 
-        active = self.get_active_branch()
-        terrain = active.terrain.get(active.player.pos)
+        if self.div_points < 1:
+            return False  # No charge — silent fail
 
-        # Check if on a branch point (BRANCH1-4)
-        if terrain not in self.BRANCH_DECREMENT:
-            return False
-
-        # Decrement branch uses in main_branch (before diverge)
-        new_terrain = self.BRANCH_DECREMENT[terrain]
-        self.main_branch.terrain[active.player.pos] = new_terrain
-
+        self.div_points -= 1
         self.main_branch, self.sub_branch = Timeline.diverge(self.main_branch)
         self.has_branched = True
         self._log_input('V')
         self._save_snapshot()
         return True
+
+    def _check_charge_pickup(self, branch: BranchState) -> None:
+        """Award charge if player is standing on a branch terrain tile."""
+        if self.has_branched:
+            return  # Tiles are grayed out during branched state
+        terrain = branch.terrain.get(branch.player.pos)
+        if terrain in self.BRANCH_CHARGE:
+            self.div_points += self.BRANCH_CHARGE[terrain]
+            branch.terrain[branch.player.pos] = TerrainType.FLOOR
 
     def try_merge(self) -> bool:
         """Attempt to merge branches (normal merge).
@@ -321,6 +330,7 @@ class GameController:
         self.sub_branch = None
         self.has_branched = False
         self.current_focus = 0
+        self._check_charge_pickup(self.main_branch)
         self._log_input(log_char)
         self._save_snapshot()
         return True
@@ -372,6 +382,7 @@ class GameController:
         # Attempt move
         if GameLogic.can_move(active, direction):
             GameLogic.execute_move(active, direction)
+            self._check_charge_pickup(active)
             self._log_input(dir_key)
             self._save_snapshot()
             return True
@@ -537,10 +548,7 @@ class GameController:
         Returns: Hint string for V/C/Shift+C actions
         """
         if not self.has_branched:
-            # Not branched: show branch hint if on branch point
-            active = self.get_active_branch()
-            terrain = active.terrain.get(active.player.pos)
-            if terrain in self.BRANCH_DECREMENT:
+            if self.div_points > 0:
                 return 'V 分裂'
             return ''
 
