@@ -19,17 +19,20 @@ class GameSnapshot:
 	var sub_branch:    BranchState  # null if not branched
 	var current_focus: int
 	var has_branched:  bool
+	var div_points:    int
 
 	func _init(
 		p_main: BranchState,
 		p_sub: BranchState,
 		p_focus: int,
-		p_branched: bool
+		p_branched: bool,
+		p_div: int
 	) -> void:
 		main_branch   = p_main
 		sub_branch    = p_sub
 		current_focus = p_focus
 		has_branched  = p_branched
+		div_points    = p_div
 
 
 # ---------------------------------------------------------------------------
@@ -43,6 +46,7 @@ var main_branch:   BranchState
 var sub_branch:    BranchState  # null when not branched
 var current_focus: int = 0      # 0 = main, 1 = sub
 var has_branched:  bool = false
+var div_points:    int  = 0     # charge for branching (game-level, not per-branch)
 
 var collapsed: bool = false
 var victory:   bool = false
@@ -76,6 +80,7 @@ func reset() -> void:
 	sub_branch    = null
 	current_focus = 0
 	has_branched  = false
+	div_points    = 0
 	collapsed     = false
 	victory       = false
 	history.clear()
@@ -84,6 +89,7 @@ func reset() -> void:
 	failed_action_time = 0.0
 	falling_boxes.clear()
 	just_undid = false
+	_check_charge_pickup(main_branch)  # 初始站在充能格直接給 charge
 	_save_snapshot()
 
 
@@ -106,7 +112,8 @@ func _save_snapshot() -> void:
 		main_branch.copy(),
 		sub_branch.copy() if sub_branch != null else null,
 		current_focus,
-		has_branched
+		has_branched,
+		div_points
 	)
 	history.append(snap)
 
@@ -124,6 +131,7 @@ func undo() -> bool:
 	sub_branch    = snap.sub_branch.copy() if snap.sub_branch != null else null
 	current_focus = snap.current_focus
 	has_branched  = snap.has_branched
+	div_points    = snap.div_points
 	collapsed     = false
 	victory       = false
 
@@ -204,15 +212,10 @@ func try_branch() -> bool:
 	if has_branched:
 		return false
 
-	var active  := get_active_branch()
-	var terrain: int = active.terrain.get(active.get_player().pos, Enums.TerrainType.FLOOR)
+	if div_points < 1:
+		return false           # No charge — silent fail
 
-	if not (terrain in Enums.BRANCH_DECREMENT):
-		return false
-
-	# Decrement branch uses
-	var new_terrain: int = Enums.BRANCH_DECREMENT[terrain]
-	main_branch.terrain[active.get_player().pos] = new_terrain
+	div_points -= 1            # Consume one charge
 
 	var pair    := Timeline.diverge(main_branch)
 	main_branch  = pair[0]
@@ -223,6 +226,18 @@ func try_branch() -> bool:
 	_save_snapshot()
 	state_changed.emit()
 	return true
+
+
+## Called after every successful move. Awards +1 charge when the player steps
+## onto a branch terrain tile, and decrements that tile one level.
+func _check_charge_pickup(branch: BranchState) -> void:
+	if has_branched:
+		return   # 分裂期間充能格變灰，不可收集
+	var pos := branch.get_player().pos
+	var terrain: int = branch.terrain.get(pos, Enums.TerrainType.FLOOR)
+	if terrain in Enums.BRANCH_TERRAINS:
+		div_points += Enums.BRANCH_CHARGE[terrain]
+		branch.terrain[pos] = Enums.TerrainType.FLOOR
 
 
 func try_merge() -> bool:
@@ -266,6 +281,8 @@ func _merge_branches(mode: String) -> bool:
 	sub_branch    = null
 	has_branched  = false
 	current_focus = 0
+
+	_check_charge_pickup(main_branch)  # 合併後站在充能格也能收集
 
 	_log_input(log_char)
 	_save_snapshot()
@@ -332,6 +349,7 @@ func handle_move(direction: Vector2i) -> bool:
 
 	if GameLogic.can_move(active, direction):
 		GameLogic.execute_move(active, direction)
+		_check_charge_pickup(active)
 		_log_input(dir_key)
 		_save_snapshot()
 		state_changed.emit()
@@ -494,9 +512,7 @@ func get_interaction_hint() -> Dictionary:
 
 func get_timeline_hint() -> String:
 	if not has_branched:
-		var active  := get_active_branch()
-		var terrain: int = active.terrain.get(active.get_player().pos, Enums.TerrainType.FLOOR)
-		if terrain in Enums.BRANCH_DECREMENT:
+		if div_points > 0:
 			return "V 分裂"
 		return ""
 

@@ -106,7 +106,7 @@ static func build(
 	var has_branched := controller.has_branched
 	var branch_hint_active: bool = false
 	if not has_branched:
-		branch_hint_active = _is_on_branch_point(controller.get_active_branch())
+		branch_hint_active = controller.div_points > 0
 	var show_merge_preview_hint: bool = has_branched
 	var show_merge_hint: bool = has_branched
 	# F indicator is always shown in branched state.

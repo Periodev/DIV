@@ -428,7 +428,8 @@ func _update_renderer_layering(preview_on: bool) -> void:
 func _update_ui() -> void:
 	if controller == null:
 		return
-	hint_label.text = ""
+	var pts := controller.div_points
+	hint_label.text = "DIV: %d" % pts if pts > 0 else ""
 
 
 func _ensure_hint_overlay() -> void:

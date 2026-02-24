@@ -213,22 +213,51 @@ func _draw_terrain_cell(
 
 
 func _draw_branch_marker(center: Vector2, tt: int, eff: float, a: float) -> void:
+	var mc := COLOR_BRANCH if not _spec.has_branched else Color8(120, 120, 120)
+	if _spec.highlight_branch_point:
+		mc = Color8(50, 220, 50)
+	var col := _col(mc, a)
+	var cell_scale := eff / 80.0
+	var br := branch_marker_dot_radius(cell_scale)
+	for dot in branch_marker_dot_positions(center, tt, cell_scale):
+		draw_circle(dot, br, col)
+
+
+## Shared geometry: returns dot radius for a given cell_scale.
+static func branch_marker_dot_radius(cell_scale: float) -> float:
+	return maxf(4.0, 8.0 * cell_scale)
+
+
+## Shared geometry: returns dot centre positions for a branch marker.
+static func branch_marker_dot_positions(center: Vector2, tt: int, cell_scale: float) -> PackedVector2Array:
 	var uses_map := {
 		Enums.TerrainType.BRANCH1: 1, Enums.TerrainType.BRANCH2: 2,
 		Enums.TerrainType.BRANCH3: 3, Enums.TerrainType.BRANCH4: 4,
 	}
 	var uses: int = uses_map.get(tt, 1)
-	var cell_scale := eff / 80.0
-	var br    := maxf(2.0, 4.0 * cell_scale)
-	var lw    := maxf(1.0, 2.0 * cell_scale)
-	# Highlight if player is standing on this tile and not yet branched
-	var mc := COLOR_BRANCH if not _spec.has_branched else Color8(120, 120, 120)
-	if _spec.highlight_branch_point:
-		mc = Color8(50, 220, 50)  # brighter green when ready to branch
-	var col := _col(mc, a)
-	for i in range(uses - 1, 0, -1):
-		draw_arc(center, br * (i + 1), 0.0, TAU, 20, col, lw, true)
-	draw_circle(center, br, col)
+	var br := branch_marker_dot_radius(cell_scale)
+	var sp := br * 2.8   # spacing between dot centres
+
+	var dots: PackedVector2Array = []
+	match uses:
+		1:
+			dots.append(center)
+		2:
+			var h := sp * 0.5
+			dots.append(center + Vector2(-h, 0.0))
+			dots.append(center + Vector2( h, 0.0))
+		3:  # equilateral triangle, one dot up
+			var R := sp / sqrt(3.0)
+			dots.append(center + Vector2( 0.0,      -R))
+			dots.append(center + Vector2(-sp * 0.5,  R * 0.5))
+			dots.append(center + Vector2( sp * 0.5,  R * 0.5))
+		4:  # square
+			var h := sp * 0.5
+			dots.append(center + Vector2(-h, -h))
+			dots.append(center + Vector2( h, -h))
+			dots.append(center + Vector2(-h,  h))
+			dots.append(center + Vector2( h,  h))
+	return dots
 
 
 # ---------------------------------------------------------------------------
@@ -853,7 +882,7 @@ func _draw_timeline_hint_box(is_active: bool, a: float) -> void:
 
 	draw_rect(rect, bg)
 	draw_rect(rect, border, false, 2.0)
-	_draw_text_in_rect("V Branch", rect, 16, text_col)
+	_draw_text_in_rect("V Diverge", rect, 16, text_col)
 
 
 func _draw_merge_preview_hint(is_active: bool, a: float) -> void:

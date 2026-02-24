@@ -98,18 +98,9 @@ func _draw_terrain_cell(rect: Rect2, terrain_type: int, pos: Vector2i, cell_scal
 
 
 func _draw_branch_marker(center: Vector2, terrain_type: int, cell_scale: float) -> void:
-	var uses_map: Dictionary = {
-		Enums.TerrainType.BRANCH1: 1,
-		Enums.TerrainType.BRANCH2: 2,
-		Enums.TerrainType.BRANCH3: 3,
-		Enums.TerrainType.BRANCH4: 4,
-	}
-	var uses: int = uses_map.get(terrain_type, 1)
-	var base_radius: float = maxf(2.0, 4.0 * cell_scale)
-	var line_width: float = maxf(1.0, 2.0 * cell_scale)
-	for i in range(uses - 1, 0, -1):
-		draw_arc(center, base_radius * (i + 1), 0.0, TAU, 20, COLOR_BRANCH, line_width, true)
-	draw_circle(center, base_radius, COLOR_BRANCH)
+	var br := GameRenderer.branch_marker_dot_radius(cell_scale)
+	for dot in GameRenderer.branch_marker_dot_positions(center, terrain_type, cell_scale):
+		draw_circle(dot, br, COLOR_BRANCH)
 
 
 func _draw_boxes(cell_size: int, cell_scale: float) -> void:

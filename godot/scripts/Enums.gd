@@ -52,3 +52,11 @@ const BRANCH_TERRAINS: Array = [
 	TerrainType.BRANCH3,
 	TerrainType.BRANCH4,
 ]
+
+# Charges awarded when stepping onto a branch tile (collected all at once)
+const BRANCH_CHARGE: Dictionary = {
+	TerrainType.BRANCH1: 1,
+	TerrainType.BRANCH2: 2,
+	TerrainType.BRANCH3: 3,
+	TerrainType.BRANCH4: 4,
+}
