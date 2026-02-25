@@ -8,7 +8,7 @@ class_name GameRenderer
 # Visual constants — Node Network style
 # ---------------------------------------------------------------------------
 
-const COLOR_BG      := Color(0.102, 0.102, 0.141)   # #1A1A24
+const COLOR_BG      := Color(0.0, 0.0, 0.0)          # pure black
 
 const LINE_NORMAL   := Color(1, 1, 1, 0.10)          # normal connection
 const LINE_DASHED   := Color(1, 1, 1, 0.20)          # filled-hole connection
@@ -160,7 +160,7 @@ func _draw_connections(gs: int, eff: float, a: float) -> void:
 					_draw_connection_pair(
 						pos_a, tt_a, c_a,
 						pos_b, tt_b, _grid_to_local_center(pos_b, eff),
-						a)
+						eff, a)
 
 			# Down neighbour
 			if y + 1 < gs:
@@ -170,13 +170,13 @@ func _draw_connections(gs: int, eff: float, a: float) -> void:
 					_draw_connection_pair(
 						pos_a, tt_a, c_a,
 						pos_b, tt_b, _grid_to_local_center(pos_b, eff),
-						a)
+						eff, a)
 
 
 func _draw_connection_pair(
 		pos_a: Vector2i, tt_a: int, c_a: Vector2,
 		pos_b: Vector2i, tt_b: int, c_b: Vector2,
-		a: float) -> void:
+		eff: float, a: float) -> void:
 
 	var a_empty_hole: bool = (tt_a == Enums.TerrainType.HOLE) and not _is_hole_filled(pos_a)
 	var b_empty_hole: bool = (tt_b == Enums.TerrainType.HOLE) and not _is_hole_filled(pos_b)
@@ -184,29 +184,53 @@ func _draw_connection_pair(
 	var b_filled_hole: bool = (tt_b == Enums.TerrainType.HOLE) and not b_empty_hole
 
 	if a_empty_hole or b_empty_hole:
-		_draw_broken_segment(c_a, c_b, a_empty_hole, b_empty_hole, a)
+		_draw_broken_segment(c_a, c_b, a_empty_hole, b_empty_hole, eff, a)
 	elif a_filled_hole or b_filled_hole:
-		# Filled-hole neighbourhood: static dashed line.
-		_draw_dashed_line(c_a, c_b, _col(LINE_DASHED, a), 1.3, 7.0, 0.0)
+		# Filled hole: restore solid connection like a normal floor.
+		draw_line(c_a, c_b, _col(LINE_NORMAL, a), 2.0)
 	else:
-		draw_line(c_a, c_b, _col(LINE_NORMAL, a), 1.2)
+		draw_line(c_a, c_b, _col(LINE_NORMAL, a), 2.0)
 
 
 func _draw_broken_segment(
 		c_a: Vector2, c_b: Vector2,
-		a_empty_hole: bool, b_empty_hole: bool, a: float) -> void:
-	var col_start: Color = _col(Color(1.0, 1.0, 1.0, 0.34), a)
-	var col_end: Color = _col(LINE_CROSS, a)
-	var dash_offset: float = 0.0
+		a_empty_hole: bool, b_empty_hole: bool, eff: float, a: float) -> void:
+	var col_white: Color = _col(LINE_NORMAL, a)
+	var col_red: Color   = _col(LINE_CROSS, a)
 	if a_empty_hole and not b_empty_hole:
-		# Gradient from walkable node (white) into empty hole (red).
-		_draw_dashed_gradient_line(c_b, c_a, col_start, col_end, 1.3, 6.0, dash_offset)
+		_draw_break_wire(c_b, c_a, col_white, col_red, eff)
 	elif b_empty_hole and not a_empty_hole:
-		# Gradient from walkable node (white) into empty hole (red).
-		_draw_dashed_gradient_line(c_a, c_b, col_start, col_end, 1.3, 6.0, dash_offset)
+		_draw_break_wire(c_a, c_b, col_white, col_red, eff)
 	else:
-		# Fallback for rare hole-hole adjacency.
-		_draw_dashed_line(c_a, c_b, col_end, 1.3, 6.0, dash_offset)
+		# Both holes: red stub from each end, gap in middle.
+		var dist: float = c_a.distance_to(c_b)
+		if dist <= 0.001:
+			return
+		var hole_r: float = _goal_marker_radius(eff) + maxf(2.0, (eff / 80.0) * 3.0) + 2.0
+		var stub: float     = minf(dist * 0.20, dist * 0.5 - hole_r)
+		var dir_ab: Vector2 = (c_b - c_a) / dist
+		_draw_dashed_line(c_a + dir_ab * hole_r, c_a + dir_ab * (hole_r + stub), col_red, 1.6, 5.0, 0.0)
+		_draw_dashed_line(c_b - dir_ab * hole_r, c_b - dir_ab * (hole_r + stub), col_red, 1.6, 5.0, 0.0)
+
+
+# Solid white line from walkable node, stops before hole visual; red dashed stub in the gap.
+func _draw_break_wire(c_walk: Vector2, c_hole: Vector2, col_white: Color, col_red: Color, eff: float) -> void:
+	var dist: float = c_walk.distance_to(c_hole)
+	if dist <= 0.001:
+		return
+	var dir: Vector2  = (c_hole - c_walk) / dist
+	# Safe boundary: leave clearance for the hole node's visual (ring + margin).
+	var hole_r: float = _goal_marker_radius(eff) + maxf(2.0, (eff / 80.0) * 3.0) + 3.0
+	var safe: float   = dist - hole_r   # px from walkable center to edge of hole visual
+	if safe <= 0.0:
+		return
+	# White line: 0 → 72% of safe zone.
+	draw_line(c_walk, c_walk + dir * safe * 0.72, col_white, 2.0)
+	# Red stub: 84% → 100% of safe zone (just outside hole node visual).
+	_draw_dashed_line(
+		c_walk + dir * safe * 0.84,
+		c_walk + dir * safe,
+		col_red, 1.6, 5.0, 0.0)
 
 
 # ---------------------------------------------------------------------------
@@ -229,7 +253,7 @@ func _draw_node_at(pos: Vector2i, tt: int, center: Vector2, eff: float, a: float
 
 	match tt:
 		Enums.TerrainType.FLOOR:
-			draw_circle(center, 2.0 * NODE_SCALE, _col(Color(1, 1, 1, 0.10), a))
+			draw_circle(center, 3.8 * NODE_SCALE, _col(Color(1, 1, 1, 0.10), a))
 
 		Enums.TerrainType.HOLE:
 			_draw_hole_node(pos, center, eff, a)
@@ -251,7 +275,7 @@ func _draw_node_at(pos: Vector2i, tt: int, center: Vector2, eff: float, a: float
 			_draw_goal_node(center, eff, a)
 
 		_:
-			draw_circle(center, 2.0 * NODE_SCALE, _col(Color(1, 1, 1, 0.10), a))
+			draw_circle(center, 3.8 * NODE_SCALE, _col(Color(1, 1, 1, 0.10), a))
 
 
 func _draw_hole_node(pos: Vector2i, center: Vector2, eff: float, a: float) -> void:
@@ -463,6 +487,10 @@ func _draw_box_diamond(ent: Entity, eff: float, a: float) -> void:
 		var sc_border: Color = uid_color
 		sc_border.a = 0.88 * a
 		_draw_dashed_diamond(center, NR, sc_border, 1.8, 3.2, 0.0)
+		# White outline when this shadow is the SPACE converge target.
+		if _spec.interaction_hint != null and _spec.interaction_hint.text == "收束" \
+				and ent.pos == _spec.interaction_hint.target_pos:
+			_draw_diamond(center, NR, Color(1, 1, 1, 0.90 * a), false, 2.2)
 		var sc_text: Color = uid_color
 		sc_text.a = 0.92 * a
 		_draw_center_text(str(ent.uid), center, font_size, sc_text)
@@ -931,15 +959,15 @@ func _draw_shadow_connections(eff: float, a: float) -> void:
 		if positions.size() <= 1:
 			continue
 
-		var line_color: Color = BOX_COLORS[(uid - 1) % 5]
-		line_color.a = 0.85 * a
+		var base_color: Color = BOX_COLORS[(uid - 1) % 5]
+		var line_color: Color = Color(base_color.r, base_color.g, base_color.b, 0.72 * a)
 
 		for raw_pos in positions.keys():
 			var pos: Vector2i = raw_pos as Vector2i
 			if pos == front_pos:
 				continue
 			var other_center: Vector2 = _grid_to_local_center(pos, eff)
-			_draw_dashed_line(other_center, front_center, line_color, 3.0, 12.0, offset)
+			_draw_dashed_line(other_center, front_center, line_color, 1.6, 12.0, offset)
 
 
 # ---------------------------------------------------------------------------
