@@ -90,6 +90,7 @@ const BORDER_UNFOCUSED := Color(0.4, 0.4, 0.4)
 static func build(
 		controller: GameController,
 		animation_frame: int,
+		fall_progress:        Dictionary = {},
 		slide_progress:       float = 0.0,
 		slide_direction:      int   = 0,
 		merge_preview_active: bool  = false,
@@ -129,14 +130,8 @@ static func build(
 			flash_int = 1.0 - elapsed / 0.3
 			flash_pos = controller.failed_action_pos
 
-	# Falling boxes
-	var falling: Dictionary = {}
-	for raw_key in controller.falling_boxes.keys():
-		var fall_arr := raw_key as Array
-		var prog: float = controller.get_falling_progress(
-			fall_arr[0] as int, fall_arr[1] as Vector2i)
-		if prog >= 0.0:
-			falling[raw_key] = prog
+	# Falling boxes: progress driven by GameScene Tweens, passed in directly.
+	var falling: Dictionary = fall_progress
 
 	# Cell size (focused panel always TARGET_PANEL pixels wide)
 	var gs: int      = controller.main_branch.grid_size

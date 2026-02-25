@@ -37,6 +37,10 @@ var merge_preview_progress: float = 0.0
 const MERGE_PREVIEW_DURATION := 0.20
 var peek_floor_active: bool = false
 
+# Falling box Tween animations
+var _fall_progress: Dictionary = {}  # {[uid, pos]: float 0-1} driven by Tweens
+var _fall_tweens:   Dictionary = {}  # {str_key: Tween}
+
 # Held-key movement (mirrors Python game_window.py on_update + move_cooldown)
 const MOVE_REPEAT_DELAY := 0.20  # seconds between repeats (~6 frames @ 60 fps)
 var _move_cooldown: float = 0.0
@@ -93,6 +97,7 @@ func _start_level(idx: int) -> void:
 		push_error("GameScene: failed to parse level %d" % current_level_idx)
 		return
 
+	_clear_fall_tweens()
 	controller = GameController.new(source)
 	controller.state_changed.connect(_on_state_changed)
 	controller.victory_achieved.connect(_on_victory)
@@ -133,10 +138,31 @@ func _process(delta: float) -> void:
 			slide_active = false
 		needs_redraw = true
 
-	# Falling boxes or flash need per-frame update
-	if controller != null and (
-			not controller.falling_boxes.is_empty() or
-			controller.failed_action_pos != Vector2i(-1, -1)):
+	# Falling boxes: create Tweens for newly detected falls, force redraw while active.
+	if controller != null and not controller.falling_boxes.is_empty():
+		for raw_key in controller.falling_boxes.keys():
+			var k: Array  = raw_key as Array
+			var str_key   := "%d:%d:%d" % [k[0] as int, (k[1] as Vector2i).x, (k[1] as Vector2i).y]
+			if not _fall_tweens.has(str_key):
+				var captured_key: Array = raw_key as Array
+				var captured_str := str_key
+				_fall_progress[captured_key] = 0.0  # register immediately for hold phase
+				var tw := create_tween()
+				_fall_tweens[str_key] = tw
+				tw.tween_interval(0.13)              # hold: empty hole + static diamond
+				tw.tween_method(
+					func(v: float) -> void: _fall_progress[captured_key] = v,
+					0.0, 1.0, 0.13).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_SINE)
+				tw.tween_callback(func() -> void:
+					_fall_progress.erase(captured_key)
+					_fall_tweens.erase(captured_str)
+					controller.falling_boxes.erase(captured_key))
+		needs_redraw = true
+	if not _fall_progress.is_empty():
+		needs_redraw = true
+
+	# Flash needs per-frame update.
+	if controller != null and controller.failed_action_pos != Vector2i(-1, -1):
 		needs_redraw = true
 
 	# Merge preview animation (M): side branch slides/scales into overlap.
@@ -365,6 +391,14 @@ func _on_collapse() -> void:
 	overlay_label.visible = true
 
 
+func _clear_fall_tweens() -> void:
+	for tw in _fall_tweens.values():
+		if tw is Tween:
+			(tw as Tween).kill()
+	_fall_tweens.clear()
+	_fall_progress.clear()
+
+
 func _full_refresh() -> void:
 	var should_hide_overlay := controller == null or (not controller.victory and not controller.collapsed)
 	if should_hide_overlay:
@@ -390,6 +424,7 @@ func _apply_frame_spec() -> void:
 	var spec := PresentationModel.build(
 		controller,
 		animation_frame,
+		_fall_progress,
 		slide_progress if slide_active else 0.0,
 		slide_direction,
 		merge_preview_active,

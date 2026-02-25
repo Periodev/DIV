@@ -256,7 +256,12 @@ func _draw_node_at(pos: Vector2i, tt: int, center: Vector2, eff: float, a: float
 
 func _draw_hole_node(pos: Vector2i, center: Vector2, eff: float, a: float) -> void:
 	var core_r: float = _goal_marker_radius(eff)
-	var uids: Array[int] = _get_uids_in_hole(pos)
+
+	# Exclude entities still in fall animation (including hold phase t=0) — hole stays empty.
+	var uids: Array[int] = []
+	for uid in _get_uids_in_hole(pos):
+		if _get_fall_progress(uid, pos) < 0.0:
+			uids.append(uid)
 
 	if uids.is_empty():
 		# Empty hole: red ring + black fill.
@@ -433,6 +438,9 @@ func _draw_entities(eff: float, a: float) -> void:
 		else:
 			_draw_box_diamond(ent, eff, draw_alpha)
 
+	# Falling box morph animations (z == -1, just dropped into hole).
+	_draw_falling_boxes(eff, a)
+
 	# Shadow connections (focused full-size only)
 	if _spec.is_focused and _spec.scale >= 1.0:
 		_draw_shadow_connections(eff, a)
@@ -447,14 +455,6 @@ func _draw_box_diamond(ent: Entity, eff: float, a: float) -> void:
 	var is_shadow: bool   = _spec.state.is_shadow(ent.uid)
 
 	var center: Vector2 = _grid_to_local_center(ent.pos, eff)
-
-	# Falling animation: shrink + fade as box drops into hole.
-	var fall_prog: float = _get_fall_progress(ent.uid, ent.pos)
-	if fall_prog > 0.0:
-		NR        *= (1.0 - fall_prog)
-		a         *= maxf(0.0, 1.0 - fall_prog * 0.8)
-		cell_scale *= (1.0 - fall_prog)
-
 	var font_size: int = int(14.0 * cell_scale * ENTITY_SCALE)
 
 	if is_shadow:
@@ -754,6 +754,55 @@ func _get_fall_progress(uid: int, pos: Vector2i) -> float:
 		if k[0] == uid and k[1] == pos:
 			return _spec.falling_progress[raw_key] as float
 	return -1.0
+
+
+## Builds N polygon points interpolated between a diamond (t=0) and circle (t=1).
+## Diamond boundary in polar: r = NR / (|cosθ| + |sinθ|).
+func _morph_diamond_circle_pts(center: Vector2, NR: float, t: float, N: int = 32) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in N:
+		var theta: float    = float(i) * TAU / float(N)
+		var r_diamond: float = NR / maxf(abs(cos(theta)) + abs(sin(theta)), 0.0001)
+		var r: float         = lerpf(r_diamond, NR, t)
+		pts.append(center + Vector2(cos(theta) * r, sin(theta) * r))
+	return pts
+
+
+## Draws the 3-stage falling animation for boxes at z==-1 with active fall progress.
+## Stage 1 (t 0→0.75): diamond morphs to filled circle, covering the empty hole.
+## Stage 2 (t 0.75→1):  inner bg circle grows to create the ring (floor visible).
+func _draw_falling_boxes(eff: float, a: float) -> void:
+	for e in _spec.state.entities:
+		var ent: Entity = e as Entity
+		if ent == null or ent.uid == 0 or ent.type != Enums.EntityType.BOX or ent.z != -1:
+			continue
+		var t: float = _get_fall_progress(ent.uid, ent.pos)
+		if t < 0.0:
+			continue
+
+		var NR: float        = eff * NR_FACTOR * ENTITY_SCALE
+		var core_r: float    = _goal_marker_radius(eff)
+		var uid_color: Color = BOX_COLORS[(ent.uid - 1) % 5]
+		var is_shadow: bool  = _spec.state.is_shadow(ent.uid)
+		var center: Vector2  = _grid_to_local_center(ent.pos, eff)
+
+		# Stage 1: morph shape (diamond → circle).
+		var t_morph: float = minf(t / 0.75, 1.0)
+		var pts: PackedVector2Array = _morph_diamond_circle_pts(center, NR, t_morph)
+		var closed := PackedVector2Array(pts)
+		closed.append(pts[0])
+
+		if is_shadow:
+			draw_colored_polygon(pts, _col(COLOR_BG, a))
+			draw_polyline(closed, Color(uid_color.r, uid_color.g, uid_color.b, 0.88 * a), 1.8)
+		else:
+			draw_colored_polygon(pts, _col(uid_color, a))
+			draw_polyline(closed, Color(1, 1, 1, 0.80 * a), 2.2)
+
+		# Stage 2: inner bg circle grows to reveal floor (creates the ring).
+		var t_ring: float = clampf((t - 0.75) / 0.25, 0.0, 1.0)
+		if t_ring > 0.0:
+			draw_circle(center, core_r * 0.80 * t_ring, _col(COLOR_BG, a))
 
 
 # ---------------------------------------------------------------------------

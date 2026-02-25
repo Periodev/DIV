@@ -175,7 +175,7 @@ func update_physics() -> void:
 			if ent.z == -1:
 				var key := [ent.uid, ent.pos]
 				if not before_underground.has(key):
-					falling_boxes[key] = now
+					falling_boxes[key] = true
 
 	just_undid = false
 
@@ -184,24 +184,9 @@ func update_physics() -> void:
 		collapse_occurred.emit()
 
 
-## Returns falling progress 0.0–1.0 for box (uid, pos), or -1 if not falling.
-func get_falling_progress(uid: int, pos: Vector2i) -> float:
-	var key := [uid, pos]
-	if not falling_boxes.has(key):
-		return -1.0
-
-	var elapsed: float = Time.get_unix_time_from_system() - (falling_boxes[key] as float)
-	var duration: float = 0.2  # 200 ms
-
-	if elapsed >= duration:
-		falling_boxes.erase(key)
-		return -1.0
-
-	var t: float = elapsed / duration
-	if t < 0.6:
-		return 0.0
-	var t_fall: float = (t - 0.6) / 0.6
-	return t_fall * t_fall
+## Whether a box (uid, pos) is registered as newly fallen (Tween driven by GameScene).
+func is_box_falling(uid: int, pos: Vector2i) -> bool:
+	return falling_boxes.has([uid, pos])
 
 
 # ---------------------------------------------------------------------------
