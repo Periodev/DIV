@@ -103,6 +103,12 @@ func _draw() -> void:
 	var gpx: float = eff * gs
 	var a:   float = _spec.alpha
 
+	# Merge-preview overlay panel: no background, no terrain — entities only.
+	var is_overlay: bool = _spec.is_merge_preview and not _spec.is_focused
+	if is_overlay:
+		_draw_entities(eff, a)
+		return
+
 	# Background
 	draw_rect(Rect2(0, 0, gpx, gpx), _col(COLOR_BG, a))
 
@@ -113,18 +119,8 @@ func _draw() -> void:
 	# Entities
 	_draw_entities(eff, a)
 
-	# Interaction hint highlight (over entities)
-	if _peek_floor_mode:
-		_set_hint_labels_visible(false)
-	elif _spec.interaction_hint != null:
-		var ih: PresentationModel.InteractionHint = \
-				_spec.interaction_hint as PresentationModel.InteractionHint
-		if ih != null and ih.target_pos != Vector2i(-1, -1):
-			_draw_hint_highlight(ih.target_pos, ih.text, ih.color, ih.is_inset, eff, a)
-		else:
-			_set_hint_labels_visible(false)
-	else:
-		_set_hint_labels_visible(false)
+	# Interaction hint — hidden for now
+	_set_hint_labels_visible(false)
 
 	# Flash overlay
 	if _spec.flash_intensity > 0.0 and _spec.flash_pos != Vector2i(-1, -1):
@@ -289,7 +285,6 @@ func _draw_hole_node(center: Vector2, hole_r: float, filled_uids: Array[int], a:
 
 func _draw_switch_node(center: Vector2, NR: float, active: bool, a: float) -> void:
 	if active:
-		_draw_glow(center, NR * 2.7, Color(0.71, 0.73, 0.76), 0.35 * a)
 		_draw_diamond(center, NR * 1.5 + 6.0,
 				_col(Color(0.71, 0.73, 0.76, 1.0), a), false, 2.0)
 	_draw_diamond(center, NR * 1.5,
@@ -325,10 +320,11 @@ func _draw_goal_node(center: Vector2, eff: float, a: float) -> void:
 	var pulse: float    = 0.6 + 0.4 * sin(_time * 2.0)
 	var cell_scale: float = eff / 80.0
 
-	_draw_glow(center, 30.0 * cell_scale, Color(1, 0.94, 0.31), 0.65 * pulse * a)
-	draw_arc(center, 10.0 * cell_scale, 0, TAU, 32,
+	if _spec.goal_active:
+		_draw_glow(center, 30.0 * cell_scale, Color(1, 0.94, 0.31), 0.65 * pulse * a)
+	draw_arc(center, 15.0 * cell_scale, 0, TAU, 32,
 			_col(Color(1, 0.94, 0.31, 0.5 + pulse * 0.4), a), 2.0)
-	draw_circle(center, 10.0 * cell_scale,
+	draw_circle(center, 15.0 * cell_scale,
 			_col(Color(1, 0.94, 0.31, 0.12 + pulse * 0.12), a))
 	_draw_center_text("G", center, int(14.0 * cell_scale), _col(Color(1, 1, 0.59, 0.9), a))
 
@@ -420,16 +416,12 @@ func _draw_box_diamond(
 		# Shadow: hollow diamond + uid-coloured text
 		var sc: Color = uid_color
 		sc.a = a
-		_draw_glow(center, NR * 1.6, uid_color, 0.10 * a)
 		_draw_diamond(center, NR, sc, false, 1.8)
 		_draw_center_text(str(ent.uid), center, font_size, sc)
 	else:
-		# Solid entity: glow + outer white ring + filled diamond + inner ring
+		# Solid entity: filled diamond + inner white ring
 		var uc: Color = uid_color
 		uc.a = a
-		_draw_glow(center, NR * 2.2, uid_color, 0.50 * a)
-		_draw_diamond(center, NR + 5.0 * cell_scale,
-				Color(1, 1, 1, 0.85 * a), false, 3.5)
 		_draw_diamond(center, NR, uc, true)
 		_draw_diamond(center, NR, Color(1, 1, 1, 0.55 * a), false, 2.0)
 		_draw_center_text(str(ent.uid), center, font_size,
@@ -453,17 +445,13 @@ func _draw_player(player: Entity, eff: float, a: float) -> void:
 		var uid_color: Color = BOX_COLORS[(held_uid - 1) % 5]
 		var uc: Color = uid_color
 		uc.a = a
-		_draw_glow(center, NR * 2.2, uid_color, 0.50 * a)
-		_draw_diamond(center, NR + 5.0 * cell_scale,
-				Color(1, 1, 1, 0.85 * a), false, 3.5)
 		_draw_diamond(center, NR, uc, true)
 		_draw_diamond(center, NR, Color(1, 1, 1, 0.55 * a), false, 2.0)
 		_draw_center_text(str(held_uid), center, font_size,
 				Color(0.07, 0.07, 0.07, a))
 		_draw_dir_arrow(center, player.direction, NR, Color(1, 1, 1, 0.92 * a))
 	else:
-		# Empty-handed: glowing circle
-		_draw_glow(center, PR * 2.2, Color(0.63, 0.78, 1.0), 0.45 * a)
+		# Empty-handed: circle
 		draw_circle(center, PR, _col(Color(0.467, 0.600, 0.933, 1.0), a))
 		draw_arc(center, PR, 0, TAU, 24,
 				_col(Color(0.78, 0.86, 1.0, 0.75), a), 2.0)
@@ -531,7 +519,7 @@ func _draw_dir_arrow(
 		origin: Vector2, dir: Vector2i,
 		base_size: float, color: Color) -> void:
 	var fdir := Vector2(float(dir.x), float(dir.y))
-	var tip   := origin + fdir * base_size * 0.85
+	var tip   := origin + fdir * base_size * 2.85
 	var as_   := base_size * 0.45
 	var perp  := Vector2(-float(dir.y), float(dir.x))
 	draw_colored_polygon(PackedVector2Array([
