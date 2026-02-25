@@ -38,7 +38,7 @@ class BranchViewSpec:
 	var alpha:                  float       = 1.0
 	var cell_size:              int         = 80
 	# Rendering state (not in Python BranchViewSpec, added for renderer convenience)
-	var goal_active:            bool        = false
+	var goal_glow:              int         = 0  # 0=off 1=weak(branched+preview ok) 2=strong(merged+ok)
 	var animation_frame:        int         = 0
 	var flash_pos:              Vector2i    = Vector2i(-1, -1)
 	var flash_intensity:        float       = 0.0
@@ -114,9 +114,11 @@ static func build(
 	var show_fetch_indicator: bool = has_branched
 	var fetch_mode_enabled: bool = has_branched and controller.can_show_fetch_hint()
 
-	# Goal active (check merge-preview state so both panels reflect win condition)
+	# Goal glow level: 2=strong (merged+switches done), 1=weak (branched+preview switches done).
 	var preview := controller.get_merge_preview()
-	var goal_ok := preview.all_switches_activated()
+	var goal_glow := 0
+	if preview.all_switches_activated():
+		goal_glow = 1 if controller.has_branched else 2
 
 	# Flash effect
 	var flash_pos := Vector2i(-1, -1)
@@ -188,7 +190,7 @@ static func build(
 		spec.timeline_hint if (focus == 0) else "",
 		has_branched, preview_on, cell_sz,
 		main_s, main_x, main_y, main_a,
-		goal_ok, animation_frame,
+		goal_glow, animation_frame,
 		flash_pos if (focus == 0) else Vector2i(-1, -1),
 		flash_int if (focus == 0) else 0.0,
 		falling,
@@ -209,7 +211,7 @@ static func build(
 			spec.timeline_hint if (focus == 1) else "",
 			has_branched, preview_on, cell_sz,
 			sub_s, sub_x, sub_y, sub_a,
-			goal_ok, animation_frame,
+			goal_glow, animation_frame,
 			flash_pos if (focus == 1) else Vector2i(-1, -1),
 			flash_int if (focus == 1) else 0.0,
 			falling,
@@ -236,7 +238,7 @@ static func _make_spec(
 		p_x:          int,
 		p_y:          int,
 		p_alpha:      float,
-		p_goal:       bool,
+		p_goal:       int,
 		p_anim:       int,
 		p_flash:      Vector2i,
 		p_flash_i:    float,
@@ -262,7 +264,7 @@ static func _make_spec(
 	s.pos_x                  = p_x
 	s.pos_y                  = p_y
 	s.alpha                  = p_alpha
-	s.goal_active            = p_goal
+	s.goal_glow              = p_goal
 	s.animation_frame        = p_anim
 	s.flash_pos              = p_flash
 	s.flash_intensity        = p_flash_i

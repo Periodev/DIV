@@ -255,63 +255,46 @@ func _draw_node_at(pos: Vector2i, tt: int, center: Vector2, eff: float, a: float
 
 
 func _draw_hole_node(pos: Vector2i, center: Vector2, eff: float, a: float) -> void:
-	# Simplified core palette matching docs/Code_Generated_Image.png
 	var core_r: float = _goal_marker_radius(eff)
-	var is_filled: bool = _is_hole_filled(pos)
-	if not is_filled:
+	var uids: Array[int] = _get_uids_in_hole(pos)
+
+	if uids.is_empty():
+		# Empty hole: red ring + black fill.
 		var ring_w: float = maxf(2.0, (eff / 80.0) * 3.0)
 		draw_circle(center, core_r + ring_w, _col(Color(0.86, 0.21, 0.24, 0.95), a))
 		draw_circle(center, core_r, _col(Color(0.0, 0.0, 0.0, 0.98), a))
 		return
 
-	var uids: Array[int] = _get_uids_in_hole(pos)
-	var fill_uid: int = -1
-	var is_shadow_fill: bool = false
-	for uid in uids:
-		if fill_uid == -1:
-			fill_uid = uid
-			is_shadow_fill = _spec.state.is_shadow(uid)
-		if not _spec.state.is_shadow(uid):
-			fill_uid = uid
-			is_shadow_fill = false
-			break
+	uids.sort()
+	if uids.size() == 1:
+		_draw_hole_fill_half(center, uids[0], core_r, eff, a, 0.0, TAU)
+	else:
+		# Two entities: left half (lower uid) / right half (higher uid).
+		_draw_hole_fill_half(center, uids[0], core_r, eff, a, PI * 0.5, PI * 1.5)
+		_draw_hole_fill_half(center, uids[1], core_r, eff, a, -PI * 0.5, PI * 0.5)
 
-	var embed_col: Color = Color(0.62, 0.66, 0.72, 1.0)
-	if fill_uid > 0:
-		embed_col = BOX_COLORS[(fill_uid - 1) % 5]
 
-	if is_shadow_fill:
-		var dash_r: float = core_r
+func _draw_hole_fill_half(
+		center: Vector2, uid: int, core_r: float, eff: float, a: float,
+		angle_from: float, angle_to: float) -> void:
+	var col: Color = BOX_COLORS[(uid - 1) % 5]
+	var is_shadow: bool = _spec.state.is_shadow(uid)
+	var frac: float = (angle_to - angle_from) / TAU
+	if is_shadow:
 		var dash_w: float = maxf(1.6, (eff / 80.0) * 2.2)
-		var dash_col: Color = embed_col
-		dash_col.a = 0.95 * a
-		_draw_dashed_circle(
-			center, dash_r, dash_col,
-			dash_w, 18, 0.35, 0.0)
-		return
-
-	# Solid fill hole: object-colored solid circle outline only (no fill).
-	var solid_rim_col: Color = embed_col
-	solid_rim_col.a = 0.95 * a
-	var solid_rim_w: float = maxf(1.8, (eff / 80.0) * 2.8)
-	draw_arc(center, core_r, 0, TAU, 32, solid_rim_col, solid_rim_w)
+		_draw_dashed_arc(center, core_r, Color(col.r, col.g, col.b, 0.95 * a),
+				angle_from, angle_to, dash_w, maxi(1, int(round(18.0 * frac))), 0.35)
+	else:
+		var rim_w: float = maxf(3.0, (eff / 80.0) * 4.5)
+		draw_arc(center, core_r, angle_from, angle_to, maxi(4, int(round(32.0 * frac))),
+				Color(col.r, col.g, col.b, 0.92 * a), rim_w)
 
 
 func _draw_switch_node(
 		pos: Vector2i, center: Vector2, NR: float,
 		node_dot_r: float, a: float) -> void:
-	var activator: Dictionary = _get_switch_activator_info(pos)
-	var active: bool = bool(activator.get("active", false))
-	var activator_uid: int = int(activator.get("uid", -1))
-	var is_shadow_activator: bool = bool(activator.get("is_shadow", false))
-
-	var active_col: Color = Color(0.71, 0.73, 0.76, 1.0)
-	if active and activator_uid > 0:
-		var uid_col: Color = BOX_COLORS[(activator_uid - 1) % 5]
-		if is_shadow_activator:
-			active_col = _opaque_faded_color(uid_col, 0.42)
-		else:
-			active_col = uid_col
+	var active: bool = _spec.state.switch_activated(pos)
+	var active_col: Color = Color(1.0, 0.78, 0.0, 1.0)  # Amber (uniform, source-independent)
 
 	if active:
 		_draw_diamond(center, NR * 1.5 + 6.0,
@@ -351,13 +334,35 @@ func _draw_goal_node(center: Vector2, eff: float, a: float) -> void:
 	var cell_scale: float = eff / 80.0
 	var goal_radius: float = _goal_marker_radius(eff)
 
-	if _spec.goal_active:
-		_draw_glow(center, goal_radius * 2.0, Color(1, 0.94, 0.31), 0.65 * pulse * a)
+	var amber := Color(1.0, 0.78, 0.0)   # same as switch
+	var green := Color(0.31, 0.86, 0.39) # same as branch node
+
+	if _spec.goal_glow == 0:
+		# Inactive: gray, no pulse.
+		draw_arc(center, goal_radius, 0, TAU, 32,
+				_col(Color(0.55, 0.55, 0.55, 0.60), a), 2.0)
+		draw_circle(center, goal_radius,
+				_col(Color(0.55, 0.55, 0.55, 0.08), a))
+		_draw_center_text("G", center, int(14.0 * cell_scale * NODE_SCALE),
+				_col(Color(0.55, 0.55, 0.55, 0.75), a))
+		return
+
+	if _spec.goal_glow == 2:
+		# Strong: green outer ring + amber inner ring.
+		draw_arc(center, goal_radius + 8.0, 0, TAU, 32,
+				_col(Color(green.r, green.g, green.b, 0.70 * pulse), a), 2.0)
+	else:
+		# Weak: amber outer ring pushed further out.
+		draw_arc(center, goal_radius + 8.0, 0, TAU, 32,
+				_col(Color(amber.r, amber.g, amber.b, 0.32 * pulse), a), 1.5)
+
+	# Amber base ring + fill (both active states).
 	draw_arc(center, goal_radius, 0, TAU, 32,
-			_col(Color(1, 0.94, 0.31, 0.5 + pulse * 0.4), a), 2.0)
+			_col(Color(amber.r, amber.g, amber.b, 0.5 + pulse * 0.4), a), 2.0)
 	draw_circle(center, goal_radius,
-			_col(Color(1, 0.94, 0.31, 0.12 + pulse * 0.12), a))
-	_draw_center_text("G", center, int(14.0 * cell_scale * NODE_SCALE), _col(Color(1, 1, 0.59, 0.9), a))
+			_col(Color(amber.r, amber.g, amber.b, 0.12 + pulse * 0.12), a))
+	_draw_center_text("G", center, int(14.0 * cell_scale * NODE_SCALE),
+			_col(Color(1, 0.92, 0.5, 0.9), a))
 
 
 # ---------------------------------------------------------------------------
@@ -386,27 +391,6 @@ func _get_uids_in_hole(pos: Vector2i) -> Array[int]:
 	return uids
 
 
-func _get_switch_activator_info(pos: Vector2i) -> Dictionary:
-	var first_uid: int = -1
-	var first_shadow: bool = false
-	for e in _spec.state.entities:
-		var ent: Entity = e as Entity
-		if ent == null:
-			continue
-		if ent.type != Enums.EntityType.BOX or ent.pos != pos or not ent.is_grounded():
-			continue
-		var is_shadow: bool = _spec.state.is_shadow(ent.uid)
-		if first_uid == -1:
-			first_uid = ent.uid
-			first_shadow = is_shadow
-		if not is_shadow:
-			return {"active": true, "uid": ent.uid, "is_shadow": false}
-
-	if first_uid > 0:
-		return {"active": true, "uid": first_uid, "is_shadow": first_shadow}
-	return {"active": false, "uid": -1, "is_shadow": false}
-
-
 # ---------------------------------------------------------------------------
 # Entities
 # ---------------------------------------------------------------------------
@@ -414,6 +398,7 @@ func _get_switch_activator_info(pos: Vector2i) -> Dictionary:
 func _draw_entities(eff: float, a: float) -> void:
 	var player: Entity   = _spec.state.get_player()
 	var overlap_map: Dictionary = _build_overlap_map()
+	var rendered_overlap: Dictionary = {}
 	var front_pos: Vector2i = \
 		player.pos + player.direction if player != null else Vector2i(-1, -1)
 
@@ -437,7 +422,16 @@ func _draw_entities(eff: float, a: float) -> void:
 			and ent.z == 0
 			and ent.pos == front_pos
 		)
-		_draw_box_diamond(ent, eff, a * (0.18 if fade_front else 1.0), overlap_map)
+		var draw_alpha: float = a * (0.18 if fade_front else 1.0)
+		var key: String = _entity_stack_key(ent.pos, ent.z)
+		var stacked: Array = overlap_map.get(key, [])
+		if stacked.size() >= 2:
+			if rendered_overlap.has(key):
+				continue
+			rendered_overlap[key] = true
+			_draw_overlap_box_diamond(stacked, ent.pos, eff, draw_alpha)
+		else:
+			_draw_box_diamond(ent, eff, draw_alpha)
 
 	# Shadow connections (focused full-size only)
 	if _spec.is_focused and _spec.scale >= 1.0:
@@ -446,8 +440,7 @@ func _draw_entities(eff: float, a: float) -> void:
 	_draw_player(player, eff, a)
 
 
-func _draw_box_diamond(
-		ent: Entity, eff: float, a: float, overlap_map: Dictionary) -> void:
+func _draw_box_diamond(ent: Entity, eff: float, a: float) -> void:
 	var cell_scale: float = eff / 80.0
 	var NR: float         = eff * NR_FACTOR * ENTITY_SCALE
 	var uid_color: Color  = BOX_COLORS[(ent.uid - 1) % 5]
@@ -455,33 +448,88 @@ func _draw_box_diamond(
 
 	var center: Vector2 = _grid_to_local_center(ent.pos, eff)
 
-	# Overlap horizontal offset
-	var key: String  = _entity_stack_key(ent.pos, ent.z)
-	var uids_at: Array = overlap_map.get(key, [])
-	if uids_at.size() >= 2:
-		var side: float = -1.0 if uids_at[0] == ent.uid else 1.0
-		center.x += side * 7.0 * cell_scale * ENTITY_SCALE
-
 	var font_size: int = int(14.0 * cell_scale * ENTITY_SCALE)
 
 	if is_shadow:
-		# Shadow entity: semi-transparent fill + white dashed border.
+		# Shadow entity: minimal fill + original-color dashed border + colored text.
 		var sc_fill: Color = uid_color
-		sc_fill.a = 0.38 * a
+		sc_fill.a = 0.10 * a
 		_draw_diamond(center, NR, sc_fill, true)
-		var sc_border: Color = Color(1, 1, 1, 0.92 * a)
-		_draw_dashed_diamond(center, NR, sc_border, 1.4, 5.0, 0.0)
+		var sc_border: Color = uid_color
+		sc_border.a = 0.88 * a
+		_draw_dashed_diamond(center, NR, sc_border, 1.8, 3.2, 0.0)
 		var sc_text: Color = uid_color
-		sc_text.a = 0.88 * a
+		sc_text.a = 0.92 * a
 		_draw_center_text(str(ent.uid), center, font_size, sc_text)
 	else:
-		# Solid entity: current fill color + white outline.
+		# Solid entity: original color fill + white outline + black text.
 		var uc: Color = uid_color
 		uc.a = a
 		_draw_diamond(center, NR, uc, true)
 		_draw_diamond(center, NR, Color(1, 1, 1, 0.80 * a), false, 2.2)
 		_draw_center_text(str(ent.uid), center, font_size,
 				Color(0.07, 0.07, 0.07, a))
+
+
+func _draw_overlap_box_diamond(stacked: Array, pos: Vector2i, eff: float, a: float) -> void:
+	if stacked.size() < 2:
+		return
+
+	var left_ent: Entity = stacked[0] as Entity
+	var right_ent: Entity = stacked[1] as Entity
+	if left_ent == null or right_ent == null:
+		return
+	if right_ent.uid < left_ent.uid:
+		var tmp: Entity = left_ent
+		left_ent = right_ent
+		right_ent = tmp
+
+	var NR: float = eff * NR_FACTOR * ENTITY_SCALE
+	var center: Vector2 = _grid_to_local_center(pos, eff)
+	var left_base: Color  = BOX_COLORS[(left_ent.uid  - 1) % 5]
+	var right_base: Color = BOX_COLORS[(right_ent.uid - 1) % 5]
+	var left_shadow:  bool = _spec.state.is_shadow(left_ent.uid)
+	var right_shadow: bool = _spec.state.is_shadow(right_ent.uid)
+
+	# Fill: original color for solid, minimal for shadow.
+	var left_fill: Color  = left_base
+	var right_fill: Color = right_base
+	left_fill.a  = (0.10 if left_shadow  else 0.92) * a
+	right_fill.a = (0.10 if right_shadow else 0.92) * a
+	_draw_half_diamond(center, NR, left_fill,  -1, true)
+	_draw_half_diamond(center, NR, right_fill,  1, true)
+
+	# Outline: white solid for solid entity, original-color dashed for shadow.
+	var left_outline:  Color = Color(1, 1, 1, 0.88 * a) if not left_shadow \
+			else Color(left_base.r,  left_base.g,  left_base.b,  0.88 * a)
+	var right_outline: Color = Color(1, 1, 1, 0.88 * a) if not right_shadow \
+			else Color(right_base.r, right_base.g, right_base.b, 0.88 * a)
+	_draw_overlap_half_outline(center, NR, -1, left_outline,  left_shadow,  1.6, 3.2, 0.0)
+	_draw_overlap_half_outline(center, NR,  1, right_outline, right_shadow, 1.6, 3.2, 0.0)
+
+	# Center divider.
+	var center_top:    Vector2 = center + Vector2(0, -NR)
+	var center_bottom: Vector2 = center + Vector2(0,  NR)
+	var center_col: Color = Color(1, 1, 1, 0.40 * a)
+	if left_shadow == right_shadow:
+		_draw_styled_line(center_top, center_bottom, center_col, left_shadow, 0.9, 3.0, 0.0)
+	else:
+		var split_off: float = maxf(0.8, NR * 0.03)
+		_draw_styled_line(center_top + Vector2(-split_off, 0), center_bottom + Vector2(-split_off, 0),
+				center_col, left_shadow,  0.85, 3.0, 0.0)
+		_draw_styled_line(center_top + Vector2(split_off, 0), center_bottom + Vector2(split_off, 0),
+				center_col, right_shadow, 0.85, 3.0, 0.0)
+
+	# Labels: two separate numbers on each half.
+	# Solid half → black text; shadow half → original-color text.
+	var font_size: int = int(13.0 * (eff / 80.0) * ENTITY_SCALE)
+	var half_off:  float = NR * 0.32
+	var left_text_col: Color = Color(0.07, 0.07, 0.07, a) if not left_shadow \
+			else Color(left_base.r,  left_base.g,  left_base.b,  0.92 * a)
+	var right_text_col: Color = Color(0.07, 0.07, 0.07, a) if not right_shadow \
+			else Color(right_base.r, right_base.g, right_base.b, 0.92 * a)
+	_draw_center_text(str(left_ent.uid),  center + Vector2(-half_off, 0), font_size, left_text_col)
+	_draw_center_text(str(right_ent.uid), center + Vector2( half_off, 0), font_size, right_text_col)
 
 
 func _draw_player(player: Entity, eff: float, a: float) -> void:
@@ -564,6 +612,20 @@ func _draw_dashed_circle(
 		draw_arc(center, radius, start, end, 6, color, line_width, true)
 
 
+func _draw_dashed_arc(
+		center: Vector2, radius: float, color: Color,
+		angle_from: float, angle_to: float,
+		line_width: float = 1.0, dash_count: int = 9,
+		duty: float = 0.55) -> void:
+	if radius <= 0.001 or dash_count < 1:
+		return
+	var seg: float = (angle_to - angle_from) / float(dash_count)
+	var on: float  = seg * clampf(duty, 0.05, 0.95)
+	for i in dash_count:
+		var start: float = angle_from + float(i) * seg
+		draw_arc(center, radius, start, start + on, 4, color, line_width, true)
+
+
 func _draw_half_diamond(
 		center: Vector2, size: float, color: Color,
 		side: int, filled: bool) -> void:
@@ -586,6 +648,31 @@ func _draw_half_diamond(
 		var closed := PackedVector2Array(pts)
 		closed.append(pts[0])
 		draw_polyline(closed, color, 1.5)
+
+
+func _draw_overlap_half_outline(
+		center: Vector2, size: float, side: int,
+		color: Color, dashed: bool,
+		line_width: float = 2.0, dash_len: float = 5.0, offset: float = 0.0) -> void:
+	var top: Vector2 = center + Vector2(0, -size)
+	var bottom: Vector2 = center + Vector2(0, size)
+	if side == -1:
+		var left: Vector2 = center + Vector2(-size, 0)
+		_draw_styled_line(top, left, color, dashed, line_width, dash_len, offset)
+		_draw_styled_line(left, bottom, color, dashed, line_width, dash_len, offset)
+	else:
+		var right: Vector2 = center + Vector2(size, 0)
+		_draw_styled_line(top, right, color, dashed, line_width, dash_len, offset)
+		_draw_styled_line(right, bottom, color, dashed, line_width, dash_len, offset)
+
+
+func _draw_styled_line(
+		from_pos: Vector2, to_pos: Vector2, col: Color, dashed: bool,
+		width: float = 2.0, dash_len: float = 5.0, offset: float = 0.0) -> void:
+	if dashed:
+		_draw_dashed_line(from_pos, to_pos, col, width, dash_len, offset)
+	else:
+		draw_line(from_pos, to_pos, col, width, true)
 
 
 func _draw_glow(
@@ -662,10 +749,28 @@ func _build_overlap_map() -> Dictionary:
 		var ent: Entity = e as Entity
 		if ent == null or ent.uid == 0 or ent.type != Enums.EntityType.BOX:
 			continue
+		if ent.z == -1:
+			continue
 		var key: String = _entity_stack_key(ent.pos, ent.z)
 		if not by_key.has(key):
 			by_key[key] = []
-		by_key[key].append(ent.uid)
+		var stack: Array = by_key[key]
+		stack.append(ent)
+		by_key[key] = stack
+
+	# Stable left/right assignment for split overlap diamonds.
+	for key in by_key.keys():
+		var stack: Array = by_key[key]
+		stack.sort_custom(func(l_raw, r_raw) -> bool:
+			var l: Entity = l_raw as Entity
+			var r: Entity = r_raw as Entity
+			if l == null or r == null:
+				return false
+			if l.uid == r.uid:
+				return l.z < r.z
+			return l.uid < r.uid
+		)
+		by_key[key] = stack
 	return by_key
 
 
@@ -1136,13 +1241,6 @@ func _col(c: Color, a: float) -> Color:
 	var out := c
 	out.a   *= a
 	return out
-
-
-func _opaque_faded_color(base: Color, fade_alpha: float) -> Color:
-	var t: float = clampf(fade_alpha, 0.0, 1.0)
-	var mixed: Color = COLOR_BG.lerp(base, t)
-	mixed.a = 1.0
-	return mixed
 
 
 func _global_rect_to_local(rect: Rect2) -> Rect2:
