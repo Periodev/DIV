@@ -203,6 +203,33 @@
             font-size: 12px;
             line-height: 1.6;
         }
+
+        /* ── Mobile layout ── */
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            h1 { font-size: 18px; }
+            .main-section {
+                flex-direction: column;
+            }
+            .output-section {
+                flex: none;
+                width: 100%;
+            }
+            .editor-section {
+                overflow-x: auto;
+            }
+            .tool-palette {
+                overflow-x: auto;
+            }
+            .tool-row {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+            }
+            .control-group {
+                flex-wrap: wrap;
+            }
+        }
     </style>
 </head>
 <body>

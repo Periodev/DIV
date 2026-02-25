@@ -200,6 +200,67 @@
     color: #444;
     font-size: 13px;
   }
+
+  /* ── Mobile layout ── */
+  @media (max-width: 600px) {
+    body {
+      flex-direction: column;
+      height: auto;
+      min-height: 100vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+    .sidebar {
+      width: 100%;
+      min-width: unset;
+      max-height: 90px;
+      flex-direction: row;
+      border-right: none;
+      border-bottom: 1px solid #3a3a3a;
+      overflow: hidden;
+    }
+    .sidebar-header {
+      border-bottom: none;
+      border-right: 1px solid #3a3a3a;
+      flex-shrink: 0;
+      min-width: 100px;
+      padding: 8px;
+    }
+    .sidebar-title {
+      font-size: 11px;
+      margin-bottom: 4px;
+    }
+    .pick-btn {
+      padding: 5px 6px;
+      font-size: 11px;
+    }
+    .tab-list {
+      display: flex;
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 6px 4px;
+      gap: 4px;
+    }
+    .tab {
+      flex-shrink: 0;
+      margin-bottom: 0;
+    }
+    .main {
+      flex: none;
+      height: auto;
+      overflow: visible;
+      min-height: 0;
+    }
+    .grid-wrapper {
+      overflow-x: auto;
+    }
+    .raw-block {
+      flex: none;
+      min-height: 200px;
+      height: 200px;
+    }
+  }
 </style>
 </head>
 <body>
