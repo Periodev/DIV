@@ -14,6 +14,7 @@ const LINE_NORMAL   := Color(1, 1, 1, 0.10)          # normal connection
 const LINE_DASHED   := Color(1, 1, 1, 0.20)          # filled-hole connection
 const LINE_BROKEN   := Color(1, 1, 1, 0.18)          # hole broken segment
 const LINE_CROSS    := Color(0.78, 0.24, 0.24, 0.70) # hole X mark
+const LINE_STABLE   := Color(1, 1, 1, 0.24)          # fused-hole stable connection
 
 const NR_FACTOR     := 0.173   # diamond radius = eff * NR_FACTOR
 const ENTITY_SCALE  := 1.50    # all entities (boxes/player/held) size scale
@@ -185,7 +186,8 @@ func _draw_connection_pair(
 	if a_empty_hole or b_empty_hole:
 		_draw_broken_segment(c_a, c_b, a_empty_hole, b_empty_hole, a)
 	elif a_filled_hole or b_filled_hole:
-		_draw_dashed_line(c_a, c_b, _col(LINE_DASHED, a), 1.2)
+		# Filled-hole neighbourhood: static dashed line.
+		_draw_dashed_line(c_a, c_b, _col(LINE_DASHED, a), 1.3, 7.0, 0.0)
 	else:
 		draw_line(c_a, c_b, _col(LINE_NORMAL, a), 1.2)
 
@@ -193,17 +195,18 @@ func _draw_connection_pair(
 func _draw_broken_segment(
 		c_a: Vector2, c_b: Vector2,
 		a_empty_hole: bool, b_empty_hole: bool, a: float) -> void:
-	var col: Color = _col(LINE_CROSS, a)
+	var col_start: Color = _col(Color(1.0, 1.0, 1.0, 0.34), a)
+	var col_end: Color = _col(LINE_CROSS, a)
 	var dash_offset: float = 0.0
 	if a_empty_hole and not b_empty_hole:
-		# Flow from walkable node into hole A.
-		_draw_dashed_line(c_b, c_a, col, 1.2, 6.0, dash_offset)
+		# Gradient from walkable node (white) into empty hole (red).
+		_draw_dashed_gradient_line(c_b, c_a, col_start, col_end, 1.3, 6.0, dash_offset)
 	elif b_empty_hole and not a_empty_hole:
-		# Flow from walkable node into hole B.
-		_draw_dashed_line(c_a, c_b, col, 1.2, 6.0, dash_offset)
+		# Gradient from walkable node (white) into empty hole (red).
+		_draw_dashed_gradient_line(c_a, c_b, col_start, col_end, 1.3, 6.0, dash_offset)
 	else:
 		# Fallback for rare hole-hole adjacency.
-		_draw_dashed_line(c_a, c_b, col, 1.2, 6.0, dash_offset)
+		_draw_dashed_line(c_a, c_b, col_end, 1.3, 6.0, dash_offset)
 
 
 # ---------------------------------------------------------------------------
@@ -229,10 +232,10 @@ func _draw_node_at(pos: Vector2i, tt: int, center: Vector2, eff: float, a: float
 			draw_circle(center, 2.0 * NODE_SCALE, _col(Color(1, 1, 1, 0.10), a))
 
 		Enums.TerrainType.HOLE:
-			_draw_hole_node(center, eff, a)
+			_draw_hole_node(pos, center, eff, a)
 
 		Enums.TerrainType.SWITCH:
-			_draw_switch_node(center, NR, _spec.state.switch_activated(pos), a)
+			_draw_switch_node(pos, center, NR, 2.0 * NODE_SCALE, a)
 
 		Enums.TerrainType.NO_CARRY:
 			_draw_glow(center, 20.0 * cell_scale * NODE_SCALE, Color(1, 0.55, 0.63), 0.20 * a)
@@ -251,22 +254,71 @@ func _draw_node_at(pos: Vector2i, tt: int, center: Vector2, eff: float, a: float
 			draw_circle(center, 2.0 * NODE_SCALE, _col(Color(1, 1, 1, 0.10), a))
 
 
-func _draw_hole_node(center: Vector2, eff: float, a: float) -> void:
+func _draw_hole_node(pos: Vector2i, center: Vector2, eff: float, a: float) -> void:
 	# Simplified core palette matching docs/Code_Generated_Image.png
 	var core_r: float = _goal_marker_radius(eff)
-	var ring_w: float = maxf(2.0, (eff / 80.0) * 3.0)
-	draw_circle(center, core_r + ring_w, _col(Color(0.86, 0.21, 0.24, 0.95), a))
-	draw_circle(center, core_r, _col(Color(0.0, 0.0, 0.0, 0.98), a))
+	var is_filled: bool = _is_hole_filled(pos)
+	if not is_filled:
+		var ring_w: float = maxf(2.0, (eff / 80.0) * 3.0)
+		draw_circle(center, core_r + ring_w, _col(Color(0.86, 0.21, 0.24, 0.95), a))
+		draw_circle(center, core_r, _col(Color(0.0, 0.0, 0.0, 0.98), a))
+		return
+
+	var uids: Array[int] = _get_uids_in_hole(pos)
+	var fill_uid: int = -1
+	var is_shadow_fill: bool = false
+	for uid in uids:
+		if fill_uid == -1:
+			fill_uid = uid
+			is_shadow_fill = _spec.state.is_shadow(uid)
+		if not _spec.state.is_shadow(uid):
+			fill_uid = uid
+			is_shadow_fill = false
+			break
+
+	var embed_col: Color = Color(0.62, 0.66, 0.72, 1.0)
+	if fill_uid > 0:
+		embed_col = BOX_COLORS[(fill_uid - 1) % 5]
+
+	if is_shadow_fill:
+		var dash_r: float = core_r
+		var dash_w: float = maxf(1.6, (eff / 80.0) * 2.2)
+		var dash_col: Color = embed_col
+		dash_col.a = 0.95 * a
+		_draw_dashed_circle(
+			center, dash_r, dash_col,
+			dash_w, 18, 0.35, 0.0)
+		return
+
+	# Solid fill hole: object-colored solid circle outline only (no fill).
+	var solid_rim_col: Color = embed_col
+	solid_rim_col.a = 0.95 * a
+	var solid_rim_w: float = maxf(1.8, (eff / 80.0) * 2.8)
+	draw_arc(center, core_r, 0, TAU, 32, solid_rim_col, solid_rim_w)
 
 
-func _draw_switch_node(center: Vector2, NR: float, active: bool, a: float) -> void:
+func _draw_switch_node(
+		pos: Vector2i, center: Vector2, NR: float,
+		node_dot_r: float, a: float) -> void:
+	var activator: Dictionary = _get_switch_activator_info(pos)
+	var active: bool = bool(activator.get("active", false))
+	var activator_uid: int = int(activator.get("uid", -1))
+	var is_shadow_activator: bool = bool(activator.get("is_shadow", false))
+
+	var active_col: Color = Color(0.71, 0.73, 0.76, 1.0)
+	if active and activator_uid > 0:
+		var uid_col: Color = BOX_COLORS[(activator_uid - 1) % 5]
+		if is_shadow_activator:
+			active_col = _opaque_faded_color(uid_col, 0.42)
+		else:
+			active_col = uid_col
+
 	if active:
 		_draw_diamond(center, NR * 1.5 + 6.0,
-				_col(Color(0.71, 0.73, 0.76, 1.0), a), false, 2.0)
+				_col(active_col, a), false, 2.0)
 	_draw_diamond(center, NR * 1.5,
 			_col(Color(0.71, 0.73, 0.76, 0.55), a), false, 2.0)
-	_draw_diamond(center, NR * 0.45,
-			_col(Color(0.55, 0.57, 0.60, 0.95), a), true)
+	draw_circle(center, node_dot_r, _col(Color(0.55, 0.57, 0.60, 0.95), a))
 
 
 func _draw_branch_node(pos: Vector2i, center: Vector2, tt: int, eff: float, a: float) -> void:
@@ -325,6 +377,36 @@ func _goal_marker_radius(eff: float) -> float:
 	return player_radius * 1.5
 
 
+func _get_uids_in_hole(pos: Vector2i) -> Array[int]:
+	var uids: Array[int] = []
+	for e in _spec.state.entities:
+		var ent: Entity = e as Entity
+		if ent != null and ent.pos == pos and ent.z == -1:
+			uids.append(ent.uid)
+	return uids
+
+
+func _get_switch_activator_info(pos: Vector2i) -> Dictionary:
+	var first_uid: int = -1
+	var first_shadow: bool = false
+	for e in _spec.state.entities:
+		var ent: Entity = e as Entity
+		if ent == null:
+			continue
+		if ent.type != Enums.EntityType.BOX or ent.pos != pos or not ent.is_grounded():
+			continue
+		var is_shadow: bool = _spec.state.is_shadow(ent.uid)
+		if first_uid == -1:
+			first_uid = ent.uid
+			first_shadow = is_shadow
+		if not is_shadow:
+			return {"active": true, "uid": ent.uid, "is_shadow": false}
+
+	if first_uid > 0:
+		return {"active": true, "uid": first_uid, "is_shadow": first_shadow}
+	return {"active": false, "uid": -1, "is_shadow": false}
+
+
 # ---------------------------------------------------------------------------
 # Entities
 # ---------------------------------------------------------------------------
@@ -340,6 +422,9 @@ func _draw_entities(eff: float, a: float) -> void:
 	for e in _spec.state.entities:
 		var ent: Entity = e as Entity
 		if ent == null or ent.uid == 0 or ent.type != Enums.EntityType.BOX:
+			continue
+		# Underground boxes are represented by the fused hole node style.
+		if ent.z == -1:
 			continue
 		boxes.append(ent)
 	boxes.sort_custom(func(l: Entity, r: Entity) -> bool: return l.z < r.z)
@@ -380,17 +465,21 @@ func _draw_box_diamond(
 	var font_size: int = int(14.0 * cell_scale * ENTITY_SCALE)
 
 	if is_shadow:
-		# Shadow: hollow diamond + uid-coloured text
-		var sc: Color = uid_color
-		sc.a = a
-		_draw_diamond(center, NR, sc, false, 1.8)
-		_draw_center_text(str(ent.uid), center, font_size, sc)
+		# Shadow entity: semi-transparent fill + white dashed border.
+		var sc_fill: Color = uid_color
+		sc_fill.a = 0.38 * a
+		_draw_diamond(center, NR, sc_fill, true)
+		var sc_border: Color = Color(1, 1, 1, 0.92 * a)
+		_draw_dashed_diamond(center, NR, sc_border, 1.4, 5.0, 0.0)
+		var sc_text: Color = uid_color
+		sc_text.a = 0.88 * a
+		_draw_center_text(str(ent.uid), center, font_size, sc_text)
 	else:
-		# Solid entity: filled diamond + inner white ring
+		# Solid entity: current fill color + white outline.
 		var uc: Color = uid_color
 		uc.a = a
 		_draw_diamond(center, NR, uc, true)
-		_draw_diamond(center, NR, Color(1, 1, 1, 0.55 * a), false, 2.0)
+		_draw_diamond(center, NR, Color(1, 1, 1, 0.80 * a), false, 2.2)
 		_draw_center_text(str(ent.uid), center, font_size,
 				Color(0.07, 0.07, 0.07, a))
 
@@ -414,7 +503,7 @@ func _draw_player(player: Entity, eff: float, a: float) -> void:
 		var uc: Color = uid_color
 		uc.a = a
 		_draw_diamond(center, NR, uc, true)
-		_draw_diamond(center, NR, Color(1, 1, 1, 0.55 * a), false, 2.0)
+		_draw_diamond(center, NR, Color(1, 1, 1, 0.80 * a), false, 2.2)
 		_draw_center_text(str(held_uid), center, font_size,
 				Color(0.07, 0.07, 0.07, a))
 	else:
@@ -446,6 +535,33 @@ func _draw_diamond(
 		var closed := PackedVector2Array(pts)
 		closed.append(pts[0])
 		draw_polyline(closed, color, line_width)
+
+
+func _draw_dashed_diamond(
+		center: Vector2, size: float, color: Color,
+		line_width: float = 1.0, dash_len: float = 5.0, offset: float = 0.0) -> void:
+	var top: Vector2 = center + Vector2(0, -size)
+	var right: Vector2 = center + Vector2(size, 0)
+	var bottom: Vector2 = center + Vector2(0, size)
+	var left: Vector2 = center + Vector2(-size, 0)
+	_draw_dashed_line(top, right, color, line_width, dash_len, offset)
+	_draw_dashed_line(right, bottom, color, line_width, dash_len, offset)
+	_draw_dashed_line(bottom, left, color, line_width, dash_len, offset)
+	_draw_dashed_line(left, top, color, line_width, dash_len, offset)
+
+
+func _draw_dashed_circle(
+		center: Vector2, radius: float, color: Color,
+		line_width: float = 1.0, dash_count: int = 24,
+		duty: float = 0.55, phase: float = 0.0) -> void:
+	if radius <= 0.001 or dash_count < 2:
+		return
+	var seg: float = TAU / float(dash_count)
+	var on: float = seg * clampf(duty, 0.05, 0.95)
+	for i in dash_count:
+		var start: float = phase + float(i) * seg
+		var end: float = start + on
+		draw_arc(center, radius, start, end, 6, color, line_width, true)
 
 
 func _draw_half_diamond(
@@ -978,6 +1094,26 @@ func _draw_dashed_line(
 		pos += period
 
 
+func _draw_dashed_gradient_line(
+		from_pos: Vector2, to_pos: Vector2,
+		col_start: Color, col_end: Color,
+		width: float = 3.0, dash_len: float = 9.0, offset: float = 0.0) -> void:
+	var dist: float = from_pos.distance_to(to_pos)
+	if dist <= 0.001:
+		return
+	var dir: Vector2 = (to_pos - from_pos) / dist
+	var period: float = dash_len * 2.0
+	var pos: float = fmod(offset, period)
+	while pos < dist:
+		var seg_start: float = maxf(0.0, pos)
+		var seg_end: float = minf(dist, pos + dash_len)
+		if seg_end > seg_start:
+			var t: float = ((seg_start + seg_end) * 0.5) / dist
+			var seg_col: Color = col_start.lerp(col_end, clampf(t, 0.0, 1.0))
+			draw_line(from_pos + dir * seg_start, from_pos + dir * seg_end, seg_col, width, true)
+		pos += period
+
+
 func _dash_offset(speed: float = DASH_SCROLL_SPEED) -> float:
 	return (Time.get_ticks_msec() / 1000.0) * speed
 
@@ -1000,6 +1136,13 @@ func _col(c: Color, a: float) -> Color:
 	var out := c
 	out.a   *= a
 	return out
+
+
+func _opaque_faded_color(base: Color, fade_alpha: float) -> Color:
+	var t: float = clampf(fade_alpha, 0.0, 1.0)
+	var mixed: Color = COLOR_BG.lerp(base, t)
+	mixed.a = 1.0
+	return mixed
 
 
 func _global_rect_to_local(rect: Rect2) -> Rect2:
