@@ -175,3 +175,346 @@ P..
 .B.
 ...
 '''
+
+--------------------------
+# Gen [seed=12 b2vs3]
+
+hints = diverge converge
+
+objective = '''
+BFS: 22 steps
+'''
+
+floor_map = '''
+####
+#S.G
+...v
+S.S#
+'''
+
+object_map = '''
+....
+..B.
+P...
+.B..
+'''
+
+
+--------------------------
+# Gen [seed=12 b1Vs3]
+
+hints = diverge converge
+
+objective = '''
+BFS: 22 steps
+'''
+
+floor_map = '''
+#####
+#GV.#
+#S.S#
+#S..#
+#####
+'''
+
+object_map = '''
+.....
+.....
+..B..
+...P.
+.....
+'''
+
+
+--------------------------
+# Gen [seed=12 b2vs2]
+
+hints = diverge converge
+
+objective = '''
+BFS: 21 steps
+'''
+
+floor_map = '''
+#####
+#G..#
+#S.v#
+#S..#
+#####
+'''
+
+object_map = '''
+.....
+..B..
+..B..
+...P.
+.....
+'''
+
+
+--------------------------
+# Gen [seed=21 b1Vs3]
+
+hints = diverge converge
+
+objective = '''
+BFS: 24 steps
+'''
+
+floor_map = '''
+VSSG
+#..S
+#..#
+####
+'''
+
+object_map = '''
+....
+..B.
+.P..
+....
+'''
+
+
+--------------------------
+# Gen [seed=21 b1vs2]
+
+hints = diverge converge
+
+objective = '''
+BFS: 23 steps
+'''
+
+floor_map = '''
+#####
+#v.S#
+#S..#
+#G.##
+#####
+'''
+
+object_map = '''
+.....
+.....
+..BP.
+.....
+.....
+'''
+
+
+--------------------------
+# Gen [seed=25 b1Vs3]
+
+hints = diverge converge
+
+objective = '''
+BFS: 20 steps
+'''
+
+floor_map = '''
+##V#
+##..
+#S..
+#GSS
+'''
+
+object_map = '''
+....
+...P
+..B.
+....
+'''
+
+
+--------------------------
+# Gen [seed=27 b2vs3]
+
+hints = diverge converge
+
+objective = '''
+BFS: 18 steps
+'''
+
+floor_map = '''
+####
+S..#
+.S.v
+#S.G
+'''
+
+object_map = '''
+....
+.BP.
+..B.
+....
+'''
+
+
+--------------------------
+# Gen [seed=29 b2vs2]
+
+hints = diverge converge
+
+objective = '''
+BFS: 16 steps
+'''
+
+floor_map = '''
+#####
+#v..#
+#S.S#
+#G..#
+#####
+'''
+
+object_map = '''
+.....
+...P.
+..B..
+..B..
+.....
+'''
+
+
+--------------------------
+# Gen [seed=35 b1vs2]
+
+hints = diverge converge
+
+objective = '''
+BFS: 15 steps
+'''
+
+floor_map = '''
+#####
+##S.#
+#...#
+#vSG#
+#####
+'''
+
+object_map = '''
+.....
+.....
+.PB..
+.....
+.....
+'''
+
+
+--------------------------
+# Gen [seed=37 b1Vs3]
+
+hints = diverge converge
+
+objective = '''
+BFS: 23 steps
+'''
+
+floor_map = '''
+##S.
+##..
+##SV
+#GS.
+'''
+
+object_map = '''
+...P
+..B.
+....
+....
+'''
+
+--------------------------
+# Gen [seed=228 b2vs3]
+
+hints = diverge converge
+
+objective = '''
+BFS: 27 steps
+'''
+
+floor_map = '''
+S.S#
+...#
+Gv.#
+##S#
+'''
+
+object_map = '''
+.B..
+.BP.
+....
+....
+'''
+
+--------------------------
+# Gen [seed=181 b2vs3]
+
+hints = diverge converge
+
+objective = '''
+BFS: 26 steps
+'''
+
+floor_map = '''
+####
+S..v
+#..S
+#S.G
+'''
+
+object_map = '''
+....
+....
+.PB.
+..B.
+'''
+
+--------------------------
+# Gen [seed=141 b2vs2]
+
+hints = diverge converge
+
+objective = '''
+BFS: 26 steps
+'''
+
+floor_map = '''
+#####
+#v.G#
+#..S#
+#..S#
+#####
+'''
+
+object_map = '''
+.....
+..B..
+..B..
+.P...
+.....
+'''
+
+--------------------------
+# Gen [seed=272 b2vs3]
+
+hints = diverge converge
+
+objective = '''
+BFS: 25 steps
+'''
+
+floor_map = '''
+####
+##SS
+G..v
+..S.
+'''
+
+object_map = '''
+....
+....
+..B.
+.B.P
+'''
