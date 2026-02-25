@@ -1,0 +1,91 @@
+# Gen [seed=316 b2vs3]
+
+hints = diverge converge
+
+objective = '''
+BFS: 24 steps
+'''
+
+floor_map = '''
+##.G
+##..
+#S.S
+#S.v
+'''
+
+object_map = '''
+....
+...B
+..B.
+..P.
+'''
+
+--------------------------
+# Gen [seed=406 b2vs3]
+
+hints = diverge converge
+
+objective = '''
+BFS: 18 steps
+'''
+
+floor_map = '''
+GS.v
+S...
+##S.
+####
+'''
+
+object_map = '''
+..B.
+..B.
+...P
+....
+'''
+
+
+--------------------------
+# Gen [seed=129 b2vs3]
+
+hints = diverge converge
+
+objective = '''
+BFS: 36 steps
+'''
+
+floor_map = '''
+####
+SS##
+...G
+..Sv
+'''
+
+object_map = '''
+....
+....
+.BB.
+P...
+'''
+
+--------------------------
+# Gen [seed=272 b2vs3]
+
+hints = diverge converge
+
+objective = '''
+BFS: 25 steps
+'''
+
+floor_map = '''
+####
+##SS
+G..v
+..S.
+'''
+
+object_map = '''
+....
+....
+..B.
+.B.P
+'''

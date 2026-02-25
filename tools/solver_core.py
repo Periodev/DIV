@@ -18,18 +18,18 @@ def _build_system_action_table() -> dict:
     """Precompute legal system actions (V/C/T/F) by coarse state flags."""
     table = {}
     for has_branched in (False, True):
-        for on_branch_point in (False, True):
+        for has_div_points in (False, True):
             for allow_diverge in (False, True):
                 for allow_fetch in (False, True):
                     actions = []
                     if not has_branched:
-                        if allow_diverge and on_branch_point:
+                        if allow_diverge and has_div_points:
                             actions.append('V')
                     else:
                         actions.extend(['C', 'T'])
                         if allow_fetch:
                             actions.append('F')
-                    table[(has_branched, on_branch_point, allow_diverge, allow_fetch)] = tuple(actions)
+                    table[(has_branched, has_div_points, allow_diverge, allow_fetch)] = tuple(actions)
     return table
 
 
@@ -142,6 +142,7 @@ def _state_key(c: GameController) -> bytes:
     data = bytearray()
     data.append(1 if c.has_branched else 0)
     data.append(focus_key & 0xFF)
+    data.extend(c.div_points.to_bytes(2, 'little', signed=False))
     data.extend(len(main_key).to_bytes(4, 'little', signed=False))
     data.extend(main_key)
     data.extend(len(sub_key).to_bytes(4, 'little', signed=False))
@@ -216,10 +217,7 @@ def _is_noop(ctrl: GameController, action: str, last_action: str = None,
     if action == 'V':
         if ctrl.has_branched:
             return True
-        # Also skip if player is not standing on a branch point
-        active = ctrl.get_active_branch()
-        terrain = active.terrain.get(active.player.pos)
-        return terrain not in GameController.BRANCH_DECREMENT
+        return ctrl.div_points < 1
 
     if action in ('C', 'T'):
         return not ctrl.has_branched  # can't merge/switch if not branched
@@ -348,14 +346,12 @@ def _legal_actions_for_state(ctrl: GameController, hints: dict) -> list:
     """Build legal candidate actions from system constraints for current state."""
     actions = ['U', 'D', 'L', 'R']
     active = ctrl.get_active_branch()
-    terrain = active.terrain.get(active.player.pos)
-    on_branch_point = terrain in GameController.BRANCH_DECREMENT
 
     # System-level legal actions are looked up from a precomputed table.
     actions.extend(
         _SYSTEM_ACTION_TABLE[(
             ctrl.has_branched,
-            on_branch_point,
+            ctrl.div_points > 0,
             bool(hints.get('diverge')),
             bool(hints.get('fetch')),
         )]
@@ -542,7 +538,8 @@ def solve_fast(level_dict: dict, max_depth: int = 60,
             active = new_ctrl.get_active_branch()
             if _has_fused_entity(active):
                 continue
-            if not hints.get('pickup', True) and not hints.get('diverge', True) and _has_dead_corner_box(active):
+            if not hints.get('pickup', True) and not hints.get('diverge', True) \
+                    and not active.all_switches_activated() and _has_dead_corner_box(active):
                 continue
 
             new_g = g + 1
@@ -625,7 +622,8 @@ def solve(level_dict: dict, max_depth: int = 60,
             active = new_ctrl.get_active_branch()
             if _has_fused_entity(active):
                 continue
-            if not hints.get('pickup', True) and not hints.get('diverge', True) and _has_dead_corner_box(active):
+            if not hints.get('pickup', True) and not hints.get('diverge', True) \
+                    and not active.all_switches_activated() and _has_dead_corner_box(active):
                 continue
 
             new_depth = depth + 1

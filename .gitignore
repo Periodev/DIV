@@ -9,3 +9,7 @@ dist/
 # Local game progress
 level_unlock.csv
 progress.json
+
+# Godot generated / cache files
+godot/.godot/
+godot/**/*.import

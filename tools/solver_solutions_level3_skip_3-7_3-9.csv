@@ -1,0 +1,8 @@
+﻿"id","name","mode","max_depth","status","elapsed_s","steps","solution"
+"3-1","Pick �B��","fast","80","PASS","0.01","24","RPDORPRUODDPUODRPLLDORRR"
+"3-2","Spin ����","fast","80","PASS","0.21","19","UVUURPDDLOLCRXPLOLU"
+"3-3","Checkerboard �ѽL","fast","80","PASS","14.45","30","UPRVORCUPDDLVROTOCLUXPRRRRUOUU"
+"3-4","Cycle �`��","fast","80","PASS","3.94","29","RUVUURPTPLOCVXPUUULOLCRXPLOLD"
+"3-5","No carry �T����a","fast","80","PASS","0.04","20","LLPROLVRPLORRCLXPDOU"
+"3-6","Hand over �汵","fast","80","PASS","6.31","40","RRPRLVDOTODDCUXPLOUUVDDLPUOUUCVXPLOTLLCL"
+"3-8","Spiral ����","fast","80","PASS","0.96","30","RUVUURRDPLOLTCVXUUUCDXPLLLUUDO"
