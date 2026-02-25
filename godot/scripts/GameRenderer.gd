@@ -448,13 +448,18 @@ func _draw_box_diamond(ent: Entity, eff: float, a: float) -> void:
 
 	var center: Vector2 = _grid_to_local_center(ent.pos, eff)
 
+	# Falling animation: shrink + fade as box drops into hole.
+	var fall_prog: float = _get_fall_progress(ent.uid, ent.pos)
+	if fall_prog > 0.0:
+		NR        *= (1.0 - fall_prog)
+		a         *= maxf(0.0, 1.0 - fall_prog * 0.8)
+		cell_scale *= (1.0 - fall_prog)
+
 	var font_size: int = int(14.0 * cell_scale * ENTITY_SCALE)
 
 	if is_shadow:
-		# Shadow entity: minimal fill + original-color dashed border + colored text.
-		var sc_fill: Color = uid_color
-		sc_fill.a = 0.10 * a
-		_draw_diamond(center, NR, sc_fill, true)
+		# Shadow entity: bg-color fill (clears overlap) + original-color dashed border + colored text.
+		_draw_diamond(center, NR, _col(COLOR_BG, a), true)
 		var sc_border: Color = uid_color
 		sc_border.a = 0.88 * a
 		_draw_dashed_diamond(center, NR, sc_border, 1.8, 3.2, 0.0)
@@ -739,6 +744,19 @@ func _draw_arrow(center: Vector2, dx: int, dy: int, size: int, col: Color) -> vo
 
 
 # ---------------------------------------------------------------------------
+# Falling animation helper
+# ---------------------------------------------------------------------------
+
+## Returns fall progress 0–1 for (uid, pos), or -1 if not falling.
+func _get_fall_progress(uid: int, pos: Vector2i) -> float:
+	for raw_key in _spec.falling_progress.keys():
+		var k: Array = raw_key as Array
+		if k[0] == uid and k[1] == pos:
+			return _spec.falling_progress[raw_key] as float
+	return -1.0
+
+
+# ---------------------------------------------------------------------------
 # Overlap utilities
 # ---------------------------------------------------------------------------
 
@@ -846,8 +864,6 @@ func _draw_shadow_connections(eff: float, a: float) -> void:
 		front_uids[ent.uid] = true
 
 	var front_center: Vector2 = _grid_to_local_center(front_pos, eff)
-	var line_color: Color = Color8(50, 220, 50)
-	line_color.a *= a
 	var offset: float = _dash_offset()
 
 	for raw_uid in front_uids.keys():
@@ -865,6 +881,9 @@ func _draw_shadow_connections(eff: float, a: float) -> void:
 
 		if positions.size() <= 1:
 			continue
+
+		var line_color: Color = BOX_COLORS[(uid - 1) % 5]
+		line_color.a = 0.85 * a
 
 		for raw_pos in positions.keys():
 			var pos: Vector2i = raw_pos as Vector2i
