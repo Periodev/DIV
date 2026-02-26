@@ -302,7 +302,11 @@ class GameController:
 
         total_items = len(focused_held | other_held)
         capacity = Physics.effective_capacity(focused)
-        return total_items <= capacity
+        if total_items > capacity:
+            return False
+
+        merged = Timeline.merge_fetch(focused, other, focused_held | other_held)
+        return not self._has_player_on_ground_box_after_merge(merged)
 
     def _merge_branches(self, mode: str) -> bool:
         """Merge branches with optional fetch mode."""
@@ -326,6 +330,9 @@ class GameController:
             merged = Timeline.merge_normal(focused, other)
             log_char = 'C'
 
+        if self._has_player_on_ground_box_after_merge(merged):
+            return False
+
         self.main_branch = merged
         self.sub_branch = None
         self.has_branched = False
@@ -334,6 +341,23 @@ class GameController:
         self._log_input(log_char)
         self._save_snapshot()
         return True
+
+    @staticmethod
+    def _has_player_on_ground_box_after_merge(branch: BranchState) -> bool:
+        """True if player stands on any grounded box after merge."""
+        player_pos = branch.player.pos
+        for e in branch.entities:
+            if e.uid != 0 and e.type == EntityType.BOX and e.z == 0 and e.collision > 0 and e.pos == player_pos:
+                return True
+        return False
+
+    def can_normal_merge(self) -> bool:
+        if not self.has_branched:
+            return False
+        focused = self.get_active_branch()
+        other = self.sub_branch if self.current_focus == 0 else self.main_branch
+        merged = Timeline.merge_normal(focused, other)
+        return not self._has_player_on_ground_box_after_merge(merged)
 
     def switch_focus(self) -> bool:
         """Switch controlled branch. Returns True if switched."""

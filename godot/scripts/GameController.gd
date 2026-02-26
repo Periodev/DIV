@@ -262,6 +262,9 @@ func _merge_branches(mode: String) -> bool:
 		merged   = Timeline.merge_normal(focused, other)
 		log_char = "C"
 
+	if _has_player_on_ground_box_after_merge(merged):
+		return false
+
 	main_branch   = merged
 	sub_branch    = null
 	has_branched  = false
@@ -273,6 +276,18 @@ func _merge_branches(mode: String) -> bool:
 	_save_snapshot()
 	state_changed.emit()
 	return true
+
+
+func _has_player_on_ground_box_after_merge(branch: BranchState) -> bool:
+	"""True if player stands on any grounded box after merge."""
+	var player_pos := branch.get_player().pos
+	for e in branch.entities:
+		var ent := e as Entity
+		if ent == null:
+			continue
+		if ent.uid != 0 and ent.type == Enums.EntityType.BOX and ent.z == 0 and ent.collision > 0 and ent.pos == player_pos:
+			return true
+	return false
 
 
 func can_show_fetch_hint() -> bool:
@@ -290,7 +305,19 @@ func can_show_fetch_hint() -> bool:
 	for uid in o_held:
 		if not union.has(uid):
 			union.append(uid)
-	return union.size() <= Physics.effective_capacity(focused)
+	if union.size() > Physics.effective_capacity(focused):
+		return false
+	var merged := Timeline.merge_fetch(focused, other, union)
+	return not _has_player_on_ground_box_after_merge(merged)
+
+
+func can_normal_merge() -> bool:
+	if not has_branched:
+		return false
+	var focused := get_active_branch()
+	var other   := sub_branch if current_focus == 0 else main_branch
+	var merged  := Timeline.merge_normal(focused, other)
+	return not _has_player_on_ground_box_after_merge(merged)
 
 
 func switch_focus() -> bool:

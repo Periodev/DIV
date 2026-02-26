@@ -47,6 +47,7 @@ class BranchViewSpec:
 	var branch_hint_active:     bool        = false
 	var show_merge_preview_hint: bool       = false
 	var show_merge_hint:        bool        = false
+	var merge_hint_enabled:     bool        = true
 	var show_fetch_indicator:   bool        = false
 	var fetch_mode_enabled:     bool        = false
 
@@ -110,6 +111,7 @@ static func build(
 		branch_hint_active = controller.div_points > 0
 	var show_merge_preview_hint: bool = has_branched
 	var show_merge_hint: bool = has_branched
+	var merge_hint_enabled: bool = has_branched and controller.can_normal_merge()
 	# F indicator is always shown in branched state.
 	# Color indicates whether fetch merge is currently usable.
 	var show_fetch_indicator: bool = has_branched
@@ -192,6 +194,7 @@ static func build(
 		branch_hint_active if (focus == 0) else false,
 		show_merge_preview_hint,
 		show_merge_hint,
+		merge_hint_enabled,
 		show_fetch_indicator,
 		fetch_mode_enabled)
 
@@ -213,6 +216,7 @@ static func build(
 			branch_hint_active if (focus == 1) else false,
 			show_merge_preview_hint,
 			show_merge_hint,
+			merge_hint_enabled,
 			show_fetch_indicator,
 			fetch_mode_enabled)
 
@@ -241,6 +245,7 @@ static func _make_spec(
 		p_branch_hint_active: bool,
 		p_show_merge_preview_hint: bool,
 		p_show_merge_hint: bool,
+		p_merge_hint_enabled: bool,
 		p_show_fetch_indicator: bool,
 		p_fetch_mode_enabled: bool) -> BranchViewSpec:
 
@@ -267,6 +272,7 @@ static func _make_spec(
 	s.branch_hint_active     = p_branch_hint_active
 	s.show_merge_preview_hint = p_show_merge_preview_hint
 	s.show_merge_hint        = p_show_merge_hint
+	s.merge_hint_enabled     = p_merge_hint_enabled
 	s.show_fetch_indicator   = p_show_fetch_indicator
 	s.fetch_mode_enabled     = p_fetch_mode_enabled
 	return s
