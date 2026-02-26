@@ -1,4 +1,60 @@
-# Shelter 避難所
+# Restore 還原
+
+hints = diverge converge
+
+objective = '''
+任務：[還原]節點後走到終點
+
+合併後，節點留下來自兩條時間線的殘影
+面對殘影按 [SPACE] 保留，[還原]為節點，其它殘影會消失
+連線標示出其他將消失的殘影
+
+按 [Z] 退回上一步
+
+'''
+
+floor_map = '''
+#v##
+#S.#
+#G.#
+####
+'''
+
+object_map = '''
+.P..
+.B..
+....
+....
+'''
+
+--------------------------
+# Gap 夾縫
+
+hints = diverge converge
+
+objective = '''
+'''
+
+floor_map = '''
+######
+######
+Sv...G
+######
+######
+######
+'''
+
+object_map = '''
+......
+......
+.PB...
+......
+......
+......
+'''
+
+--------------------------
+# Cross 錯身
 
 objective = '''
 '''
@@ -38,11 +94,11 @@ P...
 '''
 
 --------------------------
-# 2nd Diverge 二次分裂
+# Charge 充能
 
 objective = '''
-綠色圓點是分裂點
-站在分裂點按 [V] 使用分裂，並消耗掉分裂點
+綠色圓點是[分裂點]
+走到[分裂點]取得充能，增加可分裂次數
 '''
 
 floor_map = '''
@@ -81,10 +137,10 @@ object_map = '''
 '''
 
 --------------------------
-# 2nd Converge 二次收束
+# Re-Restore 再還原
 
 objective = '''
-殘影可以不收束，保留到下次分裂
+殘影可以不還原，保留到下一輪分裂
 '''
 
 floor_map = '''
@@ -105,7 +161,7 @@ object_map = '''
 # Triple 三重
 
 objective = '''
-分裂點外的同心圓代表額外可用次數
+分裂點外的同心圓圈數，代表充能次數
 '''
 
 floor_map = '''
@@ -119,6 +175,91 @@ object_map = '''
 ....
 P...
 ..B.
+....
+'''
+
+--------------------------
+# Edge 邊緣
+
+objective = '''
+'''
+
+floor_map = '''
+#.S.#
+....#
+V.G.#
+....#
+#SS.#
+'''
+
+object_map = '''
+.....
+.....
+PB...
+.....
+.....
+'''
+--------------------------
+# Selection 選擇
+
+hints = diverge converge
+
+objective = '''
+'''
+
+floor_map = '''
+##G#
+##v.
+#S.S
+#S.v
+'''
+
+object_map = '''
+....
+....
+..BB
+...P
+'''
+--------------------------
+# Redundant 冗餘
+
+hints = diverge converge
+
+objective = '''
+'''
+
+floor_map = '''
+##G#
+##V.
+#S.S
+#S.v
+'''
+
+object_map = '''
+....
+..P.
+..BB
+....
+'''
+--------------------------
+# Resolve 解析
+
+hints = diverge converge
+
+objective = '''
+'''
+
+floor_map = '''
+##G#
+##v.
+#S.S
+#S.V
+'''
+
+object_map = '''
+....
+..P.
+..BB
 ....
 '''
 

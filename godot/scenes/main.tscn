@@ -1,7 +1,9 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=2 format=3 uid="uid://bxbunno6nqj74"]
 
 [ext_resource type="PackedScene" path="res://scenes/level_select.tscn" id="1"]
 
 [node name="Main" type="Node"]
 
 [node name="LevelSelect" parent="." instance=ExtResource("1")]
+grow_horizontal = 2
+grow_vertical = 2

@@ -374,6 +374,14 @@ func _on_state_changed() -> void:
 
 func _on_victory() -> void:
 	_vlog("_on_victory fired")
+	var solution_chars := PackedStringArray()
+	for ch in controller.input_log:
+		solution_chars.append(str(ch))
+	var solution := "".join(solution_chars)
+	print("\n=== VICTORY ===")
+	print("Steps: %d" % controller.input_log.size())
+	print("Solution: %s" % solution)
+	print("===============\n")
 	var level_dict: Dictionary = all_levels[current_level_idx] \
 		if current_level_idx >= 0 and current_level_idx < all_levels.size() else {}
 	var level_id: String = str(level_dict.get("id", ""))

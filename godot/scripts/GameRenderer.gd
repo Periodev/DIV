@@ -254,7 +254,7 @@ func _draw_node_at(pos: Vector2i, tt: int, center: Vector2, eff: float, a: float
 
 	match tt:
 		Enums.TerrainType.FLOOR:
-			draw_circle(center, 3.8 * NODE_SCALE, _col(Color(1, 1, 1, 0.10), a))
+			draw_circle(center, 3.8 * NODE_SCALE, _col(Color(1, 1, 1, 1.0), a))
 
 		Enums.TerrainType.HOLE:
 			_draw_hole_node(pos, center, eff, a)
@@ -276,7 +276,7 @@ func _draw_node_at(pos: Vector2i, tt: int, center: Vector2, eff: float, a: float
 			_draw_goal_node(center, eff, a)
 
 		_:
-			draw_circle(center, 3.8 * NODE_SCALE, _col(Color(1, 1, 1, 0.10), a))
+			draw_circle(center, 3.8 * NODE_SCALE, _col(Color(1, 1, 1, 1.0), a))
 
 
 func _draw_hole_node(pos: Vector2i, center: Vector2, eff: float, a: float) -> void:
@@ -1188,7 +1188,7 @@ func _draw_adaptive_hints(a: float) -> void:
 	if _spec.show_merge_preview_hint:
 		_draw_merge_preview_hint(_spec.is_merge_preview, a)
 	if _spec.show_merge_hint:
-		_draw_merge_hint(a)
+		_draw_merge_hint(a, _spec.merge_hint_enabled)
 	if _spec.show_fetch_indicator:
 		_draw_fetch_mode_indicator(_spec.fetch_mode_enabled, a)
 
@@ -1276,7 +1276,7 @@ func _draw_merge_preview_hint(is_active: bool, a: float) -> void:
 	_draw_text_in_rect(text, rect, 14, _col(Color.WHITE, a))
 
 
-func _draw_merge_hint(a: float) -> void:
+func _draw_merge_hint(a: float, enabled: bool) -> void:
 	var box_w: float    = 150.0
 	var box_h: float    = 40.0
 	var view_size: Vector2 = get_viewport_rect().size
@@ -1284,9 +1284,13 @@ func _draw_merge_hint(a: float) -> void:
 	var y: float        = (view_size.y + PresentationModel.TARGET_PANEL) * 0.5 + 15.0
 	var rect: Rect2     = _global_rect_to_local(Rect2(x, y, box_w, box_h))
 
-	draw_rect(rect, _col(COLOR_HINT_V_BG, a * 0.8))
-	draw_rect(rect, _col(COLOR_HINT_V_BD, a), false, 2.0)
-	_draw_text_in_rect("V Merge", rect, 16, _col(Color.WHITE, a))
+	var bg: Color = _col(COLOR_HINT_V_BG if enabled else COLOR_HINT_DARK, a * 0.8)
+	var bd: Color = _col(COLOR_HINT_V_BD if enabled else COLOR_HINT_GRAY_B, a)
+	var tx: Color = _col(Color.WHITE if enabled else COLOR_HINT_TEXT_G, a)
+
+	draw_rect(rect, bg)
+	draw_rect(rect, bd, false, 2.0)
+	_draw_text_in_rect("V Merge", rect, 16, tx)
 
 
 func _draw_fetch_mode_indicator(enabled: bool, a: float) -> void:

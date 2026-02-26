@@ -1,33 +1,29 @@
-# Move 移動
+# Init 初始
 
 hints = none
 
 objective = '''
-任務 : 走到閃爍的 Goal
+任務 : 走到閃爍的[終點]
 
 使用 W/A/S/D 或方向鍵移動角色
-角色是藍色圓圈，黑色箭頭代表方向
-黃色的 Goal 是終點
+角色是藍色圓圈，白色箭頭代表方向
+黃色的 G 是[終點]
 '''
 
 floor_map = '''
-.#####.
-..###..
-...#...
-.#...#.
-.##.##.
-.#####.
-.#####G
+.....
+##.##
+##.##
+##.##
+....G
 '''
 
 object_map = '''
-.......
-.......
-.......
-.......
-.......
-.......
-P......
+P....
+.....
+.....
+.....
+.....
 '''
 
 --------------------------
@@ -36,11 +32,11 @@ P......
 hints = none
 
 objective = '''
-任務 : 推動方塊清出通往終點的路徑
+任務 : 推動[節點]清出通往終點的路線
 
-標記數字的方形色塊是方塊
-面向方塊按移動可以推動方塊
-若方塊後方有牆壁或其它方塊，就無法推動
+標記數字的菱形色塊是[節點]
+面對[節點]按移動可以推動
+一次只能推動一個[節點]
 '''
 
 floor_map = '''
@@ -64,48 +60,44 @@ object_map = '''
 '''
 
 --------------------------
-# Goal 目標
+# Trigger 觸發
 
 hints = none
 
 objective = '''
-任務 : 壓住所有開關後走到終點
+任務 : 啟動所有[目標]後走到終點
 
-有方形標記的灰色地磚是開關
-將方塊壓住開關可啟動
-當所有開關都壓下，Goal就會閃爍
+灰色菱形框是[目標]
+將節點推進[目標]可啟動
+當所有[目標]都啟動，終點就會開啟
 '''
 
 floor_map = '''
-##S..##
-#.....#
-.S#####
-..##S.G
-..###..
-#..S..#
-##...##
+S.G.S
+##.##
+##.##
+##.##
+##S##
 '''
 
 object_map = '''
-...B...
-.....P.
-.......
-.B...B.
-.......
-..B....
-.......
+.B.B.
+.....
+..P..
+..B..
+.....
 '''
 
 --------------------------
-# Diverge 分裂
+# Splitting 拆分
 
 hints = diverge
 
 objective = '''
-任務：分別在兩個空間壓開關、走到終點
+任務：分別在兩個空間啟動目標、走到終點
 
-按 [V] 分裂出平行空間
-壓下開關後，按 [Tab] 切換空間，控制另一角色到終點
+按 [V] 分裂成平行空間
+啟動目標後，按 [Tab] 切換空間，控制另一角色到終點
 再按 [V] 以當前角色位置合併
 
 '''
@@ -123,16 +115,37 @@ PB.
 '''
 
 --------------------------
+# Mutex 互斥
+
+hints = diverge
+
+objective = '''
+'''
+
+floor_map = '''
+#..#
+.G.S
+....
+#Sv#
+'''
+
+object_map = '''
+....
+..B.
+.B..
+..P.
+'''
+--------------------------
 # Merge 合併
 
 hints = diverge
 
 objective = '''
-任務 : 使用1個方塊壓2個開關，再走到終點
+任務 : 使用1個節點啟動2個目標，再走到終點
 
 按 [V] 分裂
-使用 [Tab] 切換空間，分別壓下不同開關
-再按 [V] 合併 —— 兩個空間的狀態同時保留
+使用 [Tab] 切換空間，分別啟動不同目標
+再按 [V] 合併 —— 兩個空間的啟動狀態同時保留
 
 按 [Z] 退回上一步
 '''
@@ -150,14 +163,38 @@ P..
 '''
 
 --------------------------
-# Shadow 殘影
+# Clone 複製
 
 hints = diverge
 
 objective = '''
-任務：壓下 2 個開關，再走到終點
+'''
 
-合併後，方塊會留下殘影
+floor_map = '''
+#####
+S.G.S
+.#.#.
+..v..
+#####
+'''
+
+object_map = '''
+.....
+.....
+..B..
+..P..
+.....
+'''
+
+--------------------------
+# Trace 殘影
+
+hints = diverge
+
+objective = '''
+任務：啟動2個目標，再走到終點
+
+合併後，節點會留下殘影
 殘影是障礙，無法推動
 選擇適當位置合併
 
@@ -177,157 +214,7 @@ P..
 '''
 
 --------------------------
-# Gen [seed=12 b2vs3]
-
-hints = diverge converge
-
-objective = '''
-BFS: 22 steps
-'''
-
-floor_map = '''
-####
-#S.G
-...v
-S.S#
-'''
-
-object_map = '''
-....
-..B.
-P...
-.B..
-'''
-
-
---------------------------
-# Gen [seed=12 b1Vs3]
-
-hints = diverge converge
-
-objective = '''
-BFS: 22 steps
-'''
-
-floor_map = '''
-#####
-#GV.#
-#S.S#
-#S..#
-#####
-'''
-
-object_map = '''
-.....
-.....
-..B..
-...P.
-.....
-'''
-
-
---------------------------
-# Gen [seed=12 b2vs2]
-
-hints = diverge converge
-
-objective = '''
-BFS: 21 steps
-'''
-
-floor_map = '''
-#####
-#G..#
-#S.v#
-#S..#
-#####
-'''
-
-object_map = '''
-.....
-..B..
-..B..
-...P.
-.....
-'''
-
-
---------------------------
-# Gen [seed=21 b1Vs3]
-
-hints = diverge converge
-
-objective = '''
-BFS: 24 steps
-'''
-
-floor_map = '''
-VSSG
-#..S
-#..#
-####
-'''
-
-object_map = '''
-....
-..B.
-.P..
-....
-'''
-
-
---------------------------
-# Gen [seed=21 b1vs2]
-
-hints = diverge converge
-
-objective = '''
-BFS: 23 steps
-'''
-
-floor_map = '''
-#####
-#v.S#
-#S..#
-#G.##
-#####
-'''
-
-object_map = '''
-.....
-.....
-..BP.
-.....
-.....
-'''
-
-
---------------------------
-# Gen [seed=25 b1Vs3]
-
-hints = diverge converge
-
-objective = '''
-BFS: 20 steps
-'''
-
-floor_map = '''
-##V#
-##..
-#S..
-#GSS
-'''
-
-object_map = '''
-....
-...P
-..B.
-....
-'''
-
-
---------------------------
-# Gen [seed=27 b2vs3]
+# Multiplex 多工
 
 hints = diverge converge
 
@@ -336,185 +223,37 @@ BFS: 18 steps
 '''
 
 floor_map = '''
-####
-S..#
-.S.v
-#S.G
-'''
-
-object_map = '''
-....
-.BP.
-..B.
-....
-'''
-
-
---------------------------
-# Gen [seed=29 b2vs2]
-
-hints = diverge converge
-
-objective = '''
-BFS: 16 steps
-'''
-
-floor_map = '''
-#####
-#v..#
-#S.S#
-#G..#
-#####
-'''
-
-object_map = '''
-.....
-...P.
-..B..
-..B..
-.....
-'''
-
-
---------------------------
-# Gen [seed=35 b1vs2]
-
-hints = diverge converge
-
-objective = '''
-BFS: 15 steps
-'''
-
-floor_map = '''
-#####
-##S.#
-#...#
-#vSG#
-#####
-'''
-
-object_map = '''
-.....
-.....
-.PB..
-.....
-.....
-'''
-
-
---------------------------
-# Gen [seed=37 b1Vs3]
-
-hints = diverge converge
-
-objective = '''
-BFS: 23 steps
-'''
-
-floor_map = '''
+GS.v
+S...
 ##S.
-##..
-##SV
-#GS.
+####
 '''
 
 object_map = '''
+..B.
+..B.
 ...P
-..B.
-....
 ....
 '''
 
 --------------------------
-# Gen [seed=228 b2vs3]
+# Diverge 分裂
 
-hints = diverge converge
+hints = diverge
 
 objective = '''
-BFS: 27 steps
 '''
 
 floor_map = '''
-S.S#
+#G..
+#S..
 ...#
-Gv.#
-##S#
+SvS#
 '''
 
 object_map = '''
+....
+..B.
 .B..
-.BP.
-....
-....
-'''
-
---------------------------
-# Gen [seed=181 b2vs3]
-
-hints = diverge converge
-
-objective = '''
-BFS: 26 steps
-'''
-
-floor_map = '''
-####
-S..v
-#..S
-#S.G
-'''
-
-object_map = '''
-....
-....
-.PB.
-..B.
-'''
-
---------------------------
-# Gen [seed=141 b2vs2]
-
-hints = diverge converge
-
-objective = '''
-BFS: 26 steps
-'''
-
-floor_map = '''
-#####
-#v.G#
-#..S#
-#..S#
-#####
-'''
-
-object_map = '''
-.....
-..B..
-..B..
-.P...
-.....
-'''
-
---------------------------
-# Gen [seed=272 b2vs3]
-
-hints = diverge converge
-
-objective = '''
-BFS: 25 steps
-'''
-
-floor_map = '''
-####
-##SS
-G..v
-..S.
-'''
-
-object_map = '''
-....
-....
-..B.
-.B.P
+.P..
 '''

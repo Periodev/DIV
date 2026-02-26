@@ -575,6 +575,8 @@ def solve_fast(level_dict: dict, max_depth: int = 60,
             if not hints.get('pickup', True) and not hints.get('diverge', True) \
                     and not active.all_switches_activated() and _has_dead_corner_box(active):
                 continue
+            if not _switches_feasible(new_ctrl):
+                continue
 
             # Switch upper-bound: prune if boxes can't possibly cover remaining switches.
             if not _switches_feasible(new_ctrl):
@@ -679,6 +681,8 @@ def solve(level_dict: dict, max_depth: int = 60,
                 continue
             if not hints.get('pickup', True) and not hints.get('diverge', True) \
                     and not active.all_switches_activated() and _has_dead_corner_box(active):
+                continue
+            if not _switches_feasible(new_ctrl):
                 continue
 
             # Switch upper-bound: prune if boxes can't possibly cover remaining switches.
