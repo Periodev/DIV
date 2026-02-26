@@ -121,8 +121,9 @@ func _draw() -> void:
 	# Entities
 	_draw_entities(eff, a)
 
-	# Interaction hint — hidden for now
+	# Interaction hint — float above target entity
 	_set_hint_labels_visible(false)
+	_draw_interaction_hint(eff, a)
 
 	# Flash overlay
 	if _spec.flash_intensity > 0.0 and _spec.flash_pos != Vector2i(-1, -1):
@@ -500,6 +501,10 @@ func _draw_box_diamond(ent: Entity, eff: float, a: float) -> void:
 		uc.a = a
 		_draw_diamond(center, NR, uc, true)
 		_draw_diamond(center, NR, Color(1, 1, 1, 0.80 * a), false, 2.2)
+		# Outer white ring when this solid is the SPACE pickup target.
+		if _spec.interaction_hint != null and _spec.interaction_hint.text == "拾取" \
+				and ent.pos == _spec.interaction_hint.target_pos:
+			_draw_diamond(center, NR * 1.22, Color(1, 1, 1, 0.55 * a), false, 1.4)
 		_draw_center_text(str(ent.uid), center, font_size,
 				Color(0.07, 0.07, 0.07, a))
 
@@ -999,6 +1004,43 @@ func _draw_title(gpx: float, a: float) -> void:
 
 
 # ---------------------------------------------------------------------------
+# Interaction hint — floating text above target entity/position
+# ---------------------------------------------------------------------------
+
+func _draw_interaction_hint(eff: float, a: float) -> void:
+	var ih = _spec.interaction_hint
+	if ih == null or ih.text == "":
+		return
+	if ih.target_pos == Vector2i(-1, -1):
+		return
+	var font: Font = ThemeDB.fallback_font
+	if font == null:
+		return
+	var NR: float       = eff * NR_FACTOR * ENTITY_SCALE
+	var cell_scale: float = eff / 80.0
+	var font_size: int  = maxi(10, int(round(13.0 * cell_scale)))
+	var center: Vector2 = _grid_to_local_center(ih.target_pos, eff)
+	# Float above the diamond tip with a small gap.
+	var text_center: Vector2 = center - Vector2(0.0, NR + 9.0 * cell_scale)
+	var text_w: float  = font.get_string_size(ih.text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
+	var ascent: float  = font.get_ascent(font_size)
+	var descent: float = font.get_descent(font_size)
+	var baseline_y: float = text_center.y + (ascent - descent) * 0.5
+	var draw_pos: Vector2 = Vector2(text_center.x - text_w * 0.5, baseline_y)
+	# Black outline: 4 offset draws.
+	var shadow: Color = Color(0, 0, 0, 0.85 * a)
+	for dx in [-1, 0, 1]:
+		for dy in [-1, 0, 1]:
+			if dx == 0 and dy == 0:
+				continue
+			draw_string(font, draw_pos + Vector2(dx, dy), ih.text,
+					HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, shadow)
+	# Foreground in hint color.
+	var col: Color = ih.color
+	col.a *= a
+	draw_string(font, draw_pos, ih.text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, col)
+
+
 # Interaction hint highlight — preserved
 # ---------------------------------------------------------------------------
 
