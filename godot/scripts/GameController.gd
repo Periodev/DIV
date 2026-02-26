@@ -492,7 +492,7 @@ func get_interaction_hint() -> Dictionary:
 	if Physics.effective_capacity(active, player.pos) == 0:
 		return {text="", color=Color.BLACK, target_pos=Vector2i(-1,-1), is_drop=false}
 
-	return {text="拾取", color=Color(0.2,0.78,0.2), target_pos=front_pos, is_drop=false}
+	return {text="撿取", color=Color(0.2,0.78,0.2), target_pos=front_pos, is_drop=false}
 
 
 func get_timeline_hint() -> String:

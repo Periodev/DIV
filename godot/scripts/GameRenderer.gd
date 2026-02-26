@@ -496,15 +496,15 @@ func _draw_box_diamond(ent: Entity, eff: float, a: float) -> void:
 		sc_text.a = 0.92 * a
 		_draw_center_text(str(ent.uid), center, font_size, sc_text)
 	else:
-		# Solid entity: original color fill + white outline + black text.
+		# Solid entity: original color fill + black outline + black text.
 		var uc: Color = uid_color
 		uc.a = a
 		_draw_diamond(center, NR, uc, true)
-		_draw_diamond(center, NR, Color(1, 1, 1, 0.80 * a), false, 2.2)
-		# Outer white ring when this solid is the SPACE pickup target.
-		if _spec.interaction_hint != null and _spec.interaction_hint.text == "拾取" \
+		_draw_diamond(center, NR, Color(0, 0, 0, 0.88 * a), false, 2.2)
+		# Pickup target highlight uses the same-size outer frame as converge.
+		if _spec.interaction_hint != null and _spec.interaction_hint.text == "撿取" \
 				and ent.pos == _spec.interaction_hint.target_pos:
-			_draw_diamond(center, NR * 1.22, Color(1, 1, 1, 0.55 * a), false, 1.4)
+			_draw_diamond(center, NR, Color(1, 1, 1, 0.95 * a), false, 2.2)
 		_draw_center_text(str(ent.uid), center, font_size,
 				Color(0.07, 0.07, 0.07, a))
 
@@ -1013,16 +1013,32 @@ func _draw_interaction_hint(eff: float, a: float) -> void:
 		return
 	if ih.target_pos == Vector2i(-1, -1):
 		return
+	var player: Entity = _spec.state.get_player()
+	if player == null:
+		return
 	var font: Font = ThemeDB.fallback_font
 	if font == null:
 		return
 	var NR: float       = eff * NR_FACTOR * ENTITY_SCALE
 	var cell_scale: float = eff / 80.0
-	var font_size: int  = maxi(10, int(round(13.0 * cell_scale)))
-	var center: Vector2 = _grid_to_local_center(ih.target_pos, eff)
-	# Float above the diamond tip with a small gap.
-	var text_center: Vector2 = center - Vector2(0.0, NR + 9.0 * cell_scale)
-	var text_w: float  = font.get_string_size(ih.text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
+	var font_size: int  = maxi(10, int(round(11.0 * cell_scale)))
+	if ih.text == "放下":
+		var drop_center: Vector2 = _grid_to_local_center(ih.target_pos, eff)
+		var drop_size: float = NR * 0.90
+		var frame_col: Color = COLOR_INTERACT_GRAY
+		frame_col.a = 0.9 * a
+		_draw_dashed_diamond(
+				drop_center,
+				drop_size,
+				frame_col,
+				maxf(1.2, 1.8 * cell_scale),
+				maxf(3.0, 4.0 * cell_scale),
+				0.0)
+	var anchor: Vector2 = _grid_to_local_center(ih.target_pos, eff)
+	var clearance: float = NR + 9.0 * cell_scale + 2.0
+	var text_center: Vector2 = anchor - Vector2(0.0, clearance)
+	var hint_text: String = ih.text
+	var text_w: float  = font.get_string_size(hint_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
 	var ascent: float  = font.get_ascent(font_size)
 	var descent: float = font.get_descent(font_size)
 	var baseline_y: float = text_center.y + (ascent - descent) * 0.5
@@ -1033,12 +1049,11 @@ func _draw_interaction_hint(eff: float, a: float) -> void:
 		for dy in [-1, 0, 1]:
 			if dx == 0 and dy == 0:
 				continue
-			draw_string(font, draw_pos + Vector2(dx, dy), ih.text,
+			draw_string(font, draw_pos + Vector2(dx, dy), hint_text,
 					HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, shadow)
-	# Foreground in hint color.
-	var col: Color = ih.color
-	col.a *= a
-	draw_string(font, draw_pos, ih.text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, col)
+	# Fixed white foreground for interaction hint readability.
+	var col: Color = Color(1.0, 1.0, 1.0, a)
+	draw_string(font, draw_pos, hint_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, col)
 
 
 # Interaction hint highlight — preserved
