@@ -342,6 +342,33 @@ def _has_dead_corner_box(state) -> bool:
     return False
 
 
+def _switches_feasible(ctrl: GameController) -> bool:
+    """Upper-bound check: return False if switches cannot all be activated.
+
+    A box can shadow-cover up to (div_points + 1) switch positions via diverge.
+    Shadow instances are intentionally double-counted to keep the bound loose (safe).
+    Bug note: held boxes (z >= 0 but holder != None) are included because they
+    can still be dropped onto switches.
+    """
+    if ctrl.has_branched:
+        preview = ctrl.get_merge_preview()
+    else:
+        preview = ctrl.get_active_branch()
+
+    unlit = sum(
+        1 for pos, t in preview.terrain.items()
+        if t == TerrainType.SWITCH and not preview.switch_activated(pos)
+    )
+    if unlit == 0:
+        return True
+
+    # Count non-underground boxes (z >= 0 covers grounded z=0 and held z=1).
+    # Shadow duplicates are included deliberately — overcounting is safe here
+    # because it keeps max_coverage high, avoiding false positives.
+    boxes = sum(1 for e in preview.entities if e.type == EntityType.BOX and e.z >= 0)
+    return unlit <= boxes * (ctrl.div_points + 1)
+
+
 def _legal_actions_for_state(ctrl: GameController, hints: dict) -> list:
     """Build legal candidate actions from system constraints for current state."""
     actions = ['U', 'D', 'L', 'R']
@@ -498,15 +525,16 @@ def solve_fast(level_dict: dict, max_depth: int = 60,
     parents = array('i', [-1])
     out_actions = bytearray(b'\0')
 
-    # Heap item: (f, g, tie, controller, node_id, raw_tail)
+    # Heap item: (f, g, tie, controller, node_id, raw_tail, t_in_cycle)
+    # t_in_cycle: number of T actions since the last V/C/F (CRDT canonical form)
     heap = []
     tie = 0
     start_h = _heuristic(initial, goal_positions)
-    heappush(heap, (weight * start_h, 0, tie, initial, 0, ''))
+    heappush(heap, (weight * start_h, 0, tie, initial, 0, '', 0))
     popped = 0
 
     while heap:
-        _, g, _, ctrl, node_id, raw_tail = heappop(heap)
+        _, g, _, ctrl, node_id, raw_tail, t_in_cycle = heappop(heap)
         popped += 1
         if progress_cb and popped % 10000 == 0:
             progress_cb(popped, len(best_g))
@@ -521,6 +549,12 @@ def solve_fast(level_dict: dict, max_depth: int = 60,
         last_action = raw_tail[-1] if raw_tail else None
         for action in _ordered_actions(ctrl, hints):
             if _is_noop(ctrl, action, last_action, hints, raw_tail):
+                continue
+
+            # CRDT canonical form: within each V…C cycle, allow at most one focus
+            # switch (T). This eliminates interleaved M-T-N-T-M sequences that
+            # are equivalent to the canonical M-T-(M+N) ordering.
+            if action == 'T' and t_in_cycle >= 1:
                 continue
 
             new_ctrl = ctrl.clone_for_solver()
@@ -542,10 +576,22 @@ def solve_fast(level_dict: dict, max_depth: int = 60,
                     and not active.all_switches_activated() and _has_dead_corner_box(active):
                 continue
 
+            # Switch upper-bound: prune if boxes can't possibly cover remaining switches.
+            if not _switches_feasible(new_ctrl):
+                continue
+
             new_g = g + 1
             if new_g > max_depth:
                 continue
             child_tail = _next_tail(raw_tail, action)
+
+            # Update t_in_cycle for child node.
+            if action in ('V', 'C', 'F'):
+                new_t = 0
+            elif action == 'T':
+                new_t = t_in_cycle + 1
+            else:
+                new_t = t_in_cycle
 
             if new_ctrl.victory:
                 child_id = len(parents)
@@ -564,7 +610,7 @@ def solve_fast(level_dict: dict, max_depth: int = 60,
             parents.append(node_id)
             out_actions.append(ord(output_char))
             new_h = _heuristic(new_ctrl, goal_positions)
-            heappush(heap, (new_g + weight * new_h, new_g, tie, new_ctrl, child_id, child_tail))
+            heappush(heap, (new_g + weight * new_h, new_g, tie, new_ctrl, child_id, child_tail, new_t))
 
     return None
 
@@ -587,12 +633,14 @@ def solve(level_dict: dict, max_depth: int = 60,
     parents = array('i', [-1])
     out_actions = bytearray(b'\0')
 
-    queue = deque([(initial, 0, 0, '')])  # (controller, node_id, depth, raw_tail)
+    # Queue item: (controller, node_id, depth, raw_tail, t_in_cycle)
+    # t_in_cycle: number of T actions since the last V/C/F (CRDT canonical form)
+    queue = deque([(initial, 0, 0, '', 0)])
     visited = {_state_key(initial)}
     count = 0
 
     while queue:
-        ctrl, node_id, depth, raw_tail = queue.popleft()
+        ctrl, node_id, depth, raw_tail, t_in_cycle = queue.popleft()
         count += 1
         if progress_cb and count % 10000 == 0:
             progress_cb(count, len(visited))
@@ -605,6 +653,13 @@ def solve(level_dict: dict, max_depth: int = 60,
         for action in actions:
             if _is_noop(ctrl, action, last_action, hints, raw_tail):
                 continue
+
+            # CRDT canonical form: within each V…C cycle, allow at most one focus
+            # switch (T). This eliminates interleaved M-T-N-T-M sequences that
+            # are equivalent to the canonical M-T-(M+N) ordering.
+            if action == 'T' and t_in_cycle >= 1:
+                continue
+
             new_ctrl = ctrl.clone_for_solver()
             output_char = _output_char_for_action(ctrl, action)
             execute_action(new_ctrl, action, hints)
@@ -626,8 +681,20 @@ def solve(level_dict: dict, max_depth: int = 60,
                     and not active.all_switches_activated() and _has_dead_corner_box(active):
                 continue
 
+            # Switch upper-bound: prune if boxes can't possibly cover remaining switches.
+            if not _switches_feasible(new_ctrl):
+                continue
+
             new_depth = depth + 1
             child_tail = _next_tail(raw_tail, action)
+
+            # Update t_in_cycle for child node.
+            if action in ('V', 'C', 'F'):
+                new_t = 0
+            elif action == 'T':
+                new_t = t_in_cycle + 1
+            else:
+                new_t = t_in_cycle
 
             if new_ctrl.victory:
                 child_id = len(parents)
@@ -641,7 +708,7 @@ def solve(level_dict: dict, max_depth: int = 60,
                 child_id = len(parents)
                 parents.append(node_id)
                 out_actions.append(ord(output_char))
-                queue.append((new_ctrl, child_id, new_depth, child_tail))
+                queue.append((new_ctrl, child_id, new_depth, child_tail, new_t))
 
     return None
 
