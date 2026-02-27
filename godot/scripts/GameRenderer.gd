@@ -590,7 +590,14 @@ func _draw_overlap_box_diamond(stacked: Array, pos: Vector2i, eff: float, a: flo
 	var left_shadow:  bool = _spec.state.is_shadow(left_ent.uid)
 	var right_shadow: bool = _spec.state.is_shadow(right_ent.uid)
 
-	# Fill: original color for solid, minimal for shadow.
+	# Background mask: shadow halves need a bg-color underlay so connection lines
+	# do not bleed through (rule: floor entities must not show lines behind them).
+	if left_shadow:
+		_draw_half_diamond(center, NR, _col(COLOR_BG, a), -1, true)
+	if right_shadow:
+		_draw_half_diamond(center, NR, _col(COLOR_BG, a),  1, true)
+
+	# Fill: original color for solid, minimal tint for shadow (over bg mask).
 	var left_fill: Color  = left_base
 	var right_fill: Color = right_base
 	left_fill.a  = (0.10 if left_shadow  else 0.92) * a
