@@ -38,7 +38,7 @@ const MERGE_PREVIEW_DURATION := 0.20
 var peek_floor_active: bool = false
 
 # Falling box Tween animations
-var _fall_progress: Dictionary = {}  # {[uid, pos]: float 0-1} driven by Tweens
+var _fall_progress: Dictionary = {}  # {[branch_id, uid, pos]: float 0-1} driven by Tweens
 var _fall_tweens:   Dictionary = {}  # {str_key: Tween}
 const FALL_HOLD_DURATION := 0.10
 const FALL_ANIM_DURATION := 0.25
@@ -144,22 +144,27 @@ func _process(delta: float) -> void:
 	if controller != null and not controller.falling_boxes.is_empty():
 		for raw_key in controller.falling_boxes.keys():
 			var k: Array  = raw_key as Array
-			var str_key   := "%d:%d:%d" % [k[0] as int, (k[1] as Vector2i).x, (k[1] as Vector2i).y]
+			var uid: int = k[0] as int
+			var pos: Vector2i = k[1] as Vector2i
+			var branch_id: int = controller.current_focus if controller.has_branched else 0
+			var anim_key: Array = [branch_id, uid, pos]
+			var str_key   := "%d:%d:%d:%d" % [branch_id, uid, pos.x, pos.y]
 			if not _fall_tweens.has(str_key):
-				var captured_key: Array = raw_key as Array
+				var captured_anim_key: Array = anim_key.duplicate(true)
+				var captured_src_key: Array = raw_key as Array
 				var captured_str := str_key
-				_fall_progress[captured_key] = 0.0  # register immediately for hold phase
+				_fall_progress[captured_anim_key] = 0.0  # register immediately for hold phase
 				var tw := create_tween()
 				_fall_tweens[str_key] = tw
 				if FALL_HOLD_DURATION > 0.0:
 					tw.tween_interval(FALL_HOLD_DURATION)
 				tw.tween_method(
-					func(v: float) -> void: _fall_progress[captured_key] = v,
+					func(v: float) -> void: _fall_progress[captured_anim_key] = v,
 					0.0, 1.0, FALL_ANIM_DURATION).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_SINE)
 				tw.tween_callback(func() -> void:
-					_fall_progress.erase(captured_key)
+					_fall_progress.erase(captured_anim_key)
 					_fall_tweens.erase(captured_str)
-					controller.falling_boxes.erase(captured_key))
+					controller.falling_boxes.erase(captured_src_key))
 		needs_redraw = true
 	if not _fall_progress.is_empty():
 		needs_redraw = true

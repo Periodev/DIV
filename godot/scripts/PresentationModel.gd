@@ -134,8 +134,10 @@ static func build(
 			flash_int = 1.0 - elapsed / 0.3
 			flash_pos = controller.failed_action_pos
 
-	# Falling boxes: progress driven by GameScene Tweens, passed in directly.
-	var falling: Dictionary = fall_progress
+	# Falling boxes: progress driven by GameScene Tweens.
+	# Split mode must isolate animations per branch to avoid cross-panel bleed.
+	var falling_main: Dictionary = _filter_falling_for_branch(fall_progress, controller.main_branch, 0)
+	var falling_sub: Dictionary = _filter_falling_for_branch(fall_progress, controller.sub_branch, 1)
 
 	# Cell size (focused panel always TARGET_PANEL pixels wide)
 	var gs: int      = controller.main_branch.grid_size
@@ -192,7 +194,7 @@ static func build(
 		goal_glow, animation_frame,
 		flash_pos if (focus == 0) else Vector2i(-1, -1),
 		flash_int if (focus == 0) else 0.0,
-		falling,
+		falling_main,
 		branch_hint_active if (focus == 0) else false,
 		show_merge_preview_hint,
 		show_merge_hint,
@@ -214,7 +216,7 @@ static func build(
 			goal_glow, animation_frame,
 			flash_pos if (focus == 1) else Vector2i(-1, -1),
 			flash_int if (focus == 1) else 0.0,
-			falling,
+			falling_sub,
 			branch_hint_active if (focus == 1) else false,
 			show_merge_preview_hint,
 			show_merge_hint,
@@ -347,3 +349,39 @@ static func _is_on_branch_point(state: BranchState) -> bool:
 		return false
 	var tt: int = state.terrain.get(player.pos, Enums.TerrainType.FLOOR)
 	return tt in Enums.BRANCH_DECREMENT
+
+
+static func _filter_falling_for_branch(
+		fall_progress: Dictionary, branch: BranchState, branch_id: int) -> Dictionary:
+	var filtered: Dictionary = {}
+	if branch == null:
+		return filtered
+	for raw_key in fall_progress.keys():
+		var k: Array = raw_key as Array
+		if k.size() < 2:
+			continue
+		var uid: int = -1
+		var pos: Vector2i = Vector2i(-1, -1)
+		if k.size() >= 3:
+			var k_branch: int = int(k[0])
+			if k_branch != branch_id:
+				continue
+			uid = int(k[1])
+			pos = k[2] as Vector2i
+		else:
+			uid = int(k[0])
+			pos = k[1] as Vector2i
+		if not _branch_has_underground_entity(branch, uid, pos):
+			continue
+		filtered[[uid, pos]] = float(fall_progress[raw_key])
+	return filtered
+
+
+static func _branch_has_underground_entity(branch: BranchState, uid: int, pos: Vector2i) -> bool:
+	if branch == null:
+		return false
+	for e in branch.entities:
+		var ent := e as Entity
+		if ent != null and ent.uid == uid and ent.pos == pos and ent.z == -1:
+			return true
+	return false
