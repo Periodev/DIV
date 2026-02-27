@@ -178,6 +178,23 @@ func _draw_connection_pair(
 		pos_a: Vector2i, tt_a: int, c_a: Vector2,
 		pos_b: Vector2i, tt_b: int, c_b: Vector2,
 		eff: float, a: float) -> void:
+	# Clip route lines to GOAL inner contour so lines connect to the rim but do not
+	# pass under the goal fill.
+	if tt_a == Enums.TerrainType.GOAL or tt_b == Enums.TerrainType.GOAL:
+		var dist_goal: float = c_a.distance_to(c_b)
+		if dist_goal <= 0.001:
+			return
+		var dir_ab: Vector2 = (c_b - c_a) / dist_goal
+		var goal_contour_r: float = maxf(0.0, _goal_marker_radius(eff) * 1.35 - 1.2)
+		var start: Vector2 = c_a
+		var end: Vector2 = c_b
+		if tt_a == Enums.TerrainType.GOAL:
+			start = c_a + dir_ab * goal_contour_r
+		if tt_b == Enums.TerrainType.GOAL:
+			end = c_b - dir_ab * goal_contour_r
+		if start.distance_to(end) > 0.001:
+			draw_line(start, end, _col(LINE_NORMAL, a), 2.0)
+		return
 
 	var a_empty_hole: bool = (tt_a == Enums.TerrainType.HOLE) and not _is_hole_filled(pos_a)
 	var b_empty_hole: bool = (tt_b == Enums.TerrainType.HOLE) and not _is_hole_filled(pos_b)
@@ -325,13 +342,17 @@ func _draw_switch_node(
 		node_dot_r: float, a: float) -> void:
 	var active: bool = _spec.state.switch_activated(pos)
 	var active_col: Color = Color(1.0, 0.78, 0.0, 1.0)  # Amber (uniform, source-independent)
+	var inactive_gray: Color = Color8(128, 128, 128, 255)  # Pure gray, opaque
 
 	if active:
 		_draw_diamond(center, NR * 1.5 + 6.0,
 				_col(active_col, a), false, 2.0)
-	_draw_diamond(center, NR * 1.5,
-			_col(Color(0.71, 0.73, 0.76, 0.55), a), false, 2.0)
-	draw_circle(center, node_dot_r, _col(Color(0.55, 0.57, 0.60, 0.95), a))
+		_draw_diamond(center, NR * 1.5,
+				_col(Color(0.71, 0.73, 0.76, 0.55), a), false, 2.0)
+		draw_circle(center, node_dot_r, _col(Color(0.55, 0.57, 0.60, 0.95), a))
+	else:
+		_draw_diamond(center, NR * 1.5, _col(inactive_gray, a), false, 2.0)
+		draw_circle(center, node_dot_r, _col(inactive_gray, a))
 
 
 func _draw_branch_node(pos: Vector2i, center: Vector2, tt: int, eff: float, a: float) -> void:
@@ -360,15 +381,16 @@ func _draw_branch_node(pos: Vector2i, center: Vector2, tt: int, eff: float, a: f
 
 
 func _draw_goal_node(center: Vector2, eff: float, a: float) -> void:
-	var pulse: float    = 0.6 + 0.4 * sin(_time * 2.0)
 	var cell_scale: float = eff / 80.0
-	var goal_radius: float = _goal_marker_radius(eff)
+	var goal_radius: float = _goal_marker_radius(eff) * 1.35
 
-	var amber := Color(1.0, 0.78, 0.0)   # same as switch
-	var green := Color(0.31, 0.86, 0.39) # same as branch node
+	var pulse: float = 0.6 + 0.4 * sin(_time * 2.0)
+
+	var amber := Color(1.0, 0.78, 0.0)
+	var green := Color(0.31, 0.86, 0.39)
 
 	if _spec.goal_glow == 0:
-		# Inactive: gray, no pulse.
+		# Original inactive stage color.
 		draw_arc(center, goal_radius, 0, TAU, 32,
 				_col(Color(0.55, 0.55, 0.55, 0.60), a), 2.0)
 		draw_circle(center, goal_radius,
@@ -378,15 +400,12 @@ func _draw_goal_node(center: Vector2, eff: float, a: float) -> void:
 		return
 
 	if _spec.goal_glow == 2:
-		# Strong: green outer ring + amber inner ring.
 		draw_arc(center, goal_radius + 8.0, 0, TAU, 32,
 				_col(Color(green.r, green.g, green.b, 0.70 * pulse), a), 2.0)
 	else:
-		# Weak: amber outer ring pushed further out.
 		draw_arc(center, goal_radius + 8.0, 0, TAU, 32,
 				_col(Color(amber.r, amber.g, amber.b, 0.32 * pulse), a), 1.5)
 
-	# Amber base ring + fill (both active states).
 	draw_arc(center, goal_radius, 0, TAU, 32,
 			_col(Color(amber.r, amber.g, amber.b, 0.5 + pulse * 0.4), a), 2.0)
 	draw_circle(center, goal_radius,
