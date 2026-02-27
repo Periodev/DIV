@@ -4,6 +4,8 @@
 extends Node2D
 class_name GameRenderer
 
+const HintBoxContainerScript := preload("res://scripts/HintBoxContainer.gd")
+
 # ---------------------------------------------------------------------------
 # Visual constants - Node Network style
 # ---------------------------------------------------------------------------
@@ -62,6 +64,7 @@ const COLOR_HINT_F_ON_BD := Color8(255, 180,   0)
 var _spec: PresentationModel.BranchViewSpec = null
 var _hint_space_label: Label  = null
 var _hint_action_label: Label = null
+var _hint_box_container: Control = null
 var _peek_floor_mode: bool    = false
 var _time: float              = 0.0
 var _eff: float               = 0.0
@@ -79,6 +82,9 @@ func draw_frame(spec: PresentationModel.BranchViewSpec) -> void:
 	_spec = spec
 	if spec != null:
 		position = Vector2(spec.pos_x, spec.pos_y)
+	_ensure_hint_box_container()
+	if _hint_box_container != null and _hint_box_container.has_method("update_hints"):
+		_hint_box_container.call("update_hints", _spec, position)
 	queue_redraw()
 
 
@@ -92,6 +98,7 @@ func set_peek_floor_mode(enabled: bool) -> void:
 func _ready() -> void:
 	_ensure_hint_labels()
 	_set_hint_labels_visible(false)
+	_ensure_hint_box_container()
 
 
 func _process(delta: float) -> void:
@@ -149,9 +156,7 @@ func _draw() -> void:
 	# Title above panel
 	_draw_title(gpx, a)
 
-	# Adaptive hint boxes (focused branch only)
-	if _spec.is_focused:
-		_draw_adaptive_hints(a)
+	# Hint boxes are rendered by HintBoxContainer (Control), not immediate-mode draw.
 
 
 # ---------------------------------------------------------------------------
@@ -813,37 +818,6 @@ func _draw_dir_arrow(
 	draw_polyline(PackedVector2Array([p0, p1, p2]), color, thickness, true)
 
 
-## Legacy arrow - kept for HUD tab hints (dx/dy int signature).
-func _draw_arrow(center: Vector2, dx: int, dy: int, size: int, col: Color) -> void:
-	var half: float = float(size) * 0.5
-	var points: PackedVector2Array
-	if dy < 0:
-		points = PackedVector2Array([
-			Vector2(center.x,        center.y - size),
-			Vector2(center.x - half, center.y - half),
-			Vector2(center.x + half, center.y - half),
-		])
-	elif dy > 0:
-		points = PackedVector2Array([
-			Vector2(center.x,        center.y + size),
-			Vector2(center.x - half, center.y + half),
-			Vector2(center.x + half, center.y + half),
-		])
-	elif dx < 0:
-		points = PackedVector2Array([
-			Vector2(center.x - size, center.y       ),
-			Vector2(center.x - half, center.y - half),
-			Vector2(center.x - half, center.y + half),
-		])
-	else:
-		points = PackedVector2Array([
-			Vector2(center.x + size, center.y       ),
-			Vector2(center.x + half, center.y - half),
-			Vector2(center.x + half, center.y + half),
-		])
-	draw_colored_polygon(points, col)
-
-
 # ---------------------------------------------------------------------------
 # Falling animation helper
 # ---------------------------------------------------------------------------
@@ -1178,6 +1152,15 @@ func _draw_lock_corners(
 # Hint label system - preserved
 # ---------------------------------------------------------------------------
 
+func _ensure_hint_box_container() -> void:
+	if _hint_box_container != null:
+		return
+	_hint_box_container = HintBoxContainerScript.new()
+	_hint_box_container.name = "HintBoxContainer"
+	_hint_box_container.z_index = 10
+	add_child(_hint_box_container)
+
+
 func _ensure_hint_labels() -> void:
 	if _hint_space_label == null:
 		_hint_space_label       = _create_hint_label()
@@ -1239,142 +1222,6 @@ func _apply_hint_label_style(
 func _layout_hint_label(ctrl: Control, center: Vector2, w: float, h: float) -> void:
 	ctrl.position = Vector2(round(center.x - w * 0.5), round(center.y - h * 0.5))
 	ctrl.size     = Vector2(w, h)
-
-
-# ---------------------------------------------------------------------------
-# Adaptive hint boxes - preserved
-# ---------------------------------------------------------------------------
-
-func _draw_adaptive_hints(a: float) -> void:
-	if not _spec.has_branched:
-		if _spec.timeline_hint != "":
-			_draw_timeline_hint_box(_spec.branch_hint_active, a)
-		return
-
-	_draw_tab_switch_hints(a)
-	if _spec.show_merge_preview_hint:
-		_draw_merge_preview_hint(_spec.is_merge_preview, a)
-	if _spec.show_merge_hint:
-		_draw_merge_hint(a, _spec.merge_hint_enabled)
-	if _spec.show_fetch_indicator:
-		_draw_fetch_mode_indicator(_spec.fetch_mode_enabled, a)
-
-
-func _draw_tab_switch_hints(a: float) -> void:
-	var box_w: float = 75.0
-	var box_h: float = 40.0
-	var y: float       = PresentationModel.CENTER_Y + PresentationModel.TARGET_PANEL - box_h
-	var left_x: float  = PresentationModel.CENTER_X - box_w - 10.0
-	var right_x: float = PresentationModel.CENTER_X + PresentationModel.TARGET_PANEL + 10.0
-
-	var left_rect:  Rect2 = _global_rect_to_local(Rect2(left_x,  y, box_w, box_h))
-	var right_rect: Rect2 = _global_rect_to_local(Rect2(right_x, y, box_w, box_h))
-
-	var focus_is_div0: bool = _spec.title != "DIV 1"
-	var left_active:   bool = not focus_is_div0
-	var right_active:  bool = focus_is_div0
-
-	var active_bg   := Color8( 20,  20, 200)
-	var active_bd   := Color8(  0,   0, 255)
-	var active_tx   := Color8(255, 255, 255)
-	var inactive_bg := Color8( 80,  80,  80)
-	var inactive_bd := Color8(120, 120, 120)
-	var inactive_tx := Color8(160, 160, 160)
-
-	_draw_tab_hint_box(left_rect,  left_active,  true,  a,
-			active_bg, active_bd, active_tx, inactive_bg, inactive_bd, inactive_tx)
-	_draw_tab_hint_box(right_rect, right_active, false, a,
-			active_bg, active_bd, active_tx, inactive_bg, inactive_bd, inactive_tx)
-
-
-func _draw_tab_hint_box(
-		rect: Rect2, active: bool, is_left: bool, a: float,
-		active_bg: Color, active_bd: Color, active_tx: Color,
-		inactive_bg: Color, inactive_bd: Color, inactive_tx: Color) -> void:
-	var bg: Color = _col(active_bg   if active else inactive_bg, a * 0.8)
-	var bd: Color = _col(active_bd   if active else inactive_bd, a)
-	var tx: Color = _col(active_tx   if active else inactive_tx, a)
-
-	draw_rect(rect, bg)
-	draw_rect(rect, bd, false, 2.0)
-
-	var arrow_size: int = 11
-	var text_size:  int = 18
-	if is_left:
-		var ac := Vector2(rect.position.x + 20.0, rect.get_center().y)
-		_draw_arrow(ac, -1, 0, arrow_size, tx)
-		_draw_center_text("Tab", Vector2(rect.position.x + 46.0, rect.get_center().y), text_size, tx)
-	else:
-		var ac := Vector2(rect.position.x + rect.size.x - 20.0, rect.get_center().y)
-		_draw_arrow(ac, 1, 0, arrow_size, tx)
-		_draw_center_text("Tab", Vector2(rect.position.x + 28.0, rect.get_center().y), text_size, tx)
-
-
-func _draw_timeline_hint_box(is_active: bool, a: float) -> void:
-	var box_w: float    = 150.0
-	var box_h: float    = 40.0
-	var view_size: Vector2 = get_viewport_rect().size
-	var center_x: float = (view_size.x - box_w) * 0.5
-	var y: float        = (view_size.y + PresentationModel.TARGET_PANEL) * 0.5 + 15.0
-	var rect: Rect2     = _global_rect_to_local(Rect2(center_x, y, box_w, box_h))
-
-	var bg:       Color = _col(COLOR_HINT_GREEN if is_active else COLOR_HINT_DARK,    a * 0.8)
-	var border:   Color = _col(COLOR_HINT_GREEN_B if is_active else COLOR_HINT_GRAY_B, a)
-	var text_col: Color = _col(Color8(60, 30, 0) if is_active else COLOR_HINT_TEXT_G,  a)
-
-	draw_rect(rect, bg)
-	draw_rect(rect, border, false, 2.0)
-	_draw_text_in_rect("V Diverge", rect, 16, text_col)
-
-
-func _draw_merge_preview_hint(is_active: bool, a: float) -> void:
-	var box_w: float    = 130.0
-	var box_h: float    = 40.0
-	var view_size: Vector2 = get_viewport_rect().size
-	var center_x: float = (view_size.x - PresentationModel.TARGET_PANEL) * 0.5
-	var center_y: float = (view_size.y - PresentationModel.TARGET_PANEL) * 0.5
-	var x: float        = center_x + PresentationModel.TARGET_PANEL - box_w
-	var y: float        = center_y + PresentationModel.TARGET_PANEL + 15.0
-	var rect: Rect2     = _global_rect_to_local(Rect2(x, y, box_w, box_h))
-
-	draw_rect(rect, _col(COLOR_HINT_M_BG, a * 0.8))
-	draw_rect(rect, _col(COLOR_HINT_M_BD, a), false, 2.0)
-	var text: String = "M Cancel Preview" if is_active else "M Preview Merge"
-	_draw_text_in_rect(text, rect, 14, _col(Color.WHITE, a))
-
-
-func _draw_merge_hint(a: float, enabled: bool) -> void:
-	var box_w: float    = 150.0
-	var box_h: float    = 40.0
-	var view_size: Vector2 = get_viewport_rect().size
-	var x: float        = (view_size.x - box_w) * 0.5
-	var y: float        = (view_size.y + PresentationModel.TARGET_PANEL) * 0.5 + 15.0
-	var rect: Rect2     = _global_rect_to_local(Rect2(x, y, box_w, box_h))
-
-	var bg: Color = _col(COLOR_HINT_V_BG if enabled else COLOR_HINT_DARK, a * 0.8)
-	var bd: Color = _col(COLOR_HINT_V_BD if enabled else COLOR_HINT_GRAY_B, a)
-	var tx: Color = _col(Color.WHITE if enabled else COLOR_HINT_TEXT_G, a)
-
-	draw_rect(rect, bg)
-	draw_rect(rect, bd, false, 2.0)
-	_draw_text_in_rect("V Merge", rect, 16, tx)
-
-
-func _draw_fetch_mode_indicator(enabled: bool, a: float) -> void:
-	var box_w: float    = 120.0
-	var box_h: float    = 40.0
-	var view_size: Vector2 = get_viewport_rect().size
-	var center_x: float = (view_size.x - PresentationModel.TARGET_PANEL) * 0.5
-	var y: float        = (view_size.y + PresentationModel.TARGET_PANEL) * 0.5 + 15.0
-	var rect: Rect2     = _global_rect_to_local(Rect2(center_x, y, box_w, box_h))
-
-	var bg: Color = _col(COLOR_HINT_F_ON_BG if enabled else COLOR_HINT_DARK,    a * 0.8)
-	var bd: Color = _col(COLOR_HINT_F_ON_BD if enabled else COLOR_HINT_F_BD,    a)
-	var tx: Color = _col(Color8(60, 30, 0)  if enabled else Color8(220, 220, 220), a)
-
-	draw_rect(rect, bg)
-	draw_rect(rect, bd, false, 2.0)
-	_draw_text_in_rect("F Fetch Merge", rect, 14, tx)
 
 
 # ---------------------------------------------------------------------------
@@ -1469,13 +1316,6 @@ func _col(c: Color, a: float) -> Color:
 	return out
 
 
-func _global_rect_to_local(rect: Rect2) -> Rect2:
-	return Rect2(
-		rect.position.x - position.x,
-		rect.position.y - position.y,
-		rect.size.x, rect.size.y)
-
-
 func _draw_center_text(text: String, center: Vector2, font_size: int, col: Color) -> void:
 	if text == "":
 		return
@@ -1490,16 +1330,3 @@ func _draw_center_text(text: String, center: Vector2, font_size: int, col: Color
 		Vector2(center.x - text_w * 0.5, baseline_y),
 		text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, col)
 
-
-func _draw_text_in_rect(text: String, rect: Rect2, font_size: int, col: Color) -> void:
-	if text == "":
-		return
-	var font: Font = ThemeDB.fallback_font
-	if font == null:
-		return
-	var ascent:     float = font.get_ascent(font_size)
-	var descent:    float = font.get_descent(font_size)
-	var baseline_y: float = rect.position.y + (rect.size.y + ascent - descent) * 0.5
-	draw_string(font,
-		Vector2(rect.position.x, baseline_y),
-		text, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, font_size, col)
