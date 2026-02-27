@@ -56,6 +56,13 @@ const COLOR_HINT_F_ON_BD := Color8(255, 180,   0)
 @export var title_margin_base: float = 22.0
 @export var border_w: float = 1.5
 @export var dash_scroll_speed: float = 28.0
+@export_group("Hole Animation")
+@export_enum("ExpandToHex:1", "FlashToHex:2") var hole_fill_anim_mode: int = 2
+@export_group("Hole Style")
+@export_enum("SplitEdges:0", "VertexDots:1", "VertexStubs:2") var empty_hole_outline_mode: int = 1
+@export var empty_hole_vertex_dot_radius: float = 1.4
+@export var empty_hole_vertex_stub_ratio: float = 0.16
+const HOLE_SPLIT_GAP_RATIO := 0.22
 
 # ---------------------------------------------------------------------------
 # State
@@ -199,13 +206,20 @@ func _draw_connection_pair(
 		eff: float, a: float) -> void:
 	var a_empty_hole: bool = (tt_a == Enums.TerrainType.HOLE) and not _is_hole_filled(pos_a)
 	var b_empty_hole: bool = (tt_b == Enums.TerrainType.HOLE) and not _is_hole_filled(pos_b)
+	var a_filled_hole: bool = (tt_a == Enums.TerrainType.HOLE) and _is_hole_filled(pos_a)
+	var b_filled_hole: bool = (tt_b == Enums.TerrainType.HOLE) and _is_hole_filled(pos_b)
 
 	if a_empty_hole or b_empty_hole:
-		_draw_broken_segment(c_a, c_b, a_empty_hole, b_empty_hole, eff, a)
+		_draw_broken_segment(c_a, c_b, tt_a, tt_b, a_empty_hole, b_empty_hole, eff, a)
 		return
 
 	var clip_a: float = _connection_clip_radius(tt_a, eff)
 	var clip_b: float = _connection_clip_radius(tt_b, eff)
+	# Pass-through policy: filled holes and normal floor nodes should read as fully connected.
+	if a_filled_hole or tt_a == Enums.TerrainType.FLOOR:
+		clip_a = 0.0
+	if b_filled_hole or tt_b == Enums.TerrainType.FLOOR:
+		clip_b = 0.0
 	_draw_clipped_connection_line(c_a, c_b, clip_a, clip_b, _col(line_normal, a), 2.0)
 
 
@@ -259,13 +273,14 @@ func _draw_clipped_connection_line(
 
 func _draw_broken_segment(
 		c_a: Vector2, c_b: Vector2,
+		tt_a: int, tt_b: int,
 		a_empty_hole: bool, b_empty_hole: bool, eff: float, a: float) -> void:
 	var col_white: Color = _col(line_normal, a)
 	var col_red: Color   = _col(line_cross, a)
 	if a_empty_hole and not b_empty_hole:
-		_draw_break_wire(c_b, c_a, col_white, col_red, eff)
+		_draw_break_wire(c_b, c_a, tt_b, col_white, col_red, eff)
 	elif b_empty_hole and not a_empty_hole:
-		_draw_break_wire(c_a, c_b, col_white, col_red, eff)
+		_draw_break_wire(c_a, c_b, tt_a, col_white, col_red, eff)
 	else:
 		# Both holes: red stub from each end, gap in middle.
 		var dist: float = c_a.distance_to(c_b)
@@ -279,22 +294,26 @@ func _draw_broken_segment(
 
 
 # Solid white line from walkable node, stops before hole visual; red dashed stub in the gap.
-func _draw_break_wire(c_walk: Vector2, c_hole: Vector2, col_white: Color, col_red: Color, eff: float) -> void:
+func _draw_break_wire(
+		c_walk: Vector2, c_hole: Vector2, tt_walk: int,
+		col_white: Color, col_red: Color, eff: float) -> void:
 	var dist: float = c_walk.distance_to(c_hole)
 	if dist <= 0.001:
 		return
 	var dir: Vector2  = (c_hole - c_walk) / dist
+	var walk_clip: float = _connection_clip_radius(tt_walk, eff)
 	# Safe boundary: leave clearance for the hole node's visual (ring + margin).
 	var hole_r: float = _goal_marker_radius(eff) + maxf(2.0, _cell_scale * 3.0) + 3.0
-	var safe: float   = dist - hole_r   # px from walkable center to edge of hole visual
+	var safe: float   = dist - hole_r - walk_clip   # px from walkable visual edge to hole visual edge
 	if safe <= 0.0:
 		return
+	var start: Vector2 = c_walk + dir * walk_clip
 	# White line: 0 to 72% of safe zone.
-	draw_line(c_walk, c_walk + dir * safe * 0.72, col_white, 2.0)
+	draw_line(start, start + dir * safe * 0.72, col_white, 2.0)
 	# Red stub: 84% to 100% of safe zone (just outside hole node visual).
 	_draw_dashed_line(
-		c_walk + dir * safe * 0.84,
-		c_walk + dir * safe,
+		start + dir * safe * 0.84,
+		start + dir * safe,
 		col_red, 1.6, 5.0, 0.0)
 
 
@@ -353,10 +372,16 @@ func _draw_hole_node(pos: Vector2i, center: Vector2, eff: float, a: float) -> vo
 			uids.append(uid)
 
 	if uids.is_empty():
-		# Empty hole: red ring + black fill.
+		# Empty hole: dashed regular hexagon + dark hex fill.
 		var ring_w: float = maxf(2.0, _cell_scale * 3.0)
-		draw_circle(center, core_r + ring_w, _col(Color(0.86, 0.21, 0.24, 0.95), a))
-		draw_circle(center, core_r, _col(Color(0.0, 0.0, 0.0, 0.98), a))
+		var outer_r: float = core_r + ring_w
+		var border_col: Color = _col(Color(0.86, 0.21, 0.24, 0.95), a)
+		var fill_col: Color = _col(Color(0.0, 0.0, 0.0, 0.98), a)
+		var hex_inner: PackedVector2Array = _regular_ngon_points(center, core_r, 6, -PI * 0.5)
+		var hex_outer: PackedVector2Array = _regular_ngon_points(center, outer_r, 6, -PI * 0.5)
+		if hex_inner.size() >= 3:
+			draw_colored_polygon(hex_inner, fill_col)
+		_draw_empty_hole_outline(hex_outer, border_col)
 		return
 
 	uids.sort()
@@ -366,6 +391,8 @@ func _draw_hole_node(pos: Vector2i, center: Vector2, eff: float, a: float) -> vo
 		# Two entities: left half (lower uid) / right half (higher uid).
 		_draw_hole_fill_half(center, uids[0], core_r, eff, a, PI * 0.5, PI * 1.5)
 		_draw_hole_fill_half(center, uids[1], core_r, eff, a, -PI * 0.5, PI * 0.5)
+	# Filled hole keeps the normal floor center marker to indicate full pass-through.
+	draw_circle(center, 3.8 * node_scale, _col(Color(1, 1, 1, 1.0), a))
 
 
 func _draw_hole_fill_half(
@@ -374,14 +401,188 @@ func _draw_hole_fill_half(
 	var col: Color = box_colors[(uid - 1) % 5]
 	var is_shadow: bool = _spec.state.is_shadow(uid)
 	var frac: float = (angle_to - angle_from) / TAU
+	var ring_w: float = maxf(2.0, _cell_scale * 3.0)
+	var hex_r: float = core_r + ring_w
+	var hex := _regular_ngon_points(center, hex_r, 6, -PI * 0.5)
+	if frac >= 0.999:
+		if is_shadow:
+			_draw_split_polygon_outline(
+				hex,
+				Color(col.r, col.g, col.b, 0.95 * a),
+				_hole_split_line_width(),
+				HOLE_SPLIT_GAP_RATIO
+			)
+		else:
+			var rim_w: float = maxf(3.0, _cell_scale * 4.5)
+			_draw_polygon_outline(hex, Color(col.r, col.g, col.b, 0.92 * a), rim_w)
+		return
+	var mid_angle: float = 0.5 * (angle_from + angle_to)
+	var side: int = 1 if cos(mid_angle) >= 0.0 else -1
+	var path: PackedVector2Array = _hole_half_outer_path(hex, side)
 	if is_shadow:
-		var dash_w: float = maxf(1.6, _cell_scale * 2.2)
-		_draw_dashed_arc(center, core_r, Color(col.r, col.g, col.b, 0.95 * a),
-				angle_from, angle_to, dash_w, maxi(1, int(round(18.0 * frac))), 0.35)
+		_draw_hole_path_outline(
+			path,
+			Color(col.r, col.g, col.b, 0.95 * a),
+			_hole_split_line_width(),
+			true,
+			maxf(4.0, _cell_scale * 6.0)
+		)
 	else:
-		var rim_w: float = maxf(3.0, _cell_scale * 4.5)
-		draw_arc(center, core_r, angle_from, angle_to, maxi(4, int(round(32.0 * frac))),
-				Color(col.r, col.g, col.b, 0.92 * a), rim_w)
+		_draw_hole_path_outline(
+			path,
+			Color(col.r, col.g, col.b, 0.92 * a),
+			maxf(3.0, _cell_scale * 4.5),
+			false
+		)
+
+
+func _regular_ngon_points(
+		center: Vector2, radius: float, sides: int,
+		rotation: float = -PI * 0.5) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	if sides < 3 or radius <= 0.001:
+		return pts
+	for i in sides:
+		var theta: float = rotation + TAU * float(i) / float(sides)
+		pts.append(center + Vector2(cos(theta) * radius, sin(theta) * radius))
+	return pts
+
+
+func _regular_ngon_radius_at(theta: float, sides: int, radius: float, rotation: float = -PI * 0.5) -> float:
+	if sides < 3 or radius <= 0.001:
+		return 0.0
+	var sector: float = TAU / float(sides)
+	var local: float = fposmod(theta - rotation, TAU)
+	var in_sector: float = fposmod(local, sector)
+	var rel: float = in_sector - sector * 0.5
+	var denom: float = maxf(cos(rel), 0.0001)
+	var apothem: float = radius * cos(PI / float(sides))
+	return apothem / denom
+
+
+func _morph_diamond_hex_pts(
+		center: Vector2, radius: float,
+		t: float, rotation: float = -PI * 0.5, N: int = 30) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	var mt: float = clampf(t, 0.0, 1.0)
+	for i in N:
+		var theta: float = float(i) * TAU / float(N)
+		var r_diamond: float = radius / maxf(abs(cos(theta)) + abs(sin(theta)), 0.0001)
+		var r_hex: float = _regular_ngon_radius_at(theta, 6, radius, rotation)
+		var r: float = lerpf(r_diamond, r_hex, mt)
+		pts.append(center + Vector2(cos(theta) * r, sin(theta) * r))
+	return pts
+
+
+func _draw_polygon_outline(pts: PackedVector2Array, col: Color, width: float) -> void:
+	if pts.size() < 2:
+		return
+	var closed := PackedVector2Array(pts)
+	closed.append(pts[0])
+	draw_polyline(closed, col, width, true)
+
+
+func _draw_dashed_polygon_outline(
+		pts: PackedVector2Array, col: Color,
+		width: float, dash_len: float, offset: float = 0.0) -> void:
+	var n: int = pts.size()
+	if n < 2:
+		return
+	for i in n:
+		var a_pos: Vector2 = pts[i]
+		var b_pos: Vector2 = pts[(i + 1) % n]
+		_draw_dashed_line(a_pos, b_pos, col, width, dash_len, offset)
+
+
+func _draw_split_polygon_outline(
+		pts: PackedVector2Array, col: Color,
+		width: float, center_gap_ratio: float = 0.22) -> void:
+	var n: int = pts.size()
+	if n < 2:
+		return
+	var half_gap: float = clampf(center_gap_ratio, 0.02, 0.90) * 0.5
+	var left_end_t: float = 0.5 - half_gap
+	var right_start_t: float = 0.5 + half_gap
+	for i in n:
+		var a_pos: Vector2 = pts[i]
+		var b_pos: Vector2 = pts[(i + 1) % n]
+		var ab: Vector2 = b_pos - a_pos
+		if ab.length_squared() <= 0.000001:
+			continue
+		draw_line(a_pos, a_pos + ab * left_end_t, col, width, true)
+		draw_line(a_pos + ab * right_start_t, b_pos, col, width, true)
+
+
+func _draw_empty_hole_outline(pts: PackedVector2Array, col: Color) -> void:
+	var width: float = _hole_split_line_width()
+	match empty_hole_outline_mode:
+		1:
+			_draw_vertex_dots_outline(pts, col, width)
+		2:
+			_draw_vertex_stubs_outline(pts, col, width, empty_hole_vertex_stub_ratio)
+		_:
+			_draw_split_polygon_outline(pts, col, width, HOLE_SPLIT_GAP_RATIO)
+
+
+func _draw_vertex_dots_outline(pts: PackedVector2Array, col: Color, width: float) -> void:
+	var n: int = pts.size()
+	if n < 2:
+		return
+	var dot_r: float = maxf(width * 0.52, _cell_scale * empty_hole_vertex_dot_radius)
+	var mid_r: float = dot_r * 0.9
+	for i in n:
+		var p: Vector2 = pts[i]
+		var q: Vector2 = pts[(i + 1) % n]
+		var m: Vector2 = (p + q) * 0.5
+		draw_circle(p, dot_r, col)
+		draw_circle(m, mid_r, col)
+
+
+func _draw_vertex_stubs_outline(
+		pts: PackedVector2Array, col: Color,
+		width: float, stub_ratio: float) -> void:
+	var n: int = pts.size()
+	if n < 2:
+		return
+	var t: float = clampf(stub_ratio, 0.05, 0.40)
+	for i in n:
+		var v: Vector2 = pts[i]
+		var prev_v: Vector2 = pts[(i - 1 + n) % n]
+		var next_v: Vector2 = pts[(i + 1) % n]
+		draw_line(v, v + (prev_v - v) * t, col, width, true)
+		draw_line(v, v + (next_v - v) * t, col, width, true)
+
+
+func _hole_half_outer_path(hex: PackedVector2Array, side: int) -> PackedVector2Array:
+	var path := PackedVector2Array()
+	if hex.size() < 6:
+		return path
+	if side >= 0:
+		path.append(hex[0])  # top
+		path.append(hex[1])  # upper-right
+		path.append(hex[2])  # lower-right
+		path.append(hex[3])  # bottom
+	else:
+		path.append(hex[0])  # top
+		path.append(hex[5])  # upper-left
+		path.append(hex[4])  # lower-left
+		path.append(hex[3])  # bottom
+	return path
+
+
+func _draw_hole_path_outline(
+		path: PackedVector2Array, col: Color,
+		width: float, dashed: bool, dash_len: float = 5.0) -> void:
+	var n: int = path.size()
+	if n < 2:
+		return
+	for i in range(n - 1):
+		_draw_styled_line(path[i], path[i + 1], col, dashed, width, dash_len, 0.0)
+
+
+func _hole_split_line_width() -> float:
+	var ring_w: float = maxf(2.0, _cell_scale * 3.0)
+	return maxf(1.6, ring_w * 0.8)
 
 
 func _draw_switch_node(
@@ -843,9 +1044,8 @@ func _morph_diamond_circle_pts(center: Vector2, NR: float, t: float, N: int = 32
 	return pts
 
 
-## Draws the 3-stage falling animation for boxes at z==-1 with active fall progress.
-## Stage 1 (t 0-0.75): diamond morphs to filled circle, covering the empty hole.
-## Stage 2 (t 0.75-1):  inner bg circle grows to create the ring (floor visible).
+## Draws hole-fill animation for boxes at z==-1 with active fall progress.
+## The active visual scheme is selected by `hole_fill_anim_mode`.
 func _draw_falling_boxes(eff: float, a: float) -> void:
 	for e in _spec.state.entities:
 		var ent: Entity = e as Entity
@@ -857,27 +1057,113 @@ func _draw_falling_boxes(eff: float, a: float) -> void:
 
 		var NR: float        = _nr
 		var core_r: float    = _goal_marker_radius(eff)
+		var ring_w: float    = maxf(2.0, _cell_scale * 3.0)
+		var outer_r: float   = core_r + ring_w
 		var uid_color: Color = box_colors[(ent.uid - 1) % 5]
 		var is_shadow: bool  = _spec.state.is_shadow(ent.uid)
 		var center: Vector2  = _grid_to_local_center(ent.pos, eff)
+		var t_anim: float = clampf(t, 0.0, 1.0)
+		if t_anim <= 0.0001:
+			_draw_falling_entry_overlay(center, NR, uid_color, is_shadow, ent.uid, a)
+			continue
 
-		# Stage 1: morph shape (diamond to circle).
-		var t_morph: float = minf(t / 0.75, 1.0)
-		var pts: PackedVector2Array = _morph_diamond_circle_pts(center, NR, t_morph)
-		var closed := PackedVector2Array(pts)
-		closed.append(pts[0])
+		if hole_fill_anim_mode == 2:
+			_draw_falling_hex_flash_mode(center, outer_r, uid_color, is_shadow, t_anim, a)
+		else:
+			_draw_falling_hex_expand_mode(center, NR, outer_r, uid_color, is_shadow, t_anim, a)
 
+
+func _draw_falling_hex_expand_mode(
+		center: Vector2, NR: float, outer_r: float,
+		uid_color: Color, is_shadow: bool,
+		t: float, a: float) -> void:
+	var morph_cut: float = 0.62
+	if t < morph_cut:
+		var p: float = clampf(t / morph_cut, 0.0, 1.0)
+		var radius: float = lerpf(NR, outer_r, p)
+		var pts: PackedVector2Array = _morph_diamond_hex_pts(center, radius, p, -PI * 0.5, 30)
+		var hex: PackedVector2Array = _regular_ngon_points(center, radius, 6, -PI * 0.5)
 		if is_shadow:
 			draw_colored_polygon(pts, _col(COLOR_BG, a))
-			draw_polyline(closed, Color(uid_color.r, uid_color.g, uid_color.b, 0.88 * a), 1.8)
+			_draw_split_polygon_outline(
+				hex,
+				Color(uid_color.r, uid_color.g, uid_color.b, (0.45 + 0.45 * p) * a),
+				_hole_split_line_width(),
+				HOLE_SPLIT_GAP_RATIO
+			)
 		else:
-			draw_colored_polygon(pts, _col(uid_color, a))
-			draw_polyline(closed, Color(1, 1, 1, 0.80 * a), 2.2)
+			draw_colored_polygon(pts, Color(uid_color.r, uid_color.g, uid_color.b, (0.88 + 0.08 * p) * a))
+			_draw_polygon_outline(hex, Color(1, 1, 1, (0.45 + 0.35 * p) * a), maxf(1.4, _cell_scale * 2.0))
+		return
 
-		# Stage 2: inner bg circle grows to reveal floor (creates the ring).
-		var t_ring: float = clampf((t - 0.75) / 0.25, 0.0, 1.0)
-		if t_ring > 0.0:
-			draw_circle(center, core_r * 0.80 * t_ring, _col(COLOR_BG, a))
+	var p2: float = clampf((t - morph_cut) / maxf(0.001, 1.0 - morph_cut), 0.0, 1.0)
+	var hex_outer: PackedVector2Array = _regular_ngon_points(center, outer_r, 6, -PI * 0.5)
+	if is_shadow:
+		_draw_split_polygon_outline(
+			hex_outer,
+			Color(uid_color.r, uid_color.g, uid_color.b, (0.70 + 0.25 * p2) * a),
+			_hole_split_line_width(),
+			HOLE_SPLIT_GAP_RATIO
+		)
+	else:
+		var fill_alpha: float = (1.0 - p2) * 0.92 * a
+		if fill_alpha > 0.001:
+			draw_colored_polygon(hex_outer, Color(uid_color.r, uid_color.g, uid_color.b, fill_alpha))
+		_draw_polygon_outline(
+			hex_outer,
+			Color(uid_color.r, uid_color.g, uid_color.b, (0.35 + 0.65 * p2) * a),
+			maxf(2.4, _cell_scale * 4.0)
+		)
+
+
+func _draw_falling_hex_flash_mode(
+		center: Vector2, outer_r: float,
+		uid_color: Color, is_shadow: bool,
+		t: float, a: float) -> void:
+	var flash_cut: float = 0.45
+	var hex_outer: PackedVector2Array = _regular_ngon_points(center, outer_r, 6, -PI * 0.5)
+	if t < flash_cut:
+		var p: float = clampf(t / flash_cut, 0.0, 1.0)
+		# Single flash envelope (one rise), avoids repeated time-based pulsing.
+		var pulse: float = sin(p * PI * 0.5)
+		var white_fill_a: float = (0.18 + 0.74 * pulse) * a
+		draw_colored_polygon(hex_outer, Color(1, 1, 1, white_fill_a))
+		_draw_polygon_outline(hex_outer, Color(1, 1, 1, (0.35 + 0.55 * pulse) * a), maxf(2.0, _cell_scale * 3.4))
+		return
+
+	var p2: float = clampf((t - flash_cut) / maxf(0.001, 1.0 - flash_cut), 0.0, 1.0)
+	var white_alpha: float = (1.0 - p2) * 0.90 * a
+	if white_alpha > 0.001:
+		draw_colored_polygon(hex_outer, Color(1, 1, 1, white_alpha))
+
+	if is_shadow:
+		_draw_split_polygon_outline(
+			hex_outer,
+			Color(uid_color.r, uid_color.g, uid_color.b, (0.55 + 0.40 * p2) * a),
+			_hole_split_line_width(),
+			HOLE_SPLIT_GAP_RATIO
+		)
+	else:
+		_draw_polygon_outline(
+			hex_outer,
+			Color(uid_color.r, uid_color.g, uid_color.b, (0.25 + 0.70 * p2) * a),
+			maxf(2.4, _cell_scale * 4.0)
+		)
+
+
+func _draw_falling_entry_overlay(
+		center: Vector2, NR: float,
+		uid_color: Color, is_shadow: bool,
+		uid: int, a: float) -> void:
+	var font_size: int = int(14.0 * _cell_scale * entity_scale)
+	if is_shadow:
+		_draw_diamond(center, NR, _col(COLOR_BG, a), true)
+		_draw_dashed_diamond(center, NR, Color(uid_color.r, uid_color.g, uid_color.b, 0.88 * a), 1.8, 3.2, 0.0)
+		_draw_center_text(str(uid), center, font_size, Color(uid_color.r, uid_color.g, uid_color.b, 0.92 * a))
+	else:
+		_draw_diamond(center, NR, Color(uid_color.r, uid_color.g, uid_color.b, a), true)
+		_draw_diamond(center, NR, Color(0, 0, 0, 0.88 * a), false, 2.2)
+		_draw_center_text(str(uid), center, font_size, Color(0.07, 0.07, 0.07, a))
 
 
 # ---------------------------------------------------------------------------
@@ -1329,4 +1615,3 @@ func _draw_center_text(text: String, center: Vector2, font_size: int, col: Color
 	draw_string(font,
 		Vector2(center.x - text_w * 0.5, baseline_y),
 		text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, col)
-

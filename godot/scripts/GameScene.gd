@@ -40,6 +40,8 @@ var peek_floor_active: bool = false
 # Falling box Tween animations
 var _fall_progress: Dictionary = {}  # {[uid, pos]: float 0-1} driven by Tweens
 var _fall_tweens:   Dictionary = {}  # {str_key: Tween}
+const FALL_HOLD_DURATION := 0.10
+const FALL_ANIM_DURATION := 0.25
 
 # Held-key movement (mirrors Python game_window.py on_update + move_cooldown)
 const MOVE_REPEAT_DELAY := 0.20  # seconds between repeats (~6 frames @ 60 fps)
@@ -149,10 +151,11 @@ func _process(delta: float) -> void:
 				_fall_progress[captured_key] = 0.0  # register immediately for hold phase
 				var tw := create_tween()
 				_fall_tweens[str_key] = tw
-				tw.tween_interval(0.13)              # hold: empty hole + static diamond
+				if FALL_HOLD_DURATION > 0.0:
+					tw.tween_interval(FALL_HOLD_DURATION)
 				tw.tween_method(
 					func(v: float) -> void: _fall_progress[captured_key] = v,
-					0.0, 1.0, 0.13).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_SINE)
+					0.0, 1.0, FALL_ANIM_DURATION).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_SINE)
 				tw.tween_callback(func() -> void:
 					_fall_progress.erase(captured_key)
 					_fall_tweens.erase(captured_str)
