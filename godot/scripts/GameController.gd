@@ -57,6 +57,7 @@ var input_log: Array = []       # Array[String]
 # Flash effect (NO_CARRY violation)
 var failed_action_pos:  Vector2i = Vector2i(-1, -1)
 var failed_action_time: float    = 0.0
+var failed_action_style: String  = "cell"
 
 # Falling animation (box → hole)
 var falling_boxes: Dictionary = {}  # {[uid, pos]: start_time}
@@ -87,6 +88,7 @@ func reset() -> void:
 	input_log.clear()
 	failed_action_pos  = Vector2i(-1, -1)
 	failed_action_time = 0.0
+	failed_action_style = "cell"
 	falling_boxes.clear()
 	just_undid = false
 	_check_charge_pickup(main_branch)  # 初始站在充能格直接給 charge
@@ -138,6 +140,7 @@ func undo() -> bool:
 	falling_boxes.clear()
 	failed_action_pos  = Vector2i(-1, -1)
 	failed_action_time = 0.0
+	failed_action_style = "cell"
 	just_undid         = true
 
 	state_changed.emit()
@@ -264,6 +267,9 @@ func _merge_branches(mode: String) -> bool:
 
 	if _has_player_on_ground_box_after_merge(merged):
 		return false
+	if not _merge_respects_storage_capacity(merged):
+		_trigger_flash(merged.get_player().pos)
+		return false
 
 	main_branch   = merged
 	sub_branch    = null
@@ -308,7 +314,9 @@ func can_show_fetch_hint() -> bool:
 	if union.size() > Physics.effective_capacity(focused):
 		return false
 	var merged := Timeline.merge_fetch(focused, other, union)
-	return not _has_player_on_ground_box_after_merge(merged)
+	if _has_player_on_ground_box_after_merge(merged):
+		return false
+	return _merge_respects_storage_capacity(merged)
 
 
 func can_normal_merge() -> bool:
@@ -317,7 +325,9 @@ func can_normal_merge() -> bool:
 	var focused := get_active_branch()
 	var other   := sub_branch if current_focus == 0 else main_branch
 	var merged  := Timeline.merge_normal(focused, other)
-	return not _has_player_on_ground_box_after_merge(merged)
+	if _has_player_on_ground_box_after_merge(merged):
+		return false
+	return _merge_respects_storage_capacity(merged)
 
 
 func switch_focus() -> bool:
@@ -369,7 +379,7 @@ func handle_move(direction: Vector2i) -> bool:
 	else:
 		# Flash if blocked by NO_CARRY
 		if is_holding and active.terrain.get(target_pos, Enums.TerrainType.FLOOR) == Enums.TerrainType.NO_CARRY:
-			_trigger_flash(target_pos)
+			_trigger_flash(active.get_player().pos, "player_square")
 		return false
 
 
@@ -389,7 +399,7 @@ func handle_pickup(allow_pickup: bool = true) -> bool:
 		if on_no_carry and active.get_held_items().is_empty():
 			var front_pos := player_pos + active.get_player().direction
 			if active.find_box_at(front_pos) != null:
-				_trigger_flash(player_pos)
+				_trigger_flash(player_pos, "player_circle")
 	return result
 
 
@@ -556,9 +566,16 @@ func get_timeline_hint() -> String:
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-func _trigger_flash(pos: Vector2i) -> void:
+func _trigger_flash(pos: Vector2i, style: String = "cell") -> void:
 	failed_action_pos  = pos
 	failed_action_time = Time.get_unix_time_from_system()
+	failed_action_style = style
+
+
+func _merge_respects_storage_capacity(branch: BranchState) -> bool:
+	var held_count: int = branch.get_held_items().size()
+	var cap: int = Physics.effective_capacity(branch, branch.get_player().pos)
+	return held_count <= cap
 
 
 func _log_input(ch: String) -> void:

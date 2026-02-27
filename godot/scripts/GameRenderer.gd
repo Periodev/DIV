@@ -1,4 +1,4 @@
-# GameRenderer.gd - Game panel renderer (Node Network visual style)
+﻿# GameRenderer.gd - Game panel renderer (Node Network visual style)
 # Draws one BranchViewSpec via Godot's _draw() API.
 # Interface unchanged: draw_frame(spec) / _draw()
 extends Node2D
@@ -13,7 +13,8 @@ const HintBoxContainerScript := preload("res://scripts/HintBoxContainer.gd")
 const COLOR_BG      := Color(0.0, 0.0, 0.0)          # pure black
 
 @export_group("Connection Colors")
-@export var line_normal: Color = Color(1, 1, 1, 0.10)  # normal connection
+@export var line_normal: Color = Color(1, 1, 1, 0.42)  # normal connection
+@export var line_drop_zone: Color = Color(1, 1, 1, 0.42)  # kept for inspector compatibility
 @export var line_dashed: Color = Color(1, 1, 1, 0.20)  # filled-hole connection
 @export var line_broken: Color = Color(1, 1, 1, 0.18)  # hole broken segment
 @export var line_cross: Color = Color(0.78, 0.24, 0.24, 0.70) # hole X mark
@@ -56,6 +57,7 @@ const COLOR_HINT_F_ON_BD := Color8(255, 180,   0)
 @export var title_margin_base: float = 22.0
 @export var border_w: float = 1.5
 @export var dash_scroll_speed: float = 28.0
+const DROP_ZONE_HOLE_RATIO := 0.80
 @export_group("Hole Animation")
 @export_enum("ExpandToHex:1", "FlashToHex:2") var hole_fill_anim_mode: int = 2
 @export_group("Hole Style")
@@ -142,7 +144,8 @@ func _draw() -> void:
 	# Background
 	draw_rect(Rect2(0, 0, gpx, gpx), _col(COLOR_BG, a))
 
-	# Terrain: connection lines then node markers
+	# Terrain: drop-field underlay -> connection lines -> node markers
+	_draw_no_carry_underlay(gs, eff, a)
 	_draw_connections(gs, eff, a)
 	_draw_nodes(gs, eff, a)
 
@@ -169,6 +172,26 @@ func _draw() -> void:
 # ---------------------------------------------------------------------------
 # Terrain - connection lines
 # ---------------------------------------------------------------------------
+
+func _draw_no_carry_underlay(gs: int, eff: float, a: float) -> void:
+	for y in gs:
+		for x in gs:
+			var pos := Vector2i(x, y)
+			var tt: int = _spec.state.terrain.get(pos, Enums.TerrainType.FLOOR)
+			if tt != Enums.TerrainType.NO_CARRY:
+				continue
+			var center: Vector2 = _grid_to_local_center(pos, eff)
+			_draw_drop_zone_frame(center, eff, a)
+
+
+func _draw_drop_zone_fill(center: Vector2, eff: float, a: float) -> void:
+	var half: float = eff * 0.5
+	var r := Rect2(center.x - half, center.y - half, half * 2.0, half * 2.0)
+	draw_rect(r, _col(Color(0.22, 0.22, 0.22, 0.82), a), true)
+
+
+func _draw_drop_zone_frame(center: Vector2, eff: float, a: float) -> void:
+	_draw_drop_zone_fill(center, eff, a)
 
 func _draw_connections(gs: int, eff: float, a: float) -> void:
 	for y in gs:
@@ -213,14 +236,21 @@ func _draw_connection_pair(
 		_draw_broken_segment(c_a, c_b, tt_a, tt_b, a_empty_hole, b_empty_hole, eff, a)
 		return
 
+	var conn_col: Color = _connection_line_color(tt_a, tt_b, a)
 	var clip_a: float = _connection_clip_radius(tt_a, eff)
 	var clip_b: float = _connection_clip_radius(tt_b, eff)
-	# Pass-through policy: filled holes and normal floor nodes should read as fully connected.
-	if a_filled_hole or tt_a == Enums.TerrainType.FLOOR:
+	# Pass-through policy: filled holes, normal floor, and NO_CARRY center stay connected.
+	if a_filled_hole or tt_a == Enums.TerrainType.FLOOR or tt_a == Enums.TerrainType.NO_CARRY:
 		clip_a = 0.0
-	if b_filled_hole or tt_b == Enums.TerrainType.FLOOR:
+	if b_filled_hole or tt_b == Enums.TerrainType.FLOOR or tt_b == Enums.TerrainType.NO_CARRY:
 		clip_b = 0.0
-	_draw_clipped_connection_line(c_a, c_b, clip_a, clip_b, _col(line_normal, a), 2.0)
+
+	_draw_clipped_connection_line(c_a, c_b, clip_a, clip_b, conn_col, 3.2)
+
+
+func _connection_line_color(tt_a: int, tt_b: int, a: float) -> Color:
+	# Unified route color for all segments (including DZ-related links).
+	return _col(line_normal, a)
 
 
 func _connection_clip_radius(tt: int, eff: float) -> float:
@@ -232,7 +262,7 @@ func _connection_clip_radius(tt: int, eff: float) -> float:
 			# Clip to the hollow switch diamond contour (same geometry as _draw_switch_node).
 			return maxf(0.0, _eff * nr_factor * node_scale * 1.5)
 		Enums.TerrainType.NO_CARRY:
-			return maxf(0.0, 7.0 * _cell_scale * node_scale)
+			return 0.0
 		Enums.TerrainType.BRANCH1, Enums.TerrainType.BRANCH2, \
 		Enums.TerrainType.BRANCH3, Enums.TerrainType.BRANCH4:
 			return maxf(0.0, 3.0 * _cell_scale * node_scale)
@@ -275,7 +305,7 @@ func _draw_broken_segment(
 		c_a: Vector2, c_b: Vector2,
 		tt_a: int, tt_b: int,
 		a_empty_hole: bool, b_empty_hole: bool, eff: float, a: float) -> void:
-	var col_white: Color = _col(line_normal, a)
+	var col_white: Color = _connection_line_color(tt_a, tt_b, a)
 	var col_red: Color   = _col(line_cross, a)
 	if a_empty_hole and not b_empty_hole:
 		_draw_break_wire(c_b, c_a, tt_b, col_white, col_red, eff)
@@ -346,10 +376,7 @@ func _draw_node_at(pos: Vector2i, tt: int, center: Vector2, eff: float, a: float
 			_draw_switch_node(pos, center, NR, 2.0 * node_scale, a)
 
 		Enums.TerrainType.NO_CARRY:
-			_draw_glow(center, 20.0 * cell_scale * node_scale, Color(1, 0.55, 0.63), 0.20 * a)
-			draw_circle(center, 7.0 * cell_scale * node_scale, _col(Color(1, 0.55, 0.63, 0.70), a))
-			draw_arc(center, 7.0 * cell_scale * node_scale, 0, TAU, 16,
-					_col(Color(1, 0.63, 0.71, 0.50), a), 1.0)
+			draw_circle(center, 3.8 * node_scale, _col(Color(1, 1, 1, 1.0), a))
 
 		Enums.TerrainType.BRANCH1, Enums.TerrainType.BRANCH2, \
 		Enums.TerrainType.BRANCH3, Enums.TerrainType.BRANCH4:
@@ -856,9 +883,21 @@ func _draw_player(player: Entity, eff: float, a: float) -> void:
 	var held_items: Array[int] = _spec.state.get_held_items()
 	var held_uid: int     = held_items[0] if not held_items.is_empty() else -1
 	var font_size: int    = int(14.0 * cell_scale * entity_scale)
+	# On NO_CARRY tile the player loses carry ability — render hollow to signal this.
+	var on_drop_zone: bool = \
+		_spec.state.terrain.get(player.pos, Enums.TerrainType.FLOOR) == Enums.TerrainType.NO_CARRY
 
-	if held_uid != -1:
-		# Holding: draw as a diamond in the held box's colour
+	if on_drop_zone:
+		# DZ state: keep original blue style, but with a true hollow center.
+		var hole_r: float = PR * DROP_ZONE_HOLE_RATIO
+		var mid_r: float = (PR + hole_r) * 0.5
+		var band_w: float = maxf(1.6, PR - hole_r)
+		draw_arc(center, mid_r, 0.0, TAU, 28,
+				_col(Color(0.467, 0.600, 0.933, 1.0), a), band_w, true)
+		draw_arc(center, PR, 0, TAU, 24,
+				_col(Color(0.78, 0.86, 1.0, 0.75), a), 2.0)
+	elif held_uid != -1:
+		# Holding: filled diamond in held box's colour
 		var uid_color: Color = box_colors[(held_uid - 1) % 5]
 		var uc: Color = uid_color
 		uc.a = a
@@ -1308,13 +1347,25 @@ func _draw_shadow_connections(eff: float, a: float) -> void:
 # ---------------------------------------------------------------------------
 
 func _draw_flash(eff: float, a: float) -> void:
-	var rect := Rect2(
-		_spec.flash_pos.x * eff,
-		_spec.flash_pos.y * eff,
-		eff, eff)
-	var col  := COLOR_FLASH
-	col.a     = _spec.flash_intensity * a
-	draw_rect(rect, col)
+	var center: Vector2 = _grid_to_local_center(_spec.flash_pos, eff)
+	var alpha_k: float = _spec.flash_intensity * a
+	var col := COLOR_FLASH
+	col.a = alpha_k
+	match _spec.flash_style:
+		"player_circle":
+			var pr: float = _nr * 0.68
+			draw_circle(center, pr, Color(col.r, col.g, col.b, 0.30 * alpha_k))
+			draw_arc(center, pr, 0.0, TAU, 24, Color(col.r, col.g, col.b, 0.95 * alpha_k), 2.4, true)
+		"player_square":
+			var nr: float = _nr
+			_draw_diamond(center, nr, Color(col.r, col.g, col.b, 0.32 * alpha_k), true)
+			_draw_diamond(center, nr, Color(col.r, col.g, col.b, 0.95 * alpha_k), false, 2.4)
+		_:
+			var rect := Rect2(
+				_spec.flash_pos.x * eff,
+				_spec.flash_pos.y * eff,
+				eff, eff)
+			draw_rect(rect, col)
 
 
 func _draw_border(gpx: float, a: float) -> void:

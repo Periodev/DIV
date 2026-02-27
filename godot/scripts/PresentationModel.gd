@@ -42,6 +42,7 @@ class BranchViewSpec:
 	var animation_frame:        int         = 0
 	var flash_pos:              Vector2i    = Vector2i(-1, -1)
 	var flash_intensity:        float       = 0.0
+	var flash_style:            String      = "cell"
 	var falling_progress:       Dictionary  = {}
 	# Adaptive hint flags (mirrors render_arc high-level behavior)
 	var branch_hint_active:     bool        = false
@@ -128,11 +129,13 @@ static func build(
 	# Flash effect
 	var flash_pos := Vector2i(-1, -1)
 	var flash_int := 0.0
+	var flash_style := "cell"
 	if controller.failed_action_pos != Vector2i(-1, -1):
 		var elapsed := Time.get_unix_time_from_system() - controller.failed_action_time
 		if elapsed < 0.3:
 			flash_int = 1.0 - elapsed / 0.3
 			flash_pos = controller.failed_action_pos
+			flash_style = controller.failed_action_style
 
 	# Falling boxes: progress driven by GameScene Tweens.
 	# Split mode must isolate animations per branch to avoid cross-panel bleed.
@@ -194,6 +197,7 @@ static func build(
 		goal_glow, animation_frame,
 		flash_pos if (focus == 0) else Vector2i(-1, -1),
 		flash_int if (focus == 0) else 0.0,
+		flash_style if (focus == 0) else "cell",
 		falling_main,
 		branch_hint_active if (focus == 0) else false,
 		show_merge_preview_hint,
@@ -216,6 +220,7 @@ static func build(
 			goal_glow, animation_frame,
 			flash_pos if (focus == 1) else Vector2i(-1, -1),
 			flash_int if (focus == 1) else 0.0,
+			flash_style if (focus == 1) else "cell",
 			falling_sub,
 			branch_hint_active if (focus == 1) else false,
 			show_merge_preview_hint,
@@ -245,6 +250,7 @@ static func _make_spec(
 		p_anim:       int,
 		p_flash:      Vector2i,
 		p_flash_i:    float,
+		p_flash_style: String,
 		p_falling:    Dictionary,
 		p_branch_hint_active: bool,
 		p_show_merge_preview_hint: bool,
@@ -272,6 +278,7 @@ static func _make_spec(
 	s.animation_frame        = p_anim
 	s.flash_pos              = p_flash
 	s.flash_intensity        = p_flash_i
+	s.flash_style            = p_flash_style
 	s.falling_progress       = p_falling
 	s.branch_hint_active     = p_branch_hint_active
 	s.show_merge_preview_hint = p_show_merge_preview_hint
