@@ -5,23 +5,25 @@ extends Node2D
 class_name GameRenderer
 
 # ---------------------------------------------------------------------------
-# Visual constants — Node Network style
+# Visual constants - Node Network style
 # ---------------------------------------------------------------------------
 
 const COLOR_BG      := Color(0.0, 0.0, 0.0)          # pure black
 
-const LINE_NORMAL   := Color(1, 1, 1, 0.10)          # normal connection
-const LINE_DASHED   := Color(1, 1, 1, 0.20)          # filled-hole connection
-const LINE_BROKEN   := Color(1, 1, 1, 0.18)          # hole broken segment
-const LINE_CROSS    := Color(0.78, 0.24, 0.24, 0.70) # hole X mark
-const LINE_STABLE   := Color(1, 1, 1, 0.24)          # fused-hole stable connection
+@export_group("Connection Colors")
+@export var line_normal: Color = Color(1, 1, 1, 0.10)  # normal connection
+@export var line_dashed: Color = Color(1, 1, 1, 0.20)  # filled-hole connection
+@export var line_broken: Color = Color(1, 1, 1, 0.18)  # hole broken segment
+@export var line_cross: Color = Color(0.78, 0.24, 0.24, 0.70) # hole X mark
+@export var line_stable: Color = Color(1, 1, 1, 0.24)  # fused-hole stable connection
 
-const NR_FACTOR     := 0.173   # diamond radius = eff * NR_FACTOR
-const ENTITY_SCALE  := 1.50    # all entities (boxes/player/held) size scale
-const NODE_SCALE    := 1.18    # route node slight upscale
+@export_group("Entity Sizing")
+@export var nr_factor: float = 0.173
+@export var entity_scale: float = 1.50
+@export var node_scale: float = 1.18
 
-# Box colours — uid-1 mod 5
-const BOX_COLORS: Array[Color] = [
+# Box colours - uid-1 mod 5
+@export var box_colors: Array[Color] = [
 	Color(0.478, 0.800, 0.400),  # #7ACC66 mint green
 	Color(0.298, 0.710, 0.961),  # #4CB5F5 sky blue
 	Color(0.957, 0.757, 0.353),  # #F4C15A mustard yellow
@@ -48,9 +50,10 @@ const COLOR_HINT_V_BD    := Color8( 75, 150, 200)
 const COLOR_HINT_F_BD    := Color8(100, 100, 100)
 const COLOR_HINT_F_ON_BG := Color8(255, 140,   0)
 const COLOR_HINT_F_ON_BD := Color8(255, 180,   0)
-const TITLE_MARGIN_BASE  := 22.0
-const BORDER_W           := 1.5    # thin border per new spec
-const DASH_SCROLL_SPEED  := 28.0
+@export_group("Border & Animation")
+@export var title_margin_base: float = 22.0
+@export var border_w: float = 1.5
+@export var dash_scroll_speed: float = 28.0
 
 # ---------------------------------------------------------------------------
 # State
@@ -61,6 +64,11 @@ var _hint_space_label: Label  = null
 var _hint_action_label: Label = null
 var _peek_floor_mode: bool    = false
 var _time: float              = 0.0
+var _eff: float               = 0.0
+var _cell_scale: float        = 0.0
+var _nr: float                = 0.0
+var _gpx: float               = 0.0
+var _alpha: float             = 1.0
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -101,11 +109,17 @@ func _draw() -> void:
 		return
 
 	var gs:  int   = _spec.state.grid_size
-	var eff: float = _spec.cell_size * _spec.scale
-	var gpx: float = eff * gs
-	var a:   float = _spec.alpha
+	_eff = _spec.cell_size * _spec.scale
+	_gpx = _eff * gs
+	_alpha = _spec.alpha
+	_cell_scale = _eff / 80.0
+	_nr = _eff * nr_factor * entity_scale
 
-	# Merge-preview overlay panel: no background, no terrain — entities only.
+	var eff: float = _eff
+	var gpx: float = _gpx
+	var a:   float = _alpha
+
+	# Merge-preview overlay panel: no background, no terrain - entities only.
 	var is_overlay: bool = _spec.is_merge_preview and not _spec.is_focused
 	if is_overlay:
 		_draw_entities(eff, a)
@@ -121,7 +135,7 @@ func _draw() -> void:
 	# Entities
 	_draw_entities(eff, a)
 
-	# Interaction hint — float above target entity
+	# Interaction hint - float above target entity
 	_set_hint_labels_visible(false)
 	_draw_interaction_hint(eff, a)
 
@@ -141,7 +155,7 @@ func _draw() -> void:
 
 
 # ---------------------------------------------------------------------------
-# Terrain — connection lines
+# Terrain - connection lines
 # ---------------------------------------------------------------------------
 
 func _draw_connections(gs: int, eff: float, a: float) -> void:
@@ -178,43 +192,71 @@ func _draw_connection_pair(
 		pos_a: Vector2i, tt_a: int, c_a: Vector2,
 		pos_b: Vector2i, tt_b: int, c_b: Vector2,
 		eff: float, a: float) -> void:
-	# Clip route lines to GOAL inner contour so lines connect to the rim but do not
-	# pass under the goal fill.
-	if tt_a == Enums.TerrainType.GOAL or tt_b == Enums.TerrainType.GOAL:
-		var dist_goal: float = c_a.distance_to(c_b)
-		if dist_goal <= 0.001:
-			return
-		var dir_ab: Vector2 = (c_b - c_a) / dist_goal
-		var goal_contour_r: float = maxf(0.0, _goal_marker_radius(eff) * 1.35 - 1.2)
-		var start: Vector2 = c_a
-		var end: Vector2 = c_b
-		if tt_a == Enums.TerrainType.GOAL:
-			start = c_a + dir_ab * goal_contour_r
-		if tt_b == Enums.TerrainType.GOAL:
-			end = c_b - dir_ab * goal_contour_r
-		if start.distance_to(end) > 0.001:
-			draw_line(start, end, _col(LINE_NORMAL, a), 2.0)
-		return
-
 	var a_empty_hole: bool = (tt_a == Enums.TerrainType.HOLE) and not _is_hole_filled(pos_a)
 	var b_empty_hole: bool = (tt_b == Enums.TerrainType.HOLE) and not _is_hole_filled(pos_b)
-	var a_filled_hole: bool = (tt_a == Enums.TerrainType.HOLE) and not a_empty_hole
-	var b_filled_hole: bool = (tt_b == Enums.TerrainType.HOLE) and not b_empty_hole
 
 	if a_empty_hole or b_empty_hole:
 		_draw_broken_segment(c_a, c_b, a_empty_hole, b_empty_hole, eff, a)
-	elif a_filled_hole or b_filled_hole:
-		# Filled hole: restore solid connection like a normal floor.
-		draw_line(c_a, c_b, _col(LINE_NORMAL, a), 2.0)
-	else:
-		draw_line(c_a, c_b, _col(LINE_NORMAL, a), 2.0)
+		return
+
+	var clip_a: float = _connection_clip_radius(tt_a, eff)
+	var clip_b: float = _connection_clip_radius(tt_b, eff)
+	_draw_clipped_connection_line(c_a, c_b, clip_a, clip_b, _col(line_normal, a), 2.0)
+
+
+func _connection_clip_radius(tt: int, eff: float) -> float:
+	match tt:
+		Enums.TerrainType.GOAL:
+			# Keep route touching GOAL inner contour without crossing the fill.
+			return maxf(0.0, _goal_marker_radius(eff) * 1.35 - 1.2)
+		Enums.TerrainType.SWITCH:
+			# Clip to the hollow switch diamond contour (same geometry as _draw_switch_node).
+			return maxf(0.0, _eff * nr_factor * node_scale * 1.5)
+		Enums.TerrainType.NO_CARRY:
+			return maxf(0.0, 7.0 * _cell_scale * node_scale)
+		Enums.TerrainType.BRANCH1, Enums.TerrainType.BRANCH2, \
+		Enums.TerrainType.BRANCH3, Enums.TerrainType.BRANCH4:
+			return maxf(0.0, 3.0 * _cell_scale * node_scale)
+		Enums.TerrainType.FLOOR:
+			return maxf(0.0, 3.8 * node_scale)
+		Enums.TerrainType.HOLE:
+			# Empty holes are handled by the broken-segment path above.
+			return _goal_marker_radius(eff) + maxf(2.0, _cell_scale * 3.0) + 2.0
+		_:
+			return 0.0
+
+
+func _draw_clipped_connection_line(
+		from_pos: Vector2, to_pos: Vector2,
+		clip_from: float, clip_to: float,
+		col: Color, width: float) -> void:
+	var dist: float = from_pos.distance_to(to_pos)
+	if dist <= 0.001:
+		return
+
+	var dir: Vector2 = (to_pos - from_pos) / dist
+	var max_clip_each: float = maxf(0.0, dist * 0.5 - 0.001)
+	var start_clip: float = clampf(clip_from, 0.0, max_clip_each)
+	var end_clip: float = clampf(clip_to, 0.0, max_clip_each)
+	var clip_sum: float = start_clip + end_clip
+	var max_total: float = dist - 0.001
+	if clip_sum > max_total and clip_sum > 0.0:
+		var scale: float = max_total / clip_sum
+		start_clip *= scale
+		end_clip *= scale
+
+	var start: Vector2 = from_pos + dir * start_clip
+	var end: Vector2 = to_pos - dir * end_clip
+	if start.distance_to(end) <= 0.001:
+		return
+	draw_line(start, end, col, width)
 
 
 func _draw_broken_segment(
 		c_a: Vector2, c_b: Vector2,
 		a_empty_hole: bool, b_empty_hole: bool, eff: float, a: float) -> void:
-	var col_white: Color = _col(LINE_NORMAL, a)
-	var col_red: Color   = _col(LINE_CROSS, a)
+	var col_white: Color = _col(line_normal, a)
+	var col_red: Color   = _col(line_cross, a)
 	if a_empty_hole and not b_empty_hole:
 		_draw_break_wire(c_b, c_a, col_white, col_red, eff)
 	elif b_empty_hole and not a_empty_hole:
@@ -224,7 +266,7 @@ func _draw_broken_segment(
 		var dist: float = c_a.distance_to(c_b)
 		if dist <= 0.001:
 			return
-		var hole_r: float = _goal_marker_radius(eff) + maxf(2.0, (eff / 80.0) * 3.0) + 2.0
+		var hole_r: float = _goal_marker_radius(eff) + maxf(2.0, _cell_scale * 3.0) + 2.0
 		var stub: float     = minf(dist * 0.20, dist * 0.5 - hole_r)
 		var dir_ab: Vector2 = (c_b - c_a) / dist
 		_draw_dashed_line(c_a + dir_ab * hole_r, c_a + dir_ab * (hole_r + stub), col_red, 1.6, 5.0, 0.0)
@@ -238,13 +280,13 @@ func _draw_break_wire(c_walk: Vector2, c_hole: Vector2, col_white: Color, col_re
 		return
 	var dir: Vector2  = (c_hole - c_walk) / dist
 	# Safe boundary: leave clearance for the hole node's visual (ring + margin).
-	var hole_r: float = _goal_marker_radius(eff) + maxf(2.0, (eff / 80.0) * 3.0) + 3.0
+	var hole_r: float = _goal_marker_radius(eff) + maxf(2.0, _cell_scale * 3.0) + 3.0
 	var safe: float   = dist - hole_r   # px from walkable center to edge of hole visual
 	if safe <= 0.0:
 		return
-	# White line: 0 → 72% of safe zone.
+	# White line: 0 to 72% of safe zone.
 	draw_line(c_walk, c_walk + dir * safe * 0.72, col_white, 2.0)
-	# Red stub: 84% → 100% of safe zone (just outside hole node visual).
+	# Red stub: 84% to 100% of safe zone (just outside hole node visual).
 	_draw_dashed_line(
 		c_walk + dir * safe * 0.84,
 		c_walk + dir * safe,
@@ -252,7 +294,7 @@ func _draw_break_wire(c_walk: Vector2, c_hole: Vector2, col_white: Color, col_re
 
 
 # ---------------------------------------------------------------------------
-# Terrain — node markers
+# Terrain - node markers
 # ---------------------------------------------------------------------------
 
 func _draw_nodes(gs: int, eff: float, a: float) -> void:
@@ -266,23 +308,23 @@ func _draw_nodes(gs: int, eff: float, a: float) -> void:
 
 
 func _draw_node_at(pos: Vector2i, tt: int, center: Vector2, eff: float, a: float) -> void:
-	var NR:         float = eff * NR_FACTOR * NODE_SCALE
-	var cell_scale: float = eff / 80.0
+	var NR:         float = _eff * nr_factor * node_scale
+	var cell_scale: float = _cell_scale
 
 	match tt:
 		Enums.TerrainType.FLOOR:
-			draw_circle(center, 3.8 * NODE_SCALE, _col(Color(1, 1, 1, 1.0), a))
+			draw_circle(center, 3.8 * node_scale, _col(Color(1, 1, 1, 1.0), a))
 
 		Enums.TerrainType.HOLE:
 			_draw_hole_node(pos, center, eff, a)
 
 		Enums.TerrainType.SWITCH:
-			_draw_switch_node(pos, center, NR, 2.0 * NODE_SCALE, a)
+			_draw_switch_node(pos, center, NR, 2.0 * node_scale, a)
 
 		Enums.TerrainType.NO_CARRY:
-			_draw_glow(center, 20.0 * cell_scale * NODE_SCALE, Color(1, 0.55, 0.63), 0.20 * a)
-			draw_circle(center, 7.0 * cell_scale * NODE_SCALE, _col(Color(1, 0.55, 0.63, 0.70), a))
-			draw_arc(center, 7.0 * cell_scale * NODE_SCALE, 0, TAU, 16,
+			_draw_glow(center, 20.0 * cell_scale * node_scale, Color(1, 0.55, 0.63), 0.20 * a)
+			draw_circle(center, 7.0 * cell_scale * node_scale, _col(Color(1, 0.55, 0.63, 0.70), a))
+			draw_arc(center, 7.0 * cell_scale * node_scale, 0, TAU, 16,
 					_col(Color(1, 0.63, 0.71, 0.50), a), 1.0)
 
 		Enums.TerrainType.BRANCH1, Enums.TerrainType.BRANCH2, \
@@ -293,13 +335,13 @@ func _draw_node_at(pos: Vector2i, tt: int, center: Vector2, eff: float, a: float
 			_draw_goal_node(center, eff, a)
 
 		_:
-			draw_circle(center, 3.8 * NODE_SCALE, _col(Color(1, 1, 1, 1.0), a))
+			draw_circle(center, 3.8 * node_scale, _col(Color(1, 1, 1, 1.0), a))
 
 
 func _draw_hole_node(pos: Vector2i, center: Vector2, eff: float, a: float) -> void:
 	var core_r: float = _goal_marker_radius(eff)
 
-	# Exclude entities still in fall animation (including hold phase t=0) — hole stays empty.
+	# Exclude entities still in fall animation (including hold phase t=0) - hole stays empty.
 	var uids: Array[int] = []
 	for uid in _get_uids_in_hole(pos):
 		if _get_fall_progress(uid, pos) < 0.0:
@@ -307,7 +349,7 @@ func _draw_hole_node(pos: Vector2i, center: Vector2, eff: float, a: float) -> vo
 
 	if uids.is_empty():
 		# Empty hole: red ring + black fill.
-		var ring_w: float = maxf(2.0, (eff / 80.0) * 3.0)
+		var ring_w: float = maxf(2.0, _cell_scale * 3.0)
 		draw_circle(center, core_r + ring_w, _col(Color(0.86, 0.21, 0.24, 0.95), a))
 		draw_circle(center, core_r, _col(Color(0.0, 0.0, 0.0, 0.98), a))
 		return
@@ -324,15 +366,15 @@ func _draw_hole_node(pos: Vector2i, center: Vector2, eff: float, a: float) -> vo
 func _draw_hole_fill_half(
 		center: Vector2, uid: int, core_r: float, eff: float, a: float,
 		angle_from: float, angle_to: float) -> void:
-	var col: Color = BOX_COLORS[(uid - 1) % 5]
+	var col: Color = box_colors[(uid - 1) % 5]
 	var is_shadow: bool = _spec.state.is_shadow(uid)
 	var frac: float = (angle_to - angle_from) / TAU
 	if is_shadow:
-		var dash_w: float = maxf(1.6, (eff / 80.0) * 2.2)
+		var dash_w: float = maxf(1.6, _cell_scale * 2.2)
 		_draw_dashed_arc(center, core_r, Color(col.r, col.g, col.b, 0.95 * a),
 				angle_from, angle_to, dash_w, maxi(1, int(round(18.0 * frac))), 0.35)
 	else:
-		var rim_w: float = maxf(3.0, (eff / 80.0) * 4.5)
+		var rim_w: float = maxf(3.0, _cell_scale * 4.5)
 		draw_arc(center, core_r, angle_from, angle_to, maxi(4, int(round(32.0 * frac))),
 				Color(col.r, col.g, col.b, 0.92 * a), rim_w)
 
@@ -373,15 +415,15 @@ func _draw_branch_node(pos: Vector2i, center: Vector2, tt: int, eff: float, a: f
 		base_color = Color(0.31, 0.95, 0.40)
 
 	for i in rings:
-		var r: float = (6.0 + float(i + 1) * 8.0) * (eff / 80.0) * NODE_SCALE
+		var r: float = (6.0 + float(i + 1) * 8.0) * _cell_scale * node_scale
 		var w: float = 1.5 if i == 0 else 1.0
 		draw_arc(center, r, 0, TAU, 32, _col(base_color, a), w)
 
-	draw_circle(center, 3.0 * (eff / 80.0) * NODE_SCALE, _col(base_color, a))
+	draw_circle(center, 3.0 * _cell_scale * node_scale, _col(base_color, a))
 
 
 func _draw_goal_node(center: Vector2, eff: float, a: float) -> void:
-	var cell_scale: float = eff / 80.0
+	var cell_scale: float = _cell_scale
 	var goal_radius: float = _goal_marker_radius(eff) * 1.35
 
 	var pulse: float = 0.6 + 0.4 * sin(_time * 2.0)
@@ -395,7 +437,7 @@ func _draw_goal_node(center: Vector2, eff: float, a: float) -> void:
 				_col(Color(0.55, 0.55, 0.55, 0.60), a), 2.0)
 		draw_circle(center, goal_radius,
 				_col(Color(0.55, 0.55, 0.55, 0.08), a))
-		_draw_center_text("G", center, int(14.0 * cell_scale * NODE_SCALE),
+		_draw_center_text("G", center, int(14.0 * cell_scale * node_scale),
 				_col(Color(0.55, 0.55, 0.55, 0.75), a))
 		return
 
@@ -410,7 +452,7 @@ func _draw_goal_node(center: Vector2, eff: float, a: float) -> void:
 			_col(Color(amber.r, amber.g, amber.b, 0.5 + pulse * 0.4), a), 2.0)
 	draw_circle(center, goal_radius,
 			_col(Color(amber.r, amber.g, amber.b, 0.12 + pulse * 0.12), a))
-	_draw_center_text("G", center, int(14.0 * cell_scale * NODE_SCALE),
+	_draw_center_text("G", center, int(14.0 * cell_scale * node_scale),
 			_col(Color(1, 0.92, 0.5, 0.9), a))
 
 
@@ -427,7 +469,7 @@ func _is_hole_filled(pos: Vector2i) -> bool:
 
 
 func _goal_marker_radius(eff: float) -> float:
-	var player_radius: float = eff * NR_FACTOR * ENTITY_SCALE * 0.68
+	var player_radius: float = eff * nr_factor * entity_scale * 0.68
 	return player_radius * 1.5
 
 
@@ -493,13 +535,13 @@ func _draw_entities(eff: float, a: float) -> void:
 
 
 func _draw_box_diamond(ent: Entity, eff: float, a: float) -> void:
-	var cell_scale: float = eff / 80.0
-	var NR: float         = eff * NR_FACTOR * ENTITY_SCALE
-	var uid_color: Color  = BOX_COLORS[(ent.uid - 1) % 5]
+	var cell_scale: float = _cell_scale
+	var NR: float         = _nr
+	var uid_color: Color  = box_colors[(ent.uid - 1) % 5]
 	var is_shadow: bool   = _spec.state.is_shadow(ent.uid)
 
 	var center: Vector2 = _grid_to_local_center(ent.pos, eff)
-	var font_size: int = int(14.0 * cell_scale * ENTITY_SCALE)
+	var font_size: int = int(14.0 * cell_scale * entity_scale)
 
 	if is_shadow:
 		# Shadow entity: bg-color fill (clears overlap) + original-color dashed border + colored text.
@@ -541,10 +583,10 @@ func _draw_overlap_box_diamond(stacked: Array, pos: Vector2i, eff: float, a: flo
 		left_ent = right_ent
 		right_ent = tmp
 
-	var NR: float = eff * NR_FACTOR * ENTITY_SCALE
+	var NR: float = _nr
 	var center: Vector2 = _grid_to_local_center(pos, eff)
-	var left_base: Color  = BOX_COLORS[(left_ent.uid  - 1) % 5]
-	var right_base: Color = BOX_COLORS[(right_ent.uid - 1) % 5]
+	var left_base: Color  = box_colors[(left_ent.uid  - 1) % 5]
+	var right_base: Color = box_colors[(right_ent.uid - 1) % 5]
 	var left_shadow:  bool = _spec.state.is_shadow(left_ent.uid)
 	var right_shadow: bool = _spec.state.is_shadow(right_ent.uid)
 
@@ -578,8 +620,8 @@ func _draw_overlap_box_diamond(stacked: Array, pos: Vector2i, eff: float, a: flo
 				center_col, right_shadow, 0.85, 3.0, 0.0)
 
 	# Labels: two separate numbers on each half.
-	# Solid half → black text; shadow half → original-color text.
-	var font_size: int = int(13.0 * (eff / 80.0) * ENTITY_SCALE)
+	# Solid half - black text; shadow half - original-color text.
+	var font_size: int = int(13.0 * _cell_scale * entity_scale)
 	var half_off:  float = NR * 0.32
 	var left_text_col: Color = Color(0.07, 0.07, 0.07, a) if not left_shadow \
 			else Color(left_base.r,  left_base.g,  left_base.b,  0.92 * a)
@@ -593,18 +635,18 @@ func _draw_player(player: Entity, eff: float, a: float) -> void:
 	if player == null:
 		return
 
-	var cell_scale: float = eff / 80.0
-	var NR: float         = eff * NR_FACTOR * ENTITY_SCALE
+	var cell_scale: float = _cell_scale
+	var NR: float         = _nr
 	var PR: float         = NR * 0.68
 	var arrow_base: float = PR
 	var center: Vector2   = _grid_to_local_center(player.pos, eff)
 	var held_items: Array[int] = _spec.state.get_held_items()
 	var held_uid: int     = held_items[0] if not held_items.is_empty() else -1
-	var font_size: int    = int(14.0 * cell_scale * ENTITY_SCALE)
+	var font_size: int    = int(14.0 * cell_scale * entity_scale)
 
 	if held_uid != -1:
 		# Holding: draw as a diamond in the held box's colour
-		var uid_color: Color = BOX_COLORS[(held_uid - 1) % 5]
+		var uid_color: Color = box_colors[(held_uid - 1) % 5]
 		var uc: Color = uid_color
 		uc.a = a
 		_draw_diamond(center, NR, uc, true)
@@ -622,7 +664,7 @@ func _draw_player(player: Entity, eff: float, a: float) -> void:
 
 
 # ---------------------------------------------------------------------------
-# Visual helpers — diamonds, glow, arrows
+# Visual helpers - diamonds, glow, arrows
 # ---------------------------------------------------------------------------
 
 func _draw_diamond(
@@ -735,7 +777,7 @@ func _draw_styled_line(
 func _draw_glow(
 		center: Vector2, radius: float,
 		color: Color, peak_alpha: float) -> void:
-	# 3 layers outer→inner so the bright core draws on top
+	# 3 layers outer->inner so the bright core draws on top
 	for i in range(2, -1, -1):
 		var r: float = radius * (0.4 + float(i) * 0.3)
 		var c: Color = color
@@ -764,7 +806,7 @@ func _draw_dir_arrow(
 	draw_polyline(PackedVector2Array([p0, p1, p2]), color, thickness, true)
 
 
-## Legacy arrow — kept for HUD tab hints (dx/dy int signature).
+## Legacy arrow - kept for HUD tab hints (dx/dy int signature).
 func _draw_arrow(center: Vector2, dx: int, dy: int, size: int, col: Color) -> void:
 	var half: float = float(size) * 0.5
 	var points: PackedVector2Array
@@ -799,7 +841,7 @@ func _draw_arrow(center: Vector2, dx: int, dy: int, size: int, col: Color) -> vo
 # Falling animation helper
 # ---------------------------------------------------------------------------
 
-## Returns fall progress 0–1 for (uid, pos), or -1 if not falling.
+## Returns fall progress 0-1 for (uid, pos), or -1 if not falling.
 func _get_fall_progress(uid: int, pos: Vector2i) -> float:
 	for raw_key in _spec.falling_progress.keys():
 		var k: Array = raw_key as Array
@@ -809,7 +851,7 @@ func _get_fall_progress(uid: int, pos: Vector2i) -> float:
 
 
 ## Builds N polygon points interpolated between a diamond (t=0) and circle (t=1).
-## Diamond boundary in polar: r = NR / (|cosθ| + |sinθ|).
+## Diamond boundary in polar: r = NR / (|cos(theta)| + |sin(theta)|).
 func _morph_diamond_circle_pts(center: Vector2, NR: float, t: float, N: int = 32) -> PackedVector2Array:
 	var pts := PackedVector2Array()
 	for i in N:
@@ -821,8 +863,8 @@ func _morph_diamond_circle_pts(center: Vector2, NR: float, t: float, N: int = 32
 
 
 ## Draws the 3-stage falling animation for boxes at z==-1 with active fall progress.
-## Stage 1 (t 0→0.75): diamond morphs to filled circle, covering the empty hole.
-## Stage 2 (t 0.75→1):  inner bg circle grows to create the ring (floor visible).
+## Stage 1 (t 0-0.75): diamond morphs to filled circle, covering the empty hole.
+## Stage 2 (t 0.75-1):  inner bg circle grows to create the ring (floor visible).
 func _draw_falling_boxes(eff: float, a: float) -> void:
 	for e in _spec.state.entities:
 		var ent: Entity = e as Entity
@@ -832,13 +874,13 @@ func _draw_falling_boxes(eff: float, a: float) -> void:
 		if t < 0.0:
 			continue
 
-		var NR: float        = eff * NR_FACTOR * ENTITY_SCALE
+		var NR: float        = _nr
 		var core_r: float    = _goal_marker_radius(eff)
-		var uid_color: Color = BOX_COLORS[(ent.uid - 1) % 5]
+		var uid_color: Color = box_colors[(ent.uid - 1) % 5]
 		var is_shadow: bool  = _spec.state.is_shadow(ent.uid)
 		var center: Vector2  = _grid_to_local_center(ent.pos, eff)
 
-		# Stage 1: morph shape (diamond → circle).
+		# Stage 1: morph shape (diamond to circle).
 		var t_morph: float = minf(t / 0.75, 1.0)
 		var pts: PackedVector2Array = _morph_diamond_circle_pts(center, NR, t_morph)
 		var closed := PackedVector2Array(pts)
@@ -861,7 +903,7 @@ func _draw_falling_boxes(eff: float, a: float) -> void:
 # Overlap utilities
 # ---------------------------------------------------------------------------
 
-## Returns a dict: entity_stack_key → Array[uid] (only keys with ≥2 entries matter).
+## Returns a dict: entity_stack_key -> Array[uid] (only keys with >=2 entries matter).
 func _build_overlap_map() -> Dictionary:
 	var by_key: Dictionary = {}
 	for e in _spec.state.entities:
@@ -898,7 +940,7 @@ func _entity_stack_key(pos: Vector2i, z: int) -> String:
 
 
 # ---------------------------------------------------------------------------
-# Static helpers — used by LevelPreview.gd
+# Static helpers - used by LevelPreview.gd
 # ---------------------------------------------------------------------------
 
 static func branch_marker_dot_radius(cell_scale: float) -> float:
@@ -938,7 +980,7 @@ static func branch_marker_dot_positions(
 
 
 # ---------------------------------------------------------------------------
-# Shadow connections — preserved unchanged
+# Shadow connections - preserved unchanged
 # ---------------------------------------------------------------------------
 
 func _draw_shadow_connections(eff: float, a: float) -> void:
@@ -983,7 +1025,7 @@ func _draw_shadow_connections(eff: float, a: float) -> void:
 		if positions.size() <= 1:
 			continue
 
-		var base_color: Color = BOX_COLORS[(uid - 1) % 5]
+		var base_color: Color = box_colors[(uid - 1) % 5]
 		var line_color: Color = Color(base_color.r, base_color.g, base_color.b, 0.72 * a)
 
 		for raw_pos in positions.keys():
@@ -995,7 +1037,7 @@ func _draw_shadow_connections(eff: float, a: float) -> void:
 
 
 # ---------------------------------------------------------------------------
-# Flash, border, title — preserved
+# Flash, border, title - preserved
 # ---------------------------------------------------------------------------
 
 func _draw_flash(eff: float, a: float) -> void:
@@ -1011,19 +1053,18 @@ func _draw_flash(eff: float, a: float) -> void:
 func _draw_border(gpx: float, a: float) -> void:
 	var col := _spec.border_color
 	col.a   *= a
-	draw_rect(Rect2(0, 0, gpx, gpx), col, false, BORDER_W)
+	draw_rect(Rect2(0, 0, gpx, gpx), col, false, border_w)
 
 
 func _draw_title(gpx: float, a: float) -> void:
 	var col   := _col(COLOR_TITLE, a)
-	var eff: float = _spec.cell_size * _spec.scale
-	var size  := int(16.0 * (eff / 80.0))
-	var title_y: float = -maxf(14.0, TITLE_MARGIN_BASE * (eff / 80.0))
+	var size  := int(16.0 * _cell_scale)
+	var title_y: float = -maxf(14.0, title_margin_base * _cell_scale)
 	_draw_center_text(_spec.title, Vector2(gpx * 0.5, title_y), size, col)
 
 
 # ---------------------------------------------------------------------------
-# Interaction hint — floating text above target entity/position
+# Interaction hint - floating text above target entity/position
 # ---------------------------------------------------------------------------
 
 func _draw_interaction_hint(eff: float, a: float) -> void:
@@ -1038,8 +1079,8 @@ func _draw_interaction_hint(eff: float, a: float) -> void:
 	var font: Font = ThemeDB.fallback_font
 	if font == null:
 		return
-	var NR: float       = eff * NR_FACTOR * ENTITY_SCALE
-	var cell_scale: float = eff / 80.0
+	var NR: float       = _nr
+	var cell_scale: float = _cell_scale
 	var font_size: int  = maxi(10, int(round(11.0 * cell_scale)))
 	if ih.text == "放下":
 		var drop_center: Vector2 = _grid_to_local_center(ih.target_pos, eff)
@@ -1075,14 +1116,14 @@ func _draw_interaction_hint(eff: float, a: float) -> void:
 	draw_string(font, draw_pos, hint_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, col)
 
 
-# Interaction hint highlight — preserved
+# Interaction hint highlight - preserved
 # ---------------------------------------------------------------------------
 
 func _draw_hint_highlight(
 		pos: Vector2i, hint_text: String, _hint_col: Color,
 		is_inset: bool, eff: float, a: float) -> void:
 	var rect := Rect2(pos.x * eff, pos.y * eff, eff, eff)
-	var cell_scale: float = eff / 80.0
+	var cell_scale: float = _cell_scale
 	var center: Vector2 = rect.get_center()
 	_update_hint_text_overlay(hint_text, center, cell_scale, a)
 
@@ -1127,7 +1168,7 @@ func _draw_lock_corners(
 
 
 # ---------------------------------------------------------------------------
-# Hint label system — preserved
+# Hint label system - preserved
 # ---------------------------------------------------------------------------
 
 func _ensure_hint_labels() -> void:
@@ -1194,7 +1235,7 @@ func _layout_hint_label(ctrl: Control, center: Vector2, w: float, h: float) -> v
 
 
 # ---------------------------------------------------------------------------
-# Adaptive hint boxes — preserved
+# Adaptive hint boxes - preserved
 # ---------------------------------------------------------------------------
 
 func _draw_adaptive_hints(a: float) -> void:
@@ -1330,7 +1371,7 @@ func _draw_fetch_mode_indicator(enabled: bool, a: float) -> void:
 
 
 # ---------------------------------------------------------------------------
-# Dashed drawing utilities — preserved
+# Dashed drawing utilities - preserved
 # ---------------------------------------------------------------------------
 
 func _draw_dashed_rect(rect: Rect2, col: Color, width: float) -> void:
@@ -1395,12 +1436,14 @@ func _draw_dashed_gradient_line(
 		pos += period
 
 
-func _dash_offset(speed: float = DASH_SCROLL_SPEED) -> float:
+func _dash_offset(speed: float = -1.0) -> float:
+	if speed < 0.0:
+		speed = dash_scroll_speed
 	return (Time.get_ticks_msec() / 1000.0) * speed
 
 
 # ---------------------------------------------------------------------------
-# General utilities — preserved
+# General utilities - preserved
 # ---------------------------------------------------------------------------
 
 func _grid_to_local_center(pos: Vector2i, eff: float) -> Vector2:
