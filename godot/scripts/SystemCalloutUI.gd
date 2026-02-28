@@ -7,20 +7,40 @@ const COL_TEXT_DIM   := Color(0.6, 0.6, 0.6, 1.0)
 const COL_TEXT_LIT   := Color(0.95, 0.95, 0.95, 1.0)
 const COL_STATUS     := Color(0.4, 0.8, 0.9, 0.8)
 const COL_DIV_DOT    := Color(0.36, 0.92, 0.48, 0.95)
+const COL_READY_DIVERGE := Color(0.36, 0.92, 0.48, 0.98)
+const COL_READY_MERGE   := Color(0.30, 0.62, 1.00, 0.98)
+const COL_READY_FETCH   := Color(1.00, 0.62, 0.18, 0.98)
 
 var is_diverged: bool = false
 var active_branch: int = 0
 var div_points: int = 0
 var can_v_merge: bool = false
 var can_f_fetch: bool = false
+var unlock_diverge: bool = true
+var unlock_merge: bool = true
+var unlock_fetch: bool = true
+var preview_active: bool = false
 
 
-func update_state(diverged: bool, focus: int, pts: int, v_merge: bool, f_fetch: bool) -> void:
+func update_state(
+		diverged: bool,
+		focus: int,
+		pts: int,
+		v_merge: bool,
+		f_fetch: bool,
+		can_diverge_ui: bool = true,
+		can_fetch_ui: bool = true,
+		preview_active_ui: bool = false) -> void:
 	is_diverged = diverged
 	active_branch = focus
 	div_points = pts
 	can_v_merge = v_merge
 	can_f_fetch = f_fetch
+	unlock_diverge = can_diverge_ui
+	# Merge unlock follows diverge unlock by design.
+	unlock_merge = can_diverge_ui
+	unlock_fetch = can_fetch_ui
+	preview_active = preview_active_ui
 	queue_redraw()
 
 
@@ -39,7 +59,15 @@ func _draw() -> void:
 		var right_end: float = center_x + line_w
 
 		draw_line(Vector2(left_end, baseline_y), Vector2(right_end, baseline_y), COL_LINE_DIM, 1.0)
-		_draw_callout_node(Vector2(center_x, baseline_y), "[V] DIVERGE", div_points > 0, font, font_size)
+		_draw_gated_callout_node(
+			Vector2(center_x, baseline_y),
+			"[V] DIVERGE",
+			unlock_diverge,
+			unlock_diverge and div_points > 0,
+			COL_READY_DIVERGE,
+			font,
+			font_size
+		)
 		_draw_div_dots(Vector2(center_x, baseline_y), div_points)
 	else:
 		var line_w: float = size.x * 0.12
@@ -51,11 +79,67 @@ func _draw() -> void:
 		var m_x: float = center_x + line_w
 
 		draw_line(Vector2(left_end, baseline_y), Vector2(right_end, baseline_y), COL_LINE_DIM, 1.0)
-		_draw_callout_node(Vector2(f_x, baseline_y), "[F] FETCH MERGE", can_f_fetch, font, font_size)
-		_draw_callout_node(Vector2(v_x, baseline_y), "[V] MERGE", can_v_merge, font, font_size)
-		_draw_callout_node(Vector2(m_x, baseline_y), "[M] PREVIEW", true, font, font_size)
+		_draw_gated_callout_node(
+			Vector2(f_x, baseline_y),
+			"[F] FETCH MERGE",
+			unlock_fetch,
+			unlock_fetch and can_f_fetch,
+			COL_READY_FETCH,
+			font,
+			font_size
+		)
+		_draw_gated_callout_node(
+			Vector2(v_x, baseline_y),
+			"[V] MERGE",
+			unlock_merge,
+			unlock_merge and can_v_merge,
+			COL_READY_MERGE,
+			font,
+			font_size
+		)
+		_draw_preview_toggle_node(Vector2(m_x, baseline_y), preview_active, font, font_size)
 		_draw_div_dots(Vector2(v_x, baseline_y), div_points)
 		_draw_tab_indicator(size.x, baseline_y, font, font_size)
+
+
+func _draw_gated_callout_node(
+		pos: Vector2,
+		text: String,
+		is_unlocked: bool,
+		is_ready: bool,
+		ready_col: Color,
+		font: Font,
+		font_size: int) -> void:
+	if not is_unlocked:
+		draw_arc(pos, 2.5, 0.0, TAU, 12, COL_LINE_DIM, 1.0, true)
+		return
+
+	var col_line: Color = COL_LINE_LIT if is_ready else COL_LINE_DIM
+	var col_text: Color = COL_TEXT_LIT if is_ready else COL_TEXT_DIM
+	var line_len: float = 18.0
+	var node_r: float = 5.0 if is_ready else 4.0
+
+	if is_ready:
+		draw_circle(pos, node_r, ready_col)
+	else:
+		draw_arc(pos, node_r, 0.0, TAU, 16, col_line, 1.5, true)
+	draw_line(pos + Vector2(0.0, node_r), pos + Vector2(0.0, line_len), col_line, 1.0)
+	_draw_callout_label(pos, text, col_text, font, font_size, line_len)
+
+
+func _draw_preview_toggle_node(pos: Vector2, is_active: bool, font: Font, font_size: int) -> void:
+	var line_len: float = 18.0
+	var col_line: Color = COL_LINE_LIT
+	var col_text: Color = COL_TEXT_LIT
+	var node_r: float = 5.0 if not is_active else 4.0
+	var label_text: String = "[M] CANCEL" if is_active else "[M] PREVIEW"
+
+	if is_active:
+		draw_arc(pos, node_r, 0.0, TAU, 16, col_line, 1.5, true)
+	else:
+		draw_circle(pos, node_r, col_line)
+	draw_line(pos + Vector2(0.0, node_r), pos + Vector2(0.0, line_len), col_line, 1.0)
+	_draw_callout_label(pos, label_text, col_text, font, font_size, line_len)
 
 
 func _draw_callout_node(pos: Vector2, text: String, is_lit: bool, font: Font, font_size: int) -> void:
@@ -65,7 +149,16 @@ func _draw_callout_node(pos: Vector2, text: String, is_lit: bool, font: Font, fo
 
 	draw_arc(pos, 4.0, 0.0, TAU, 16, col_line, 1.5, true)
 	draw_line(pos + Vector2(0.0, 4.0), pos + Vector2(0.0, line_len), col_line, 1.0)
+	_draw_callout_label(pos, text, col_text, font, font_size, line_len)
 
+
+func _draw_callout_label(
+		pos: Vector2,
+		text: String,
+		col_text: Color,
+		font: Font,
+		font_size: int,
+		line_len: float) -> void:
 	var label_y: float = line_len + 16.0
 	var parts: PackedStringArray = text.split(" ", false, 1)
 	if parts.size() >= 2:
@@ -84,7 +177,8 @@ func _draw_callout_node(pos: Vector2, text: String, is_lit: bool, font: Font, fo
 
 
 func _draw_div_dots(anchor_pos: Vector2, points: int) -> void:
-	var count: int = maxi(0, mini(points, 6))
+	# Reserve the first point for the main diverge node itself.
+	var count: int = maxi(0, mini(points - 1, 6))
 	if count <= 0:
 		return
 	var start: Vector2 = anchor_pos + Vector2(18.0, 0.0)

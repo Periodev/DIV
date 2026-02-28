@@ -318,6 +318,7 @@ func _input(event: InputEvent) -> void:
 			if controller.has_branched:
 				merge_preview_active = not merge_preview_active
 			_apply_frame_spec()
+			_update_ui()
 
 		KEY_ESCAPE:
 			_save_selected_level_idx()
@@ -512,7 +513,10 @@ func _update_ui() -> void:
 		controller.current_focus,
 		pts,
 		can_merge,
-		can_fetch
+		can_fetch,
+		_current_hints.get("diverge", true) as bool,
+		_current_hints.get("fetch", false) as bool,
+		merge_preview_active
 	)
 
 
