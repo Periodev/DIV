@@ -114,11 +114,11 @@ func _draw_tab_indicator(screen_w: float, y_pos: float, font: Font, font_size: i
 	var text_w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
 	var text_pos: Vector2 = pos + Vector2(12.0, 34.0) if show_left else pos + Vector2(-text_w - 12.0, 34.0)
 
-	# Lock fold direction by focus:
-	# focus DIV0 -> ___|
-	# focus DIV1 -> |___
-	var extend_len: float = maxf(110.0, text_w + 18.0)
-	var elbow_x: float = tab_x + extend_len if active_branch == 0 else tab_x - extend_len
+	# Keep one tab node and align its X with the mini-branch panel center.
+	var mini_center_x: float = float(PresentationModel.RIGHT_X + PresentationModel.SIDE_GRID * 0.5)
+	if active_branch == 1:
+		mini_center_x = float(PresentationModel.LEFT_X + PresentationModel.SIDE_GRID * 0.5)
+	var elbow_x: float = mini_center_x
 	var node_pos: Vector2 = Vector2(elbow_x, y_pos - 24.0)
 
 	draw_line(pos, Vector2(elbow_x, y_pos), COL_TAB_ACCENT, 1.0)
