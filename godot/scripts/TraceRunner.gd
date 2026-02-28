@@ -96,7 +96,6 @@ static func _exec(ctrl: GameController, ch: String, hints: Dictionary) -> void:
 				hints.get("pickup",   true) as bool)
 		"K": ctrl.handle_pickup(hints.get("pickup", true) as bool)
 		"P": ctrl.handle_drop()
-		"Z": ctrl.undo()
 
 
 # ---------------------------------------------------------------------------
