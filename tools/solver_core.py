@@ -26,7 +26,7 @@ def _build_system_action_table() -> dict:
                         if allow_diverge and has_div_points:
                             actions.append('V')
                     else:
-                        actions.extend(['C', 'T'])
+                        actions.extend(['M', 'T'])
                         if allow_fetch:
                             actions.append('F')
                     table[(has_branched, has_div_points, allow_diverge, allow_fetch)] = tuple(actions)
@@ -168,7 +168,7 @@ def _is_noop(ctrl: GameController, action: str, last_action: str = None,
             return True  # branches are still symmetric
 
     # Pattern: V->C/F (branch then immediately merge)
-    if action in ('C', 'F') and last_action == 'V':
+    if action in ('M', 'F') and last_action == 'V':
         return True
 
     # Short oscillation pruning: ABAB on system actions (e.g., TCTC, TFTF).
@@ -180,9 +180,9 @@ def _is_noop(ctrl: GameController, action: str, last_action: str = None,
         if a == c and b == d:
             pair = (a, b)
             if pair in {
-                ('T', 'C'), ('C', 'T'),
+                ('T', 'M'), ('M', 'T'),
                 ('T', 'F'), ('F', 'T'),
-                ('C', 'F'), ('F', 'C'),
+                ('M', 'F'), ('F', 'M'),
             }:
                 return True
 
@@ -219,7 +219,7 @@ def _is_noop(ctrl: GameController, action: str, last_action: str = None,
             return True
         return ctrl.div_points < 1
 
-    if action in ('C', 'T'):
+    if action in ('M', 'T'):
         return not ctrl.has_branched  # can't merge/switch if not branched
 
     if action == 'F':
@@ -235,12 +235,12 @@ def _is_noop(ctrl: GameController, action: str, last_action: str = None,
         # fetch merge will fail.
         if total_items > capacity:
             return True
-        # If other branch carries nothing, fetch is equivalent to normal merge C.
+        # If other branch carries nothing, fetch is equivalent to normal merge M.
         if not other_held:
             return True
         return False
 
-    if action in ('X', 'P', 'O'):
+    if action in ('C', 'P', 'O'):
         active = ctrl.get_active_branch()
         px, py = active.player.pos
         dx, dy = active.player.direction
@@ -248,7 +248,7 @@ def _is_noop(ctrl: GameController, action: str, last_action: str = None,
         holding = bool(active.get_held_items())
 
         if action == 'O':
-            # X fully dominates O (holding -> drop path is identical).
+            # C fully dominates O (holding -> drop path is identical).
             if has_x_action:
                 return True
             if not holding:
@@ -274,12 +274,12 @@ def _is_noop(ctrl: GameController, action: str, last_action: str = None,
             # Rule: shadow/overlap must converge before pickup.
             if has_overlap or active.is_shadow(target.uid):
                 return True
-            # X fully dominates valid solid pickup.
+            # C fully dominates valid solid pickup.
             if has_x_action:
                 return True
             return False
 
-        # action == 'X'
+        # action == 'C'
         if holding:
             return Physics.collision_at(front_pos, active) > 0
 
@@ -393,7 +393,7 @@ def _legal_actions_for_state(ctrl: GameController, hints: dict) -> list:
 
         if holding:
             if Physics.collision_at(front_pos, active) <= 0:
-                actions.append('X')
+                actions.append('C')
         else:
             target = active.find_box_at(front_pos)
             if target is not None:
@@ -408,17 +408,17 @@ def _legal_actions_for_state(ctrl: GameController, hints: dict) -> list:
 
                 if has_overlap or active.is_shadow(target.uid):
                     if hints.get('converge'):
-                        actions.append('X')
+                        actions.append('C')
                 else:
                     if hints.get('pickup') and Physics.effective_capacity(active, at_pos=active.player.pos) > 0:
-                        actions.append('X')
+                        actions.append('C')
 
     return actions
 
 
 def _output_char_for_action(ctrl: GameController, action: str) -> str:
     """Map internal action to user-facing bottom-level action symbol."""
-    if action != 'X':
+    if action != 'C':
         return action
 
     active = ctrl.get_active_branch()
@@ -430,7 +430,7 @@ def _output_char_for_action(ctrl: GameController, action: str) -> str:
     front_pos = (px + dx, py + dy)
     target = active.find_box_at(front_pos)
     if target is None:
-        return 'X'
+        return 'C'
 
     uids_at_front = {
         e.uid for e in active.entities
@@ -441,7 +441,7 @@ def _output_char_for_action(ctrl: GameController, action: str) -> str:
     }
     has_overlap = len(uids_at_front) >= 2
     if has_overlap or active.is_shadow(target.uid):
-        return 'X'
+        return 'C'
     return 'P'
 
 
@@ -478,10 +478,10 @@ def _ordered_actions(ctrl: GameController, hints: dict) -> list[str]:
     """Action ordering for fast mode to improve early solution quality."""
     actions = _legal_actions_for_state(ctrl, hints)
     priority = {
-        'X': 0, 'P': 0, 'O': 0,
+        'C': 0, 'P': 0, 'O': 0,
         'U': 1, 'D': 1, 'L': 1, 'R': 1,
         'V': 2,
-        'C': 3, 'F': 3,
+        'M': 3, 'F': 3,
         'T': 4,
     }
     return sorted(actions, key=lambda action: (priority.get(action, 9), action))
@@ -588,7 +588,7 @@ def solve_fast(level_dict: dict, max_depth: int = 60,
             child_tail = _next_tail(raw_tail, action)
 
             # Update t_in_cycle for child node.
-            if action in ('V', 'C', 'F'):
+            if action in ('V', 'M', 'F'):
                 new_t = 0
             elif action == 'T':
                 new_t = t_in_cycle + 1
@@ -693,7 +693,7 @@ def solve(level_dict: dict, max_depth: int = 60,
             child_tail = _next_tail(raw_tail, action)
 
             # Update t_in_cycle for child node.
-            if action in ('V', 'C', 'F'):
+            if action in ('V', 'M', 'F'):
                 new_t = 0
             elif action == 'T':
                 new_t = t_in_cycle + 1

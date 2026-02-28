@@ -82,7 +82,7 @@ static func try_pickup(state: BranchState) -> bool:
 		return false
 
 	# Converge shadow instances before picking up
-	target = Timeline.converge_one(state, target.uid)
+	target = Timeline.converge(state, target.uid)
 
 	target.z         = 1
 	target.holder    = 0

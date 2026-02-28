@@ -65,7 +65,7 @@ static func diverge(branch: BranchState) -> Array:
 
 ## Low-level merge: combine entities from focused (main) and non-focused (sub).
 ## Does NOT settle carried items — call merge_normal() or merge_fetch() instead.
-static func converge(main: BranchState, sub: BranchState) -> BranchState:
+static func merge(main: BranchState, sub: BranchState) -> BranchState:
 	var result := BranchState.new()
 	result.terrain   = main.terrain.duplicate()
 	result.grid_size = main.grid_size
@@ -154,16 +154,16 @@ static func converge(main: BranchState, sub: BranchState) -> BranchState:
 	return result
 
 
-## Normal merge: converge + settle all carried items.
+## Normal merge: merge + settle all carried items.
 static func merge_normal(main: BranchState, sub: BranchState) -> BranchState:
-	var merged := converge(main, sub)
+	var merged := merge(main, sub)
 	settle_carried(merged)
 	return merged
 
 
-## Fetch merge: converge + re-assign fetch_uids to player + settle.
+## Fetch merge: merge + re-assign fetch_uids to player + settle.
 static func merge_fetch(main: BranchState, sub: BranchState, fetch_uids: Array) -> BranchState:
-	var merged := converge(main, sub)
+	var merged := merge(main, sub)
 	for uid in fetch_uids:
 		for e in merged.entities:
 			if (e as Entity).uid == uid:
@@ -174,7 +174,7 @@ static func merge_fetch(main: BranchState, sub: BranchState, fetch_uids: Array) 
 
 ## Collapse all instances of target_uid into one (priority: held > target_pos > first).
 ## Returns the surviving entity.
-static func converge_one(state: BranchState, target_uid: int, target_pos: Vector2i = Vector2i(-1, -1)) -> Entity:
+static func converge(state: BranchState, target_uid: int, target_pos: Vector2i = Vector2i(-1, -1)) -> Entity:
 	var instances := state.get_entities_by_uid(target_uid)
 	if instances.is_empty():
 		return null
@@ -289,7 +289,7 @@ static func settle_carried(state: BranchState) -> void:
 	if held_uids.is_empty():
 		return
 	for uid in held_uids:
-		var target := converge_one(state, uid)
+		var target := converge(state, uid)
 		if target == null:
 			continue
 		target.z         = 1

@@ -88,10 +88,10 @@ static func _exec(ctrl: GameController, ch: String, hints: Dictionary) -> void:
 		"L": ctrl.handle_move(Vector2i(-1, 0))
 		"R": ctrl.handle_move(Vector2i( 1, 0))
 		"V": ctrl.try_branch()
-		"C": ctrl.try_merge()
+		"M": ctrl.try_merge()
 		"F": ctrl.try_fetch_merge()
 		"T": ctrl.switch_focus()
-		"X": ctrl.handle_adaptive_action(
+		"C": ctrl.handle_adaptive_action(
 				hints.get("converge", true) as bool,
 				hints.get("pickup",   true) as bool)
 		"P": ctrl.handle_pickup(hints.get("pickup", true) as bool)

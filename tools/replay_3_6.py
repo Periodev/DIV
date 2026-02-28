@@ -58,7 +58,7 @@ def run_solution(solution, label):
             ctrl.handle_move(DIR_MAP[ch])
         elif ch == 'V':
             ctrl.try_branch()
-        elif ch == 'C':
+        elif ch == 'M':
             ctrl.try_merge()
         elif ch == 'T':
             ctrl.switch_focus()

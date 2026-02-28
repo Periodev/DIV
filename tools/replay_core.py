@@ -26,13 +26,13 @@ def execute_action(controller, char: str, hints: dict):
         c.handle_move(DIRECTION_MAP[char])
     elif char == 'V':
         c.try_branch()
-    elif char == 'C':
+    elif char == 'M':
         c.try_merge()
     elif char == 'F':
         c.try_fetch_merge()
     elif char == 'T':
         c.switch_focus()
-    elif char == 'X':
+    elif char == 'C':
         c.handle_adaptive_action(
             allow_converge=hints.get('converge', True),
             allow_pickup=hints.get('pickup', True),

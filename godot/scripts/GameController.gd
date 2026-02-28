@@ -269,7 +269,7 @@ func _merge_branches(mode: String) -> bool:
 		log_char = "F"
 	else:
 		merged   = Timeline.merge_normal(focused, other)
-		log_char = "C"
+		log_char = "M"
 
 	if _has_player_on_ground_box_after_merge(merged):
 		_trigger_player_fail_flash(focused)
@@ -464,7 +464,7 @@ func handle_adaptive_action(allow_converge: bool = true, allow_pickup: bool = tr
 				if source_present:
 					Timeline.resolve_fusion_toward_fusion(active, target.uid)
 				else:
-					Timeline.converge_one(active, target.uid, front_pos)
+					Timeline.converge(active, target.uid, front_pos)
 			else:
 				# Check if a fusion has absorbed this uid
 				var fusion_present := false
@@ -476,9 +476,9 @@ func handle_adaptive_action(allow_converge: bool = true, allow_pickup: bool = tr
 				if fusion_present:
 					Timeline.resolve_fusion_toward_sources(active, target.uid)
 				else:
-					Timeline.converge_one(active, target.uid, front_pos)
+					Timeline.converge(active, target.uid, front_pos)
 
-		_log_input("X")
+		_log_input("C")
 		_save_snapshot()
 		state_changed.emit()
 		return true
