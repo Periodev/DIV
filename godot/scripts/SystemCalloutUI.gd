@@ -56,7 +56,7 @@ func _draw() -> void:
 		_draw_callout_node(Vector2(v_x, baseline_y), "[V] MERGE", can_v_merge, font, font_size)
 		_draw_callout_node(Vector2(m_x, baseline_y), "[M] PREVIEW", true, font, font_size)
 		_draw_div_dots(Vector2(v_x, baseline_y), div_points)
-		_draw_tab_indicator(size.x, baseline_y - 65.0, font, font_size)
+		_draw_tab_indicator(size.x, baseline_y, font, font_size)
 
 
 func _draw_callout_node(pos: Vector2, text: String, is_lit: bool, font: Font, font_size: int) -> void:
@@ -111,14 +111,18 @@ func _draw_tab_indicator(screen_w: float, y_pos: float, font: Font, font_size: i
 	var tab_x: float = screen_w * 0.22 if show_left else screen_w * 0.78
 	var text: String = "< [TAB]" if show_left else "[TAB] >"
 	var pos: Vector2 = Vector2(tab_x, y_pos)
+	var text_w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
+	var text_pos: Vector2 = pos + Vector2(12.0, 34.0) if show_left else pos + Vector2(-text_w - 12.0, 34.0)
 
-	var elbow_x: float = tab_x - 24.0 if show_left else tab_x + 24.0
+	# Lock fold direction by focus:
+	# focus DIV0 -> ___|
+	# focus DIV1 -> |___
+	var extend_len: float = maxf(110.0, text_w + 18.0)
+	var elbow_x: float = tab_x + extend_len if active_branch == 0 else tab_x - extend_len
 	var node_pos: Vector2 = Vector2(elbow_x, y_pos - 24.0)
 
 	draw_line(pos, Vector2(elbow_x, y_pos), COL_TAB_ACCENT, 1.0)
 	draw_line(Vector2(elbow_x, y_pos), node_pos, COL_TAB_ACCENT, 1.0)
 	draw_arc(node_pos, 3.0, 0.0, TAU, 12, COL_TAB_ACCENT, 1.0, true)
 
-	var text_w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
-	var text_pos: Vector2 = pos + Vector2(12.0, 4.0) if show_left else pos + Vector2(-text_w - 12.0, 4.0)
 	draw_string(font, text_pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, COL_TAB_ACCENT)
