@@ -241,7 +241,7 @@
             <div class="tool-row">
                 <strong>Object:</strong>
                 <button class="tool-btn" data-layer="object" data-tool="." onclick="selectTool(this)">. Empty</button>
-                <button class="tool-btn" data-layer="object" data-tool="P" onclick="selectTool(this)">P Player</button>
+                <button class="tool-btn" data-layer="object" data-tool="@" onclick="selectTool(this)">@ Player</button>
                 <button class="tool-btn" data-layer="object" data-tool="B" onclick="selectTool(this)">B Box</button>
             </div>
             <div class="tool-row">
@@ -333,7 +333,7 @@
                     if (currentView === 'merge') {
                         if (obj !== '.') {
                             cell.classList.add('merged');
-                            if (obj === 'P') cell.classList.add('obj-player');
+                            if (obj === '@') cell.classList.add('obj-player');
                             if (obj === 'B') cell.classList.add('obj-box');
                             cell.textContent = obj;
                         } else {
@@ -391,9 +391,9 @@
         }
         
         function applyObjectStyle(cell, obj) {
-            if (obj === 'P') {
+            if (obj === '@') {
                 cell.classList.add('obj-player');
-                cell.textContent = 'P';
+                cell.textContent = '@';
             } else if (obj === 'B') {
                 cell.classList.add('obj-box');
                 cell.textContent = 'B';
@@ -404,15 +404,15 @@
             if (currentLayer === 'floor') {
                 floorMap[y][x] = currentTool;
             } else {
-                if (currentTool === 'P') {
+                if (currentTool === '@') {
                     for (let py = 0; py < gridSize; py++) {
                         for (let px = 0; px < gridSize; px++) {
-                            if (objectMap[py][px] === 'P') {
+                            if (objectMap[py][px] === '@') {
                                 objectMap[py][px] = '.';
                             }
                         }
                     }
-                    objectMap[y][x] = 'P';
+                    objectMap[y][x] = '@';
                     playerPos = [x, y];
                     document.getElementById('playerPos').textContent = `(${x}, ${y})`;
                 } else {

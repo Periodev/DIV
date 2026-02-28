@@ -56,7 +56,7 @@ def parse_dual_layer(floor_map_str, object_map_str) -> LevelSource:
     # Parse object layer -> entity_definitions
     for y, line in enumerate(object_lines):
         for x, char in enumerate(line):
-            if char == 'P':
+            if char == '@':
                 entity_definitions[0] = (EntityType.PLAYER, (x, y))
             elif char == 'B':
                 uid += 1

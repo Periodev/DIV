@@ -38,14 +38,14 @@ static func parse_dual_layer(floor_map_str: String, object_map_str: String) -> L
 		for x in line.length():
 			var ch := line[x]
 			var pos := Vector2i(x, y)
-			if ch == "P":
+			if ch == "@":
 				entity_defs[0] = [Enums.EntityType.PLAYER, pos]
 			elif ch == "B":
 				next_uid += 1
 				entity_defs[next_uid] = [Enums.EntityType.BOX, pos]
 
 	if not entity_defs.has(0):
-		push_error("MapParser: player start position (P) not found")
+		push_error("MapParser: player start position (@) not found")
 		return null
 
 	var has_goal := false

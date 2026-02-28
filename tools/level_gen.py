@@ -268,7 +268,7 @@ def generate_level(
         floor_map = '\n'.join(floor_rows)
 
         obj_rows = [['.' for _ in range(width)] for _ in range(height)]
-        obj_rows[p_pos[1]][p_pos[0]] = 'P'
+        obj_rows[p_pos[1]][p_pos[0]] = '@'
         for bx, by in box_positions:
             obj_rows[by][bx] = 'B'
         object_map = '\n'.join(''.join(row) for row in obj_rows)

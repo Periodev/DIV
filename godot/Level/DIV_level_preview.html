@@ -355,7 +355,7 @@ function buildGrid(floorRows, objRows) {
 
       if (o !== '.') {
         // Object takes priority in merged view
-        if (o === 'P') { cell.classList.add('obj-player'); cell.textContent = 'P'; }
+        if (o === '@') { cell.classList.add('obj-player'); cell.textContent = '@'; }
         else if (o === 'B') { cell.classList.add('obj-box'); cell.textContent = 'B'; }
         else { cell.textContent = o; }
       } else {
