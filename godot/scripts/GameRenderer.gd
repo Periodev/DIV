@@ -907,7 +907,8 @@ func _draw_player(player: Entity, eff: float, a: float) -> void:
 				_col(Color(0.78, 0.86, 1.0, 0.75), a), 2.0)
 
 	# Arrow keeps a fixed size/offset regardless of held item state.
-	_draw_dir_arrow(center, player.direction, arrow_base, Color(1, 1, 1, 0.92 * a))
+	if _spec.show_player_direction:
+		_draw_dir_arrow(center, player.direction, arrow_base, Color(1, 1, 1, 0.92 * a))
 
 
 # ---------------------------------------------------------------------------

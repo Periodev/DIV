@@ -51,6 +51,7 @@ class BranchViewSpec:
 	var merge_hint_enabled:     bool        = true
 	var show_fetch_indicator:   bool        = false
 	var fetch_mode_enabled:     bool        = false
+	var show_player_direction:  bool        = true
 
 
 ## Complete visual specification for one frame.

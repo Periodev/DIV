@@ -17,9 +17,10 @@ func set_state(state: BranchState) -> void:
 	spec.cell_size  = cell_size
 	spec.scale      = 1.0
 	spec.alpha      = 1.0
-	spec.is_focused = true
-	spec.pos_x      = int(position.x)
-	spec.pos_y      = int(position.y)
+	spec.is_focused           = true
+	spec.show_player_direction = false
+	spec.pos_x                = int(position.x)
+	spec.pos_y                = int(position.y)
 	draw_frame(spec)
 
 
