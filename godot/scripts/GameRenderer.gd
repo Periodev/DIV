@@ -4,8 +4,6 @@
 extends Node2D
 class_name GameRenderer
 
-const HintBoxContainerScript := preload("res://scripts/HintBoxContainer.gd")
-
 # ---------------------------------------------------------------------------
 # Visual constants - Node Network style
 # ---------------------------------------------------------------------------
@@ -74,7 +72,6 @@ const HOLE_SPLIT_GAP_RATIO := 0.22
 var _spec: PresentationModel.BranchViewSpec = null
 var _hint_space_label: Label  = null
 var _hint_action_label: Label = null
-var _hint_box_container: Control = null
 var _peek_floor_mode: bool    = false
 var _time: float              = 0.0
 var _eff: float               = 0.0
@@ -92,9 +89,6 @@ func draw_frame(spec: PresentationModel.BranchViewSpec) -> void:
 	_spec = spec
 	if spec != null:
 		position = Vector2(spec.pos_x, spec.pos_y)
-	_ensure_hint_box_container()
-	if _hint_box_container != null and _hint_box_container.has_method("update_hints"):
-		_hint_box_container.call("update_hints", _spec, position)
 	queue_redraw()
 
 
@@ -108,7 +102,6 @@ func set_peek_floor_mode(enabled: bool) -> void:
 func _ready() -> void:
 	_ensure_hint_labels()
 	_set_hint_labels_visible(false)
-	_ensure_hint_box_container()
 
 
 func _process(delta: float) -> void:
@@ -166,9 +159,6 @@ func _draw() -> void:
 
 	# Title above panel
 	_draw_title(gpx, a)
-
-	# Hint boxes are rendered by HintBoxContainer (Control), not immediate-mode draw.
-
 
 # ---------------------------------------------------------------------------
 # Terrain - connection lines
@@ -1493,15 +1483,6 @@ func _draw_lock_corners(
 # ---------------------------------------------------------------------------
 # Hint label system - preserved
 # ---------------------------------------------------------------------------
-
-func _ensure_hint_box_container() -> void:
-	if _hint_box_container != null:
-		return
-	_hint_box_container = HintBoxContainerScript.new()
-	_hint_box_container.name = "HintBoxContainer"
-	_hint_box_container.z_index = 10
-	add_child(_hint_box_container)
-
 
 func _ensure_hint_labels() -> void:
 	if _hint_space_label == null:

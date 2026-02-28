@@ -500,8 +500,20 @@ func _update_renderer_layering(preview_on: bool) -> void:
 func _update_ui() -> void:
 	if controller == null:
 		return
+	hint_label.text = ""
+	var callout_ui = get_node_or_null("UI/SystemCalloutUI")
+	if callout_ui == null:
+		return
 	var pts := controller.div_points
-	hint_label.text = "DIV: %d" % pts if pts > 0 else ""
+	var can_merge := controller.can_normal_merge() if controller.has_method("can_normal_merge") else false
+	var can_fetch := controller.can_show_fetch_hint()
+	callout_ui.update_state(
+		controller.has_branched,
+		controller.current_focus,
+		pts,
+		can_merge,
+		can_fetch
+	)
 
 
 func _ensure_hint_overlay() -> void:
