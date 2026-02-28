@@ -91,7 +91,7 @@ func reset() -> void:
 	failed_action_style = "cell"
 	falling_boxes.clear()
 	just_undid = false
-	_check_charge_pickup(main_branch)  # 初始站在充能格直接給 charge
+	_check_charge_pickup(main_branch)  # ?��?站在?�能?�直?�給 charge
 	_save_snapshot()
 
 
@@ -201,7 +201,8 @@ func try_branch() -> bool:
 		return false
 
 	if div_points < 1:
-		return false           # No charge — silent fail
+		_trigger_player_fail_flash(main_branch)
+		return false           # No charge
 
 	div_points -= 1            # Consume one charge
 
@@ -251,24 +252,30 @@ func _merge_branches(mode: String) -> bool:
 	if mode == "fetch":
 		var focused_held := focused.get_held_items()
 		var other_held   := other.get_held_items()
-		var total_items  := 0
+		var fetch_uids: Array[int] = _fetch_uids_from_other(focused_held, other_held)
+		# Fetch merge must actually fetch from the other branch; never degrade to normal merge.
+		if fetch_uids.is_empty():
+			_trigger_player_fail_flash(focused)
+			return false
 		var union: Array[int] = focused_held.duplicate()
-		for uid in other_held:
+		for uid in fetch_uids:
 			if not union.has(uid):
 				union.append(uid)
-		total_items = union.size()
+		var total_items: int  = union.size()
 		if total_items > Physics.effective_capacity(focused):
+			_trigger_player_fail_flash(focused)
 			return false
-		merged   = Timeline.merge_fetch(focused, other, union)
+		merged   = Timeline.merge_fetch(focused, other, fetch_uids)
 		log_char = "F"
 	else:
 		merged   = Timeline.merge_normal(focused, other)
 		log_char = "C"
 
 	if _has_player_on_ground_box_after_merge(merged):
+		_trigger_player_fail_flash(focused)
 		return false
 	if not _merge_respects_storage_capacity(merged):
-		_trigger_flash(merged.get_player().pos)
+		_trigger_player_fail_flash(focused)
 		return false
 
 	main_branch   = merged
@@ -301,19 +308,20 @@ func can_show_fetch_hint() -> bool:
 		return false
 	var focused := get_active_branch()
 	var other   := sub_branch if current_focus == 0 else main_branch
-	var f_held  := focused.get_held_items()
-	var o_held  := other.get_held_items()
-	if not f_held.is_empty() or o_held.is_empty():
+	var f_held: Array[int] = focused.get_held_items()
+	var o_held: Array[int] = other.get_held_items()
+	var fetch_uids: Array[int] = _fetch_uids_from_other(f_held, o_held)
+	if fetch_uids.is_empty():
 		return false
 	var union: Array[int] = []
 	for uid in f_held:
 		union.append(uid)
-	for uid in o_held:
+	for uid in fetch_uids:
 		if not union.has(uid):
 			union.append(uid)
 	if union.size() > Physics.effective_capacity(focused):
 		return false
-	var merged := Timeline.merge_fetch(focused, other, union)
+	var merged := Timeline.merge_fetch(focused, other, fetch_uids)
 	if _has_player_on_ground_box_after_merge(merged):
 		return false
 	return _merge_respects_storage_capacity(merged)
@@ -379,7 +387,7 @@ func handle_move(direction: Vector2i) -> bool:
 	else:
 		# Flash if blocked by NO_CARRY
 		if is_holding and active.terrain.get(target_pos, Enums.TerrainType.FLOOR) == Enums.TerrainType.NO_CARRY:
-			_trigger_flash(active.get_player().pos, "player_square")
+			_trigger_player_fail_flash(active)
 		return false
 
 
@@ -399,17 +407,22 @@ func handle_pickup(allow_pickup: bool = true) -> bool:
 		if on_no_carry and active.get_held_items().is_empty():
 			var front_pos := player_pos + active.get_player().direction
 			if active.find_box_at(front_pos) != null:
-				_trigger_flash(player_pos, "player_circle")
+				_trigger_player_fail_flash(active)
 	return result
 
 
 func handle_drop() -> bool:
 	var active := get_active_branch()
+	var held_count: int = active.get_held_items().size()
+	var front_pos: Vector2i = active.get_player().pos + active.get_player().direction
 	var result := GameLogic.try_drop(active)
 	if result:
 		_log_input("O")
 		_save_snapshot()
 		state_changed.emit()
+	else:
+		if held_count > 0 and Physics.collision_at(front_pos, active) > 0:
+			_trigger_player_fail_flash(active)
 	return result
 
 
@@ -572,6 +585,24 @@ func _trigger_flash(pos: Vector2i, style: String = "cell") -> void:
 	failed_action_style = style
 
 
+func _trigger_player_fail_flash(branch: BranchState) -> void:
+	if branch == null:
+		return
+	var player := branch.get_player()
+	if player == null:
+		return
+	var style: String = "player_square" if not branch.get_held_items().is_empty() else "player_circle"
+	_trigger_flash(player.pos, style)
+
+
+func _fetch_uids_from_other(focused_held: Array[int], other_held: Array[int]) -> Array[int]:
+	var result: Array[int] = []
+	for uid in other_held:
+		if not focused_held.has(uid) and not result.has(uid):
+			result.append(uid)
+	return result
+
+
 func _merge_respects_storage_capacity(branch: BranchState) -> bool:
 	var held_count: int = branch.get_held_items().size()
 	var cap: int = Physics.effective_capacity(branch, branch.get_player().pos)
@@ -581,3 +612,4 @@ func _merge_respects_storage_capacity(branch: BranchState) -> bool:
 func _log_input(ch: String) -> void:
 	if not solver_mode:
 		input_log.append(ch)
+

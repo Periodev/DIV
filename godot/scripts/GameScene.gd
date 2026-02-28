@@ -1,5 +1,5 @@
 # GameScene.gd - Main game scene controller
-# Wires input ??GameController ??PresentationModel ??GameRenderer
+# Wires input → GameController → PresentationModel → GameRenderer
 extends Node2D
 class_name GameScene
 
@@ -12,6 +12,7 @@ class_name GameScene
 @onready var overlay_backdrop: ColorRect = $UI/OverlayBackdrop
 @onready var overlay_label: Label     = $UI/OverlayLabel
 var hint_overlay: HintOverlay = null
+var _desc_overlay: LevelDescOverlay = null
 
 # ---------------------------------------------------------------------------
 # State
@@ -44,7 +45,7 @@ const FALL_HOLD_DURATION := 0.10
 const FALL_ANIM_DURATION := 0.25
 
 # Held-key movement (mirrors Python game_window.py on_update + move_cooldown)
-const MOVE_REPEAT_DELAY := 0.20  # seconds between repeats (~6 frames @ 60 fps)
+const MOVE_REPEAT_DELAY := 0.133  # seconds between repeats (~8 frames @ 60 fps)
 var _move_cooldown: float = 0.0
 const DEBUG_VICTORY := true
 
@@ -60,6 +61,7 @@ func _vlog(msg: String) -> void:
 
 func _ready() -> void:
 	_ensure_hint_overlay()
+	_ensure_desc_overlay()
 	var gd = _get_game_data()
 	if gd == null:
 		push_error("GameScene: missing /root/GameData autoload")
@@ -108,6 +110,8 @@ func _start_level(idx: int) -> void:
 	overlay_backdrop.visible = false
 	overlay_label.visible = false
 	hint_overlay.clear_overlay()
+	if _desc_overlay != null:
+		_desc_overlay.hide_desc()
 	merge_preview_active  = false
 	merge_preview_progress = 0.0
 	_set_peek_floor_mode(false)
@@ -257,6 +261,16 @@ func _input(event: InputEvent) -> void:
 	var key_event := event as InputEventKey
 	var key: int = key_event.keycode
 
+	# F1: toggle level description overlay (intercepts all other input while open).
+	if _desc_overlay != null and _desc_overlay.visible:
+		if key_event.pressed:
+			_desc_overlay.hide_desc()
+		return
+	if key == KEY_F1:
+		if key_event.pressed and not key_event.echo:
+			_show_level_desc()
+		return
+
 	# Hold C to peek the floor under the front box.
 	if key == KEY_C:
 		if key_event.echo:
@@ -309,10 +323,10 @@ func _input(event: InputEvent) -> void:
 			_save_selected_level_idx()
 			get_tree().change_scene_to_file("res://scenes/level_select.tscn")
 
-		KEY_BRACKETRIGHT:  # ] ??next level
+		KEY_BRACKETRIGHT:  # ] → next level
 			_start_level(current_level_idx + 1)
 			_save_selected_level_idx()
-		KEY_BRACKETLEFT:   # [ ??previous level
+		KEY_BRACKETLEFT:   # [ → previous level
 			_start_level(current_level_idx - 1)
 			_save_selected_level_idx()
 
@@ -498,6 +512,24 @@ func _ensure_hint_overlay() -> void:
 	hint_overlay.z_as_relative = false
 	hint_overlay.z_index = 100
 	add_child(hint_overlay)
+
+
+func _ensure_desc_overlay() -> void:
+	if _desc_overlay != null:
+		return
+	_desc_overlay = LevelDescOverlay.new()
+	_desc_overlay.name = "LevelDescOverlay"
+	$UI.add_child(_desc_overlay)
+
+
+func _show_level_desc() -> void:
+	if _desc_overlay == null or all_levels.is_empty():
+		return
+	var level_dict: Dictionary = all_levels[current_level_idx]
+	_desc_overlay.show_desc(
+		str(level_dict.get("name", "")),
+		str(level_dict.get("objective", ""))
+	)
 
 
 func _set_peek_floor_mode(enabled: bool) -> void:
