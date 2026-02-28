@@ -240,22 +240,22 @@ def _is_noop(ctrl: GameController, action: str, last_action: str = None,
             return True
         return False
 
-    if action in ('C', 'P', 'O'):
+    if action in ('C', 'K', 'P'):
         active = ctrl.get_active_branch()
         px, py = active.player.pos
         dx, dy = active.player.direction
         front_pos = (px + dx, py + dy)
         holding = bool(active.get_held_items())
 
-        if action == 'O':
-            # C fully dominates O (holding -> drop path is identical).
+        if action == 'P':
+            # C fully dominates P (holding -> drop path is identical).
             if has_x_action:
                 return True
             if not holding:
                 return True
             return Physics.collision_at(front_pos, active) > 0
 
-        if action == 'P':
+        if action == 'K':
             if not allow_pickup:
                 return True
             if Physics.effective_capacity(active, at_pos=active.player.pos) == 0:
@@ -423,7 +423,7 @@ def _output_char_for_action(ctrl: GameController, action: str) -> str:
 
     active = ctrl.get_active_branch()
     if active.get_held_items():
-        return 'O'
+        return 'P'
 
     px, py = active.player.pos
     dx, dy = active.player.direction
@@ -442,7 +442,7 @@ def _output_char_for_action(ctrl: GameController, action: str) -> str:
     has_overlap = len(uids_at_front) >= 2
     if has_overlap or active.is_shadow(target.uid):
         return 'C'
-    return 'P'
+    return 'K'
 
 
 def _manhattan(a: tuple[int, int], b: tuple[int, int]) -> int:
@@ -478,7 +478,7 @@ def _ordered_actions(ctrl: GameController, hints: dict) -> list[str]:
     """Action ordering for fast mode to improve early solution quality."""
     actions = _legal_actions_for_state(ctrl, hints)
     priority = {
-        'C': 0, 'P': 0, 'O': 0,
+        'C': 0, 'K': 0, 'P': 0,
         'U': 1, 'D': 1, 'L': 1, 'R': 1,
         'V': 2,
         'M': 3, 'F': 3,

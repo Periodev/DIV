@@ -400,7 +400,7 @@ func handle_pickup(allow_pickup: bool = true) -> bool:
 
 	var result := GameLogic.try_pickup(active)
 	if result:
-		_log_input("P")
+		_log_input("K")
 		_save_snapshot()
 		state_changed.emit()
 	else:
@@ -417,7 +417,7 @@ func handle_drop() -> bool:
 	var front_pos: Vector2i = active.get_player().pos + active.get_player().direction
 	var result := GameLogic.try_drop(active)
 	if result:
-		_log_input("O")
+		_log_input("P")
 		_save_snapshot()
 		state_changed.emit()
 	else:

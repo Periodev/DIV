@@ -37,9 +37,9 @@ def execute_action(controller, char: str, hints: dict):
             allow_converge=hints.get('converge', True),
             allow_pickup=hints.get('pickup', True),
         )
-    elif char == 'P':
+    elif char == 'K':
         c.handle_pickup(allow_pickup=hints.get('pickup', True))
-    elif char == 'O':
+    elif char == 'P':
         c.handle_drop()
 
 

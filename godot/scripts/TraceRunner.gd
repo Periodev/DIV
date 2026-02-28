@@ -94,8 +94,8 @@ static func _exec(ctrl: GameController, ch: String, hints: Dictionary) -> void:
 		"C": ctrl.handle_adaptive_action(
 				hints.get("converge", true) as bool,
 				hints.get("pickup",   true) as bool)
-		"P": ctrl.handle_pickup(hints.get("pickup", true) as bool)
-		"O": ctrl.handle_drop()
+		"K": ctrl.handle_pickup(hints.get("pickup", true) as bool)
+		"P": ctrl.handle_drop()
 		"Z": ctrl.undo()
 
 

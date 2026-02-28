@@ -62,9 +62,9 @@ def run_solution(solution, label):
             ctrl.try_merge()
         elif ch == 'T':
             ctrl.switch_focus()
-        elif ch == 'P':
+        elif ch == 'K':
             ctrl.handle_pickup()
-        elif ch == 'O':
+        elif ch == 'P':
             ctrl.handle_drop()
         elif ch == 'X':
             ctrl.try_fetch_merge()
