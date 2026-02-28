@@ -29,7 +29,7 @@ const COLOR_BG      := Color(0.0, 0.0, 0.0)          # pure black
 @export var box_colors: Array[Color] = [
 	Color(0.478, 0.800, 0.400),  # #7ACC66 mint green
 	Color(0.298, 0.710, 0.961),  # #4CB5F5 sky blue
-	Color(0.957, 0.757, 0.353),  # #F4C15A mustard yellow
+	Color(0.910, 0.300, 0.780),  # #E84CC7 magenta (distinct from goal yellow and hole red)
 	Color(0.616, 0.455, 0.827),  # #9D74D3 lilac purple
 	Color(0.957, 0.545, 0.376),  # #F48B60 coral orange
 ]
@@ -64,6 +64,7 @@ const DROP_ZONE_HOLE_RATIO := 0.80
 @export_enum("SplitEdges:0", "VertexDots:1", "VertexStubs:2") var empty_hole_outline_mode: int = 1
 @export var empty_hole_vertex_dot_radius: float = 1.4
 @export var empty_hole_vertex_stub_ratio: float = 0.16
+@export var hole_core_size_ratio: float = 1.08
 const HOLE_SPLIT_GAP_RATIO := 0.22
 
 # ---------------------------------------------------------------------------
@@ -270,7 +271,7 @@ func _connection_clip_radius(tt: int, eff: float) -> float:
 			return maxf(0.0, 3.8 * node_scale)
 		Enums.TerrainType.HOLE:
 			# Empty holes are handled by the broken-segment path above.
-			return _goal_marker_radius(eff) + maxf(2.0, _cell_scale * 3.0) + 2.0
+			return _hole_core_radius(eff) + maxf(2.0, _cell_scale * 3.0) + 2.0
 		_:
 			return 0.0
 
@@ -316,7 +317,7 @@ func _draw_broken_segment(
 		var dist: float = c_a.distance_to(c_b)
 		if dist <= 0.001:
 			return
-		var hole_r: float = _goal_marker_radius(eff) + maxf(2.0, _cell_scale * 3.0) + 2.0
+		var hole_r: float = _hole_core_radius(eff) + maxf(2.0, _cell_scale * 3.0) + 2.0
 		var stub: float     = minf(dist * 0.20, dist * 0.5 - hole_r)
 		var dir_ab: Vector2 = (c_b - c_a) / dist
 		_draw_dashed_line(c_a + dir_ab * hole_r, c_a + dir_ab * (hole_r + stub), col_red, 1.6, 5.0, 0.0)
@@ -333,7 +334,7 @@ func _draw_break_wire(
 	var dir: Vector2  = (c_hole - c_walk) / dist
 	var walk_clip: float = _connection_clip_radius(tt_walk, eff)
 	# Safe boundary: leave clearance for the hole node's visual (ring + margin).
-	var hole_r: float = _goal_marker_radius(eff) + maxf(2.0, _cell_scale * 3.0) + 3.0
+	var hole_r: float = _hole_core_radius(eff) + maxf(2.0, _cell_scale * 3.0) + 3.0
 	var safe: float   = dist - hole_r - walk_clip   # px from walkable visual edge to hole visual edge
 	if safe <= 0.0:
 		return
@@ -390,7 +391,7 @@ func _draw_node_at(pos: Vector2i, tt: int, center: Vector2, eff: float, a: float
 
 
 func _draw_hole_node(pos: Vector2i, center: Vector2, eff: float, a: float) -> void:
-	var core_r: float = _goal_marker_radius(eff)
+	var core_r: float = _hole_core_radius(eff)
 
 	# Exclude entities still in fall animation (including hold phase t=0) - hole stays empty.
 	var uids: Array[int] = []
@@ -704,6 +705,10 @@ func _is_hole_filled(pos: Vector2i) -> bool:
 func _goal_marker_radius(eff: float) -> float:
 	var player_radius: float = eff * nr_factor * entity_scale * 0.68
 	return player_radius * 1.5
+
+
+func _hole_core_radius(eff: float) -> float:
+	return _goal_marker_radius(eff) * hole_core_size_ratio
 
 
 func _get_uids_in_hole(pos: Vector2i) -> Array[int]:
@@ -1095,7 +1100,7 @@ func _draw_falling_boxes(eff: float, a: float) -> void:
 			continue
 
 		var NR: float        = _nr
-		var core_r: float    = _goal_marker_radius(eff)
+		var core_r: float    = _hole_core_radius(eff)
 		var ring_w: float    = maxf(2.0, _cell_scale * 3.0)
 		var outer_r: float   = core_r + ring_w
 		var uid_color: Color = box_colors[(ent.uid - 1) % 5]
