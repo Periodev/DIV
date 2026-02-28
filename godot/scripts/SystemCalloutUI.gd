@@ -5,7 +5,6 @@ const COL_LINE_DIM   := Color(1.0, 1.0, 1.0, 0.25)
 const COL_LINE_LIT   := Color(1.0, 1.0, 1.0, 0.95)
 const COL_TEXT_DIM   := Color(0.6, 0.6, 0.6, 1.0)
 const COL_TEXT_LIT   := Color(0.95, 0.95, 0.95, 1.0)
-const COL_TAB_ACCENT := Color(0.3, 0.6, 1.0, 1.0)
 const COL_STATUS     := Color(0.4, 0.8, 0.9, 0.8)
 const COL_DIV_DOT    := Color(0.36, 0.92, 0.48, 0.95)
 
@@ -113,6 +112,8 @@ func _draw_tab_indicator(screen_w: float, y_pos: float, font: Font, font_size: i
 	var pos: Vector2 = Vector2(tab_x, y_pos)
 	var text_w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
 	var text_pos: Vector2 = pos + Vector2(12.0, 34.0) if show_left else pos + Vector2(-text_w - 12.0, 34.0)
+	var line_col: Color = COL_LINE_DIM
+	var text_col: Color = COL_TEXT_DIM
 
 	# Keep one node at mini-panel center, then extend same horizontal line toward baseline.
 	var elbow_x: float = float(PresentationModel.RIGHT_X + PresentationModel.SIDE_GRID * 0.5)
@@ -124,8 +125,8 @@ func _draw_tab_indicator(screen_w: float, y_pos: float, font: Font, font_size: i
 	var center_target_x: float = baseline_left if show_left else baseline_right
 	var node_pos: Vector2 = Vector2(elbow_x, y_pos - 24.0)
 
-	draw_line(Vector2(minf(elbow_x, center_target_x), y_pos), Vector2(maxf(elbow_x, center_target_x), y_pos), COL_TAB_ACCENT, 1.0)
-	draw_line(Vector2(elbow_x, y_pos), node_pos, COL_TAB_ACCENT, 1.0)
-	draw_arc(node_pos, 3.0, 0.0, TAU, 12, COL_TAB_ACCENT, 1.0, true)
+	draw_line(Vector2(minf(elbow_x, center_target_x), y_pos), Vector2(maxf(elbow_x, center_target_x), y_pos), line_col, 1.0)
+	draw_line(Vector2(elbow_x, y_pos), node_pos, line_col, 1.0)
+	draw_arc(node_pos, 3.0, 0.0, TAU, 12, line_col, 1.0, true)
 
-	draw_string(font, text_pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, COL_TAB_ACCENT)
+	draw_string(font, text_pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, text_col)
