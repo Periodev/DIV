@@ -574,6 +574,16 @@ func _update_ui() -> void:
 		_current_hints.get("fetch", false) as bool,
 		merge_preview_active
 	)
+	var hl: Dictionary = tutorial.get_highlight()
+	if current_level_idx >= 0 and current_level_idx < all_levels.size():
+		var level_dict: Dictionary = all_levels[current_level_idx]
+		var level_name_lc: String = str(level_dict.get("name", "")).to_lower()
+		if level_name_lc.contains("mutex"):
+			hl = {
+				"node": "merge",
+				"annotations": ["藍色 = 可合併", "灰色 = 無法合併"]
+			}
+	callout_ui.set_highlight(hl.get("node", ""), hl.get("annotations", []))
 
 
 func _ensure_hint_overlay() -> void:

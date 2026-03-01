@@ -36,6 +36,15 @@ const TUTORIAL_CHECKS := {
 	],
 }
 
+## Highlight node names used by SystemCalloutUI
+## Check type → { "node": String, "annotations": Array[String] }
+const CHECK_HIGHLIGHTS := {
+	Check.HAS_BRANCHED: {"node": "diverge", "annotations": ["綠色 = 有充能，可分裂"]},
+	Check.INPUT_TAB: {"node": "tab", "annotations": []},
+	Check.INPUT_M: {"node": "preview", "annotations": []},
+	Check.MERGE_SUCCESS: {"node": "merge", "annotations": ["藍色 = 可合併", "灰色 = 無法合併"]},
+}
+
 var _scene: GameScene
 var _tutorial_id: String = ""
 var _active: bool = false
@@ -74,6 +83,20 @@ func start_level(tutorial_id: String, steps: Array, scene: GameScene) -> void:
 
 func stop() -> void:
 	_active = false
+
+
+## Returns highlight info for SystemCalloutUI, or empty dict if none.
+func get_highlight() -> Dictionary:
+	if not _active:
+		return {}
+	# Find first uncompleted item that has a highlight
+	for item in _items:
+		if item["done"]:
+			continue
+		var check: Check = item["check"] as Check
+		if CHECK_HIGHLIGHTS.has(check):
+			return CHECK_HIGHLIGHTS[check]
+	return {}
 
 
 func on_state_changed() -> void:

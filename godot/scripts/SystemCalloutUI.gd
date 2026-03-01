@@ -21,6 +21,23 @@ var unlock_diverge: bool = true
 var unlock_merge: bool = true
 var unlock_fetch: bool = true
 var preview_active: bool = false
+var highlight_node: String = ""        # "diverge", "merge", "tab", "preview", ""
+var highlight_annotations: Array = []  # ["藍色 = 可合併", ...]
+var _pulse_time: float = 0.0
+
+
+func set_highlight(node_name: String, annotations: Array = []) -> void:
+	highlight_node = node_name
+	highlight_annotations = annotations
+	queue_redraw()
+
+
+func _process(delta: float) -> void:
+	if highlight_node != "":
+		_pulse_time += delta
+		queue_redraw()
+	else:
+		_pulse_time = 0.0
 
 
 func update_state(
@@ -54,16 +71,19 @@ func _draw() -> void:
 	var center_x: float = size.x * 0.5
 	var baseline_y: float = size.y - 70.0
 
+	# Track node positions for highlight
+	var node_positions: Dictionary = {}  # name → Vector2
+
 	if not is_diverged:
 		var line_w: float = 200.0
 		var left_end: float = center_x - line_w
 		var right_end: float = center_x + line_w
 
-
-
 		draw_line(Vector2(left_end, baseline_y), Vector2(right_end, baseline_y), COL_LINE_DIM, 1.0)
+		var diverge_pos := Vector2(center_x, baseline_y)
+		node_positions["diverge"] = diverge_pos
 		_draw_gated_callout_node(
-			Vector2(center_x, baseline_y),
+			diverge_pos,
 			"[V] DIVERGE",
 			unlock_diverge,
 			unlock_diverge and div_points > 0,
@@ -73,8 +93,8 @@ func _draw() -> void:
 			font_size
 		)
 		if unlock_diverge and div_points > 0:
-			draw_circle(Vector2(center_x, baseline_y), 5.0, COL_READY_DIVERGE)
-		_draw_div_dots(Vector2(center_x, baseline_y), div_points)
+			draw_circle(diverge_pos, 5.0, COL_READY_DIVERGE)
+		_draw_div_dots(diverge_pos, div_points)
 	else:
 		var line_w: float = size.x * 0.12
 		var left_end: float = center_x - line_w - 40.0
@@ -85,6 +105,7 @@ func _draw() -> void:
 		var m_x: float = center_x + line_w
 
 		draw_line(Vector2(left_end, baseline_y), Vector2(right_end, baseline_y), COL_LINE_DIM, 1.0)
+		node_positions["fetch"] = Vector2(f_x, baseline_y)
 		_draw_gated_callout_node(
 			Vector2(f_x, baseline_y),
 			"[F] FETCH MERGE",
@@ -95,6 +116,7 @@ func _draw() -> void:
 			font,
 			font_size
 		)
+		node_positions["merge"] = Vector2(v_x, baseline_y)
 		_draw_gated_callout_node(
 			Vector2(v_x, baseline_y),
 			"[V] MERGE",
@@ -105,11 +127,17 @@ func _draw() -> void:
 			font,
 			font_size
 		)
+		node_positions["preview"] = Vector2(m_x, baseline_y)
 		_draw_preview_toggle_node(Vector2(m_x, baseline_y), preview_active, font, font_size)
 		_draw_div_dots(Vector2(v_x, baseline_y), div_points)
-		_draw_tab_indicator(size.x, baseline_y, font, font_size)
+		var tab_pos := _draw_tab_indicator(size.x, baseline_y, font, font_size)
+		node_positions["tab"] = tab_pos
 
 	_draw_persistent_footer(font, 11)
+
+	# Draw highlight pulse + annotation
+	if highlight_node != "" and node_positions.has(highlight_node):
+		_draw_highlight(node_positions[highlight_node], font, 12)
 
 
 func _draw_gated_callout_node(
@@ -220,7 +248,7 @@ func _draw_persistent_footer(font: Font, font_size: int) -> void:
 			text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, COL_TEXT_DIM)
 
 
-func _draw_tab_indicator(screen_w: float, y_pos: float, font: Font, font_size: int) -> void:
+func _draw_tab_indicator(screen_w: float, y_pos: float, font: Font, font_size: int) -> Vector2:
 	# Direction cue: left only when DIV1 is centered, otherwise right.
 	var show_left: bool = active_branch == 1
 	var tab_x: float = screen_w * 0.22 if show_left else screen_w * 0.78
@@ -246,3 +274,47 @@ func _draw_tab_indicator(screen_w: float, y_pos: float, font: Font, font_size: i
 	draw_arc(node_pos, 3.0, 0.0, TAU, 12, line_col, 1.0, true)
 
 	draw_string(font, text_pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, text_col)
+	return node_pos
+
+
+func _draw_highlight(pos: Vector2, font: Font, font_size: int) -> void:
+	# Keep highlight ring fixed in place; only the outline brightness blinks.
+	var blink: float = 0.5 + 0.5 * sin(_pulse_time * 4.0)
+	var ring_r: float = 16.0
+	var ring_col := Color(1.0, 1.0, 0.6, 0.35 + 0.45 * blink)
+	draw_arc(pos, ring_r, 0.0, TAU, 32, ring_col, 2.0, true)
+
+	# Annotation box on the LEFT side of the node.
+	if highlight_annotations.is_empty():
+		return
+	var line_h: float = float(font_size) + 4.0
+	var pad_x: float = 8.0
+	var pad_y: float = 4.0
+	var gap: float = 8.0  # gap between ring and box
+
+	# Measure max text width
+	var max_w: float = 0.0
+	for ann in highlight_annotations:
+		var w: float = font.get_string_size(str(ann), HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
+		if w > max_w:
+			max_w = w
+
+	var box_w: float = max_w + pad_x * 2.0
+	var box_h: float = line_h * highlight_annotations.size() + pad_y * 2.0
+	var box_x: float = pos.x - ring_r - gap - box_w
+	var box_y: float = pos.y - box_h * 0.5
+
+	# Background
+	var bg_col := Color(0.08, 0.08, 0.08, 0.9)
+	draw_rect(Rect2(box_x, box_y, box_w, box_h), bg_col)
+	# Border
+	var border_col := Color(1.0, 1.0, 0.6, 0.45 + 0.35 * blink)
+	draw_rect(Rect2(box_x, box_y, box_w, box_h), border_col, false, 1.0)
+
+	# Text lines
+	for i in highlight_annotations.size():
+		var text: String = str(highlight_annotations[i])
+		var text_w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
+		var tx: float = box_x + (box_w - text_w) * 0.5
+		var ty: float = box_y + pad_y + line_h * (i + 1) - 2.0
+		draw_string(font, Vector2(tx, ty), text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, Color(1.0, 1.0, 0.85, 0.95))
