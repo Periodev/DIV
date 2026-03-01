@@ -651,37 +651,32 @@ func _draw_branch_node(pos: Vector2i, center: Vector2, tt: int, eff: float, a: f
 
 
 func _draw_goal_node(center: Vector2, eff: float, a: float) -> void:
-	var cell_scale: float = _cell_scale
 	var goal_radius: float = _goal_marker_radius(eff) * 1.35
-
 	var pulse: float = 0.6 + 0.4 * sin(_time * 2.0)
-
 	var amber := Color(1.0, 0.78, 0.0)
 	var green := Color(0.31, 0.86, 0.39)
 
+	# Preserve goal-state visualization, but remove "G" text.
 	if _spec.goal_glow == 0:
-		# Original inactive stage color.
 		draw_arc(center, goal_radius, 0, TAU, 32,
 				_col(Color(0.55, 0.55, 0.55, 0.60), a), 2.0)
 		draw_circle(center, goal_radius,
 				_col(Color(0.55, 0.55, 0.55, 0.08), a))
-		_draw_center_text("G", center, int(14.0 * cell_scale * node_scale),
-				_col(Color(0.55, 0.55, 0.55, 0.75), a))
-		return
-
-	if _spec.goal_glow == 2:
-		draw_arc(center, goal_radius + 8.0, 0, TAU, 32,
-				_col(Color(green.r, green.g, green.b, 0.70 * pulse), a), 2.0)
 	else:
-		draw_arc(center, goal_radius + 8.0, 0, TAU, 32,
-				_col(Color(amber.r, amber.g, amber.b, 0.32 * pulse), a), 1.5)
+		if _spec.goal_glow == 2:
+			draw_arc(center, goal_radius + 8.0, 0, TAU, 32,
+					_col(Color(green.r, green.g, green.b, 0.70 * pulse), a), 2.0)
+		else:
+			draw_arc(center, goal_radius + 8.0, 0, TAU, 32,
+					_col(Color(amber.r, amber.g, amber.b, 0.32 * pulse), a), 1.5)
+		draw_arc(center, goal_radius, 0, TAU, 32,
+				_col(Color(amber.r, amber.g, amber.b, 0.5 + pulse * 0.4), a), 2.0)
+		draw_circle(center, goal_radius,
+				_col(Color(amber.r, amber.g, amber.b, 0.12 + pulse * 0.12), a))
 
-	draw_arc(center, goal_radius, 0, TAU, 32,
-			_col(Color(amber.r, amber.g, amber.b, 0.5 + pulse * 0.4), a), 2.0)
-	draw_circle(center, goal_radius,
-			_col(Color(amber.r, amber.g, amber.b, 0.12 + pulse * 0.12), a))
-	_draw_center_text("G", center, int(14.0 * cell_scale * node_scale),
-			_col(Color(1, 0.92, 0.5, 0.9), a))
+	# Always draw a centered solid yellow dot (inactive to active).
+	var dot_r: float = maxf(6.0 * _cell_scale * node_scale, _goal_marker_radius(eff) * 0.42)
+	draw_circle(center, dot_r, _col(Color(1.0, 0.78, 0.0, 1.0), a))
 
 
 # ---------------------------------------------------------------------------
