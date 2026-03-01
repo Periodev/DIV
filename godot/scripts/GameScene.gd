@@ -129,6 +129,10 @@ func _start_level(idx: int) -> void:
 	hint_overlay.clear_overlay()
 	if _desc_overlay != null:
 		_desc_overlay.hide_desc()
+		var objective: String = level_dict.get("objective", "")
+		if objective != "":
+			var level_name: String = str(level_dict.get("name", ""))
+			_desc_overlay.show_desc(level_name, objective)
 	merge_preview_active  = false
 	merge_preview_progress = 0.0
 	_set_peek_floor_mode(false)

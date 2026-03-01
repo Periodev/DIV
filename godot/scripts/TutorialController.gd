@@ -4,7 +4,7 @@
 class_name TutorialController
 
 # Check type constants — each tutorial ID maps to a fixed sequence of these.
-enum Check { PLAYER_ON_GOAL, GOAL_ACTIVE, GOAL_ACTIVE_CROSS, HAS_BRANCHED, SWITCH_ACTIVATED, SWITCH_PROGRESS, SWITCH_ALL_CROSS, INPUT_TAB, MERGED, MERGE_SUCCESS }
+enum Check { PLAYER_ON_GOAL, GOAL_ACTIVE, GOAL_ACTIVE_CROSS, HAS_BRANCHED, SWITCH_ACTIVATED, SWITCH_PROGRESS, SWITCH_ALL_CROSS, INPUT_TAB, INPUT_M, MERGED, MERGE_SUCCESS }
 
 # Tutorial ID → array of check types (defines the check sequence).
 # Level files provide matching labels via tutorial_steps.
@@ -22,6 +22,10 @@ const TUTORIAL_CHECKS := {
 		Check.SWITCH_ALL_CROSS,
 		Check.GOAL_ACTIVE_CROSS,
 		Check.MERGE_SUCCESS,
+	],
+	"preview_intro": [
+		Check.HAS_BRANCHED,
+		Check.INPUT_M,
 	],
 	"diverge_intro": [
 		Check.HAS_BRANCHED,
@@ -86,6 +90,9 @@ func on_input(key: int) -> void:
 		if _items[i]["done"]:
 			continue
 		if _items[i]["check"] == Check.INPUT_TAB and key == KEY_TAB \
+				and _scene.controller != null and _scene.controller.has_branched:
+			_complete_item(i)
+		if _items[i]["check"] == Check.INPUT_M and key == KEY_M \
 				and _scene.controller != null and _scene.controller.has_branched:
 			_complete_item(i)
 
