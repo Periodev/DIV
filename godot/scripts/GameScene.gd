@@ -107,6 +107,7 @@ func _start_level(idx: int) -> void:
 	controller.state_changed.connect(_on_state_changed)
 	controller.victory_achieved.connect(_on_victory)
 	controller.collapse_occurred.connect(_on_collapse)
+	_sync_interaction_hint_gates()
 
 	overlay_backdrop.visible = false
 	overlay_label.visible = false
@@ -457,6 +458,7 @@ func _apply_frame_spec() -> void:
 		if hint_overlay != null:
 			hint_overlay.clear_overlay()
 		return
+	_sync_interaction_hint_gates()
 
 	var preview_on := merge_preview_progress > 0.0
 	var spec := PresentationModel.build(
@@ -480,6 +482,17 @@ func _apply_frame_spec() -> void:
 
 	if hint_overlay != null:
 		hint_overlay.update_overlay(spec, controller, preview_on, animation_frame)
+
+
+func _sync_interaction_hint_gates() -> void:
+	if controller == null:
+		return
+	if not controller.has_method("set_interaction_hint_gates"):
+		return
+	controller.set_interaction_hint_gates(
+		_current_hints.get("converge", false) as bool,
+		_current_hints.get("pickup", false) as bool
+	)
 
 
 func _update_renderer_layering(preview_on: bool) -> void:

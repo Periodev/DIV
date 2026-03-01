@@ -65,6 +65,10 @@ var falling_boxes: Dictionary = {}  # {[uid, pos]: start_time}
 # Flag: suppress re-triggering animations right after undo
 var just_undid: bool = false
 
+# Interaction-hint gates (synced from tutorial/progression hints)
+var hint_allow_converge: bool = true
+var hint_allow_pickup: bool = true
+
 
 # ---------------------------------------------------------------------------
 # Init / Reset
@@ -101,6 +105,11 @@ func reset() -> void:
 
 func get_active_branch() -> BranchState:
 	return main_branch if current_focus == 0 else sub_branch
+
+
+func set_interaction_hint_gates(allow_converge: bool, allow_pickup: bool) -> void:
+	hint_allow_converge = allow_converge
+	hint_allow_pickup = allow_pickup
 
 
 # ---------------------------------------------------------------------------
@@ -537,7 +546,12 @@ func get_interaction_hint() -> Dictionary:
 		   and ent.pos == front_pos and ent.is_grounded():
 			uids_at_front[ent.uid] = true
 	if uids_at_front.size() >= 2 or active.is_shadow(target.uid):
+		if not hint_allow_converge:
+			return {text="", color=Color.BLACK, target_pos=Vector2i(-1,-1), is_drop=false}
 		return {text="還原", color=Color(0,0.86,0.86), target_pos=front_pos, is_drop=false}
+
+	if not hint_allow_pickup:
+		return {text="", color=Color.BLACK, target_pos=Vector2i(-1,-1), is_drop=false}
 
 	if Physics.effective_capacity(active, player.pos) == 0:
 		return {text="", color=Color.BLACK, target_pos=Vector2i(-1,-1), is_drop=false}
