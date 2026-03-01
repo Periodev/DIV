@@ -1,6 +1,8 @@
 extends Control
 class_name LevelDescOverlay
 
+signal dismissed
+
 # Colors matching the game's visual palette.
 const COLOR_BACKDROP   := Color(0.0,  0.0,  0.0,  0.78)
 const COLOR_PANEL_BG   := Color(0.08, 0.09, 0.12, 0.97)
@@ -33,6 +35,7 @@ func show_desc(level_name: String, objective: String) -> void:
 
 func hide_desc() -> void:
 	visible = false
+	dismissed.emit()
 
 
 # ---------------------------------------------------------------------------

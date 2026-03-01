@@ -59,6 +59,7 @@ var _instr_tween: Tween = null
 const _SpotlightScript := preload("res://scripts/SymbolSpotlightUI.gd")
 var tutorial: TutorialController = TutorialController.new()
 var _spotlight: Control = null
+var _pending_spotlight: Array = []
 const DEBUG_VICTORY := true
 
 
@@ -131,10 +132,10 @@ func _start_level(idx: int) -> void:
 	hint_overlay.clear_overlay()
 	if _desc_overlay != null:
 		_desc_overlay.hide_desc()
-		#var objective: String = level_dict.get("objective", "")
-		#if objective != "":
-		#	var level_name: String = str(level_dict.get("name", ""))
-		#	_desc_overlay.show_desc(level_name, objective)
+		var objective: String = level_dict.get("objective", "")
+		if objective != "":
+			var level_name: String = str(level_dict.get("name", ""))
+			_desc_overlay.show_desc(level_name, objective)
 
 	merge_preview_active  = false
 	merge_preview_progress = 0.0
@@ -147,13 +148,19 @@ func _start_level(idx: int) -> void:
 	_apply_frame_spec()
 	_update_ui()
 
-	# Blocking symbol spotlight — built after _apply_frame_spec() so renderer positions are ready.
+	# Spotlight — built after _apply_frame_spec() so renderer positions are ready.
+	# If desc overlay is visible, defer until it's dismissed; otherwise show immediately.
+	_pending_spotlight = []
 	var spotlight_seq: Array = tutorial.get_spotlight_sequence()
 	if not spotlight_seq.is_empty():
 		_ensure_spotlight()
-		var screen_items := _build_spotlight_screen_items(spotlight_seq)
-		if not screen_items.is_empty():
-			_spotlight.show_sequence(screen_items)
+		_pending_spotlight = _build_spotlight_screen_items(spotlight_seq)
+	if not _pending_spotlight.is_empty():
+		if _desc_overlay != null and _desc_overlay.visible:
+			if not _desc_overlay.dismissed.is_connected(_on_desc_dismissed):
+				_desc_overlay.dismissed.connect(_on_desc_dismissed, CONNECT_ONE_SHOT)
+		else:
+			_show_pending_spotlight()
 
 
 # ---------------------------------------------------------------------------
@@ -292,7 +299,14 @@ func _input(event: InputEvent) -> void:
 					_full_refresh()
 				KEY_SPACE, KEY_ENTER, KEY_KP_ENTER:
 					if controller.victory:
-						_start_level(current_level_idx + 1)
+						var next_zone_first := _next_zone_first_idx()
+						if next_zone_first >= 0:
+							var gd = _get_game_data()
+							if gd != null:
+								gd.selected_level_idx = next_zone_first
+							get_tree().change_scene_to_file("res://scenes/level_select.tscn")
+						else:
+							_start_level(current_level_idx + 1)
 						return
 				KEY_ESCAPE:
 					var gd = _get_game_data()
@@ -643,6 +657,16 @@ func _build_spotlight_screen_items(seq: Array) -> Array:
 	return result
 
 
+func _on_desc_dismissed() -> void:
+	_show_pending_spotlight()
+
+
+func _show_pending_spotlight() -> void:
+	if not _pending_spotlight.is_empty() and _spotlight != null:
+		_spotlight.show_sequence(_pending_spotlight)
+		_pending_spotlight = []
+
+
 func _ensure_spotlight() -> void:
 	if _spotlight != null:
 		return
@@ -676,6 +700,30 @@ func _save_selected_level_idx() -> void:
 	var gd = _get_game_data()
 	if gd != null:
 		gd.selected_level_idx = current_level_idx
+
+
+## Returns the first level index of the next zone if current level is the last
+## in its zone, otherwise returns -1.
+func _next_zone_first_idx() -> int:
+	if all_levels.is_empty():
+		return -1
+	var cur_zone: int = all_levels[current_level_idx].get("zone", -1)
+	if cur_zone < 0:
+		return -1
+	# Find last index in current zone
+	var last_in_zone := current_level_idx
+	for i in range(current_level_idx + 1, all_levels.size()):
+		if all_levels[i].get("zone", -1) == cur_zone:
+			last_in_zone = i
+		else:
+			break
+	if current_level_idx != last_in_zone:
+		return -1  # not the last level in this zone
+	# Find first index of next zone
+	var next_start := current_level_idx + 1
+	if next_start >= all_levels.size():
+		return -1  # no next zone
+	return next_start
 
 
 func show_instruction(title: String, body_bbcode: String) -> void:
