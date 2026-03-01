@@ -526,7 +526,7 @@ class GameController:
 
         Returns:
             (hint_text, hint_color, target_pos, is_drop)
-            hint_text: 'X 拾取' / 'X 放下' / 'X 收束' / ''
+            hint_text: 'X 拾取' / 'X 放下' / 'X 還原' / ''
             hint_color: (r, g, b) frame color
             target_pos: (x, y) target cell, None if no hint
             is_drop: True if this is a drop hint (use inset frame)
@@ -557,7 +557,7 @@ class GameController:
                          and e.pos == front_pos
                          and Physics.grounded(e)}
         if len(uids_at_front) >= 2 or active.is_shadow(target.uid):
-            return ('收束', (0, 220, 220), front_pos, False)  # Cyan
+            return ('還原', (0, 220, 220), front_pos, False)  # Cyan
 
         # Solid box: check if pickup is allowed (not in NO_CARRY zone)
         player_pos = (px, py)

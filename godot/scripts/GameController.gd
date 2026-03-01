@@ -537,7 +537,7 @@ func get_interaction_hint() -> Dictionary:
 		   and ent.pos == front_pos and ent.is_grounded():
 			uids_at_front[ent.uid] = true
 	if uids_at_front.size() >= 2 or active.is_shadow(target.uid):
-		return {text="收束", color=Color(0,0.86,0.86), target_pos=front_pos, is_drop=false}
+		return {text="還原", color=Color(0,0.86,0.86), target_pos=front_pos, is_drop=false}
 
 	if Physics.effective_capacity(active, player.pos) == 0:
 		return {text="", color=Color.BLACK, target_pos=Vector2i(-1,-1), is_drop=false}

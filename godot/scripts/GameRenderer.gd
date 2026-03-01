@@ -782,7 +782,7 @@ func _draw_box_diamond(ent: Entity, eff: float, a: float) -> void:
 		sc_border.a = 0.88 * a
 		_draw_dashed_diamond(center, NR, sc_border, 1.8, 3.2, 0.0)
 		# White outline when this shadow is the SPACE converge target.
-		if _spec.interaction_hint != null and _spec.interaction_hint.text == "收束" \
+		if _spec.interaction_hint != null and _spec.interaction_hint.text == "還原" \
 				and ent.pos == _spec.interaction_hint.target_pos:
 			_draw_diamond(center, NR, Color(1, 1, 1, 0.90 * a), false, 2.2)
 		var sc_text: Color = uid_color
