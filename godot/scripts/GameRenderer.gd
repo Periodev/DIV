@@ -132,6 +132,10 @@ func _draw() -> void:
 	# Merge-preview overlay panel: no background, no terrain - entities only.
 	var is_overlay: bool = _spec.is_merge_preview and not _spec.is_focused
 	if is_overlay:
+		# Keep activated switches visible in overlay so branch activation state remains readable.
+		_draw_overlay_activated_switch_nodes(gs, eff, a)
+		# Show filled-hole state in overlay (semi-transparent, terrain-sized).
+		_draw_overlay_filled_hole_nodes(gs, eff, a)
 		_draw_entities(eff, a)
 		return
 
@@ -350,6 +354,37 @@ func _draw_nodes(gs: int, eff: float, a: float) -> void:
 			if tt == Enums.TerrainType.WALL:
 				continue
 			_draw_node_at(pos, tt, _grid_to_local_center(pos, eff), eff, a)
+
+
+func _draw_overlay_activated_switch_nodes(gs: int, eff: float, a: float) -> void:
+	var NR: float = _eff * nr_factor * node_scale
+	var dot_r: float = 2.0 * node_scale
+	for y in gs:
+		for x in gs:
+			var pos := Vector2i(x, y)
+			var tt: int = _spec.state.terrain.get(pos, Enums.TerrainType.FLOOR)
+			if tt != Enums.TerrainType.SWITCH:
+				continue
+			if not _spec.state.switch_activated(pos):
+				continue
+			_draw_switch_node(pos, _grid_to_local_center(pos, eff), NR, dot_r, a)
+
+
+func _draw_overlay_filled_hole_nodes(gs: int, eff: float, a: float) -> void:
+	var overlay_a: float = a * 0.55
+	var hole_scale: float = 0.72
+	for y in gs:
+		for x in gs:
+			var pos := Vector2i(x, y)
+			var tt: int = _spec.state.terrain.get(pos, Enums.TerrainType.FLOOR)
+			if tt != Enums.TerrainType.HOLE:
+				continue
+			if not _is_hole_filled(pos):
+				continue
+			var center := _grid_to_local_center(pos, eff)
+			draw_set_transform(center, 0.0, Vector2(hole_scale, hole_scale))
+			_draw_hole_node(pos, Vector2.ZERO, eff, overlay_a)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 func _draw_node_at(pos: Vector2i, tt: int, center: Vector2, eff: float, a: float) -> void:
