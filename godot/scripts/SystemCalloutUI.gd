@@ -66,6 +66,7 @@ func _draw() -> void:
 			unlock_diverge,
 			unlock_diverge and div_points > 0,
 			COL_DIVERGE_DEEP,
+			true,
 			font,
 			font_size
 		)
@@ -88,6 +89,7 @@ func _draw() -> void:
 			unlock_fetch,
 			unlock_fetch and can_f_fetch,
 			COL_READY_FETCH,
+			false,
 			font,
 			font_size
 		)
@@ -97,6 +99,7 @@ func _draw() -> void:
 			unlock_merge,
 			unlock_merge and can_v_merge,
 			COL_READY_MERGE,
+			false,
 			font,
 			font_size
 		)
@@ -111,6 +114,7 @@ func _draw_gated_callout_node(
 		is_unlocked: bool,
 		is_ready: bool,
 		ready_col: Color,
+		ready_as_ring: bool,
 		font: Font,
 		font_size: int) -> void:
 	if not is_unlocked:
@@ -123,7 +127,10 @@ func _draw_gated_callout_node(
 	var node_r: float = 10.0 if is_ready else 8.0
 
 	if is_ready:
-		draw_circle(pos, node_r, ready_col)
+		if ready_as_ring:
+			draw_arc(pos, node_r, 0.0, TAU, 24, ready_col, 1.8, true)
+		else:
+			draw_circle(pos, node_r, ready_col)
 	else:
 		draw_arc(pos, node_r, 0.0, TAU, 16, col_line, 1.5, true)
 	draw_line(pos + Vector2(0.0, node_r), pos + Vector2(0.0, line_len), col_line, 1.0)
