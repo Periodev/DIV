@@ -236,7 +236,7 @@ func _draw_connection_pair(
 	if b_filled_hole or tt_b == Enums.TerrainType.FLOOR or tt_b == Enums.TerrainType.NO_CARRY:
 		clip_b = 0.0
 
-	_draw_clipped_connection_line(c_a, c_b, clip_a, clip_b, conn_col, 3.2)
+	_draw_clipped_connection_line(c_a, c_b, clip_a, clip_b, conn_col, 1.5)
 
 
 func _connection_line_color(tt_a: int, tt_b: int, a: float) -> Color:
@@ -1337,7 +1337,16 @@ func _draw_shadow_connections(eff: float, a: float) -> void:
 			if pos == front_pos:
 				continue
 			var other_center: Vector2 = _grid_to_local_center(pos, eff)
-			_draw_dashed_line(other_center, front_center, line_color, 1.6, 12.0, offset)
+			var seg: Vector2 = front_center - other_center
+			var seg_len: float = seg.length()
+			var clip: float = _nr
+			if seg_len <= clip * 2.0:
+				continue
+			var seg_dir: Vector2 = seg / seg_len
+			_draw_dashed_line(
+				other_center + seg_dir * clip,
+				front_center - seg_dir * clip,
+				line_color, 2.8, 12.0, offset)
 
 
 # ---------------------------------------------------------------------------
