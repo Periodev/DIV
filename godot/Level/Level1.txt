@@ -200,27 +200,6 @@ object_map = '''
 .....
 '''
 --------------------------
-# Selection 選擇
-
-hints = diverge converge
-
-objective = '''
-'''
-
-floor_map = '''
-##G#
-##v.
-#S.S
-#S.v
-'''
-
-object_map = '''
-....
-....
-..BB
-...@
-'''
---------------------------
 # Redundant 冗餘
 
 hints = diverge converge
@@ -229,18 +208,41 @@ objective = '''
 '''
 
 floor_map = '''
-##G#
-##V.
-#S.S
-#S.v
+#G##
+#V.#
+S.S.
+S..#
 '''
 
 object_map = '''
 ....
-..@.
-..BB
+.@..
+.BB.
 ....
 '''
+
+--------------------------
+# Selection 選擇
+
+hints = diverge converge
+
+objective = '''
+'''
+
+floor_map = '''
+#G##
+#v.#
+S.S#
+S.v#
+'''
+
+object_map = '''
+....
+....
+.BB.
+..@.
+'''
+
 --------------------------
 # Resolve 解析
 

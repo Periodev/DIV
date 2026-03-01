@@ -7,9 +7,7 @@ tutorial_steps = '''
 '''
 
 objective = '''
-藍色圓圈是[角色]，白色箭頭是角色方向
-黃色中心圓圈是[終點]
-使用 W/A/S/D 或方向鍵移動角色，走到閃爍的[終點]
+角色與終點
 '''
 
 floor_map = '''
@@ -29,7 +27,7 @@ object_map = '''
 '''
 
 --------------------------
-# Core 核心
+# Push 推動
 tutorial = core_intro
 hints = none
 
@@ -38,9 +36,7 @@ tutorial_steps = '''
 '''
 
 objective = '''
-菱形色塊是[核心]
-面對[核心]移動可以將其推動一格
-一次只能推動一個[核心]
+推動核心
 '''
 
 floor_map = '''
@@ -74,9 +70,7 @@ tutorial_steps = '''
 '''
 
 objective = '''
-灰色菱形框是[目標]
-將核心推進[目標]可啟動
-當所有[目標]都啟動，終點就會開啟
+啟動目標
 '''
 
 floor_map = '''
@@ -109,7 +103,7 @@ tutorial_steps = '''
 '''
 
 objective = '''
-核心啟動目標位置，有可能會阻擋終點，使用分裂拆分工作
+核心所在位置，可能會阻擋終點，使用分裂拆分工作
 
 按 [Z] 可退回上一步
 '''
@@ -131,8 +125,8 @@ object_map = '''
 hints = diverge
 
 objective = '''
-分裂後，若角色和另一空間核心位置重疊，會導致衝突無法合併
-可觀察下方控制區狀態
+若角色和另一空間核心位置重疊，會導致衝突無法合併
+分裂後，可觀察下方控制區狀態
 '''
 
 floor_map = '''
@@ -184,6 +178,7 @@ object_map = '''
 hints = diverge
 
 objective = '''
+一分為二
 '''
 
 floor_map = '''
@@ -269,6 +264,7 @@ object_map = '''
 hints = diverge
 
 objective = '''
+並行處理
 '''
 
 floor_map = '''
