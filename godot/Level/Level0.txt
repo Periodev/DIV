@@ -194,8 +194,7 @@ hints = diverge
 objective = '''
 任務：啟動2個目標，再走到終點
 
-合併後，核心會留下[殘影]
-[殘影]無法推動
+合併後，核心會留下不可推動的[殘影]
 如果角色和另一空間[殘影]位置重疊會無法合併
 
 按 [Z] 退回上一步
@@ -219,7 +218,6 @@ object_map = '''
 hints = diverge converge
 
 objective = '''
-BFS: 18 steps
 '''
 
 floor_map = '''
