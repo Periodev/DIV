@@ -223,9 +223,9 @@ BFS: 18 steps
 '''
 
 floor_map = '''
-GS.v
+GS..
 S...
-##S.
+##Sv
 ####
 '''
 
