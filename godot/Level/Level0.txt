@@ -90,16 +90,11 @@ object_map = '''
 
 --------------------------
 # Splitting 拆分
-
+tutorial = diverge_intro
 hints = diverge
 
 objective = '''
-任務：啟動目標、走到終點合併
-
-按 [V] 分裂成平行空間
-啟動目標後，按 [Tab] 切換空間，控制另一角色到終點
-再按 [V] 以當前角色位置合併
-
+任務：核心啟動目標會阻擋終點，使用分裂拆分工作
 '''
 
 floor_map = '''

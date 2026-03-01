@@ -11,6 +11,12 @@ class_name GameScene
 @onready var hint_label: Label        = $UI/HintLabel
 @onready var overlay_backdrop: ColorRect = $UI/OverlayBackdrop
 @onready var overlay_label: Label     = $UI/OverlayLabel
+@onready var instr_toast: PanelContainer = $UI/InstructionToast
+@onready var instr_title: Label = $UI/InstructionToast/InstrVBox/InstrTitle
+@onready var instr_body: RichTextLabel = $UI/InstructionToast/InstrVBox/InstrBody
+@onready var win_toast: PanelContainer = $UI/WinToast
+@onready var toast_sub: Label = $UI/WinToast/ToastVBox/ToastSub
+@onready var toast_dot: ColorRect = $UI/WinToast/ToastVBox/ToastHeader/ToastDot
 var hint_overlay: HintOverlay = null
 var _desc_overlay: LevelDescOverlay = null
 
@@ -48,6 +54,9 @@ const FALL_ANIM_DURATION := 0.25
 const MOVE_REPEAT_DELAY := 0.250  # seconds between repeats (~400ms per step)
 var _move_cooldown: float = 0.0
 var _last_held_dir: Vector2i = Vector2i(0, 0)
+var _win_tween: Tween = null
+var _instr_tween: Tween = null
+var tutorial: TutorialController = TutorialController.new()
 const DEBUG_VICTORY := true
 
 
@@ -111,6 +120,12 @@ func _start_level(idx: int) -> void:
 
 	overlay_backdrop.visible = false
 	overlay_label.visible = false
+	win_toast.visible = false
+	hide_instruction()
+
+	var tutorial_id: String = level_dict.get("tutorial", "")
+	var objective: String = level_dict.get("objective", "")
+	tutorial.start_level(tutorial_id, objective, self)
 	hint_overlay.clear_overlay()
 	if _desc_overlay != null:
 		_desc_overlay.hide_desc()
@@ -247,7 +262,7 @@ func _input(event: InputEvent) -> void:
 			if not end_key.pressed or end_key.echo:
 				return
 			# End-screen hotkeys are only valid when the overlay is actually shown.
-			if not overlay_label.visible:
+			if not overlay_label.visible and not win_toast.visible:
 				return
 			match end_key.keycode:
 				KEY_R:
@@ -256,7 +271,11 @@ func _input(event: InputEvent) -> void:
 				KEY_Z:
 					controller.undo()
 					_full_refresh()
-				KEY_SPACE, KEY_ESCAPE:
+				KEY_SPACE, KEY_ENTER, KEY_KP_ENTER:
+					if controller.victory:
+						_start_level(current_level_idx + 1)
+						return
+				KEY_ESCAPE:
 					var gd = _get_game_data()
 					if gd != null:
 						gd.selected_level_idx = current_level_idx
@@ -339,6 +358,8 @@ func _input(event: InputEvent) -> void:
 			_start_level(current_level_idx - 1)
 			_save_selected_level_idx()
 
+	tutorial.on_input(key)
+
 
 # ---------------------------------------------------------------------------
 # Slide animation
@@ -399,6 +420,7 @@ func _on_state_changed() -> void:
 	# Physics and victory are now handled each frame in _process().
 	# _on_state_changed() only triggers an immediate redraw so the visual
 	# responds to input without waiting for the next _process() tick.
+	tutorial.on_state_changed()
 	_apply_frame_spec()
 	_update_ui()
 
@@ -419,9 +441,16 @@ func _on_victory() -> void:
 	var gd = _get_game_data()
 	if gd != null:
 		gd.mark_level_played(level_id)
-	overlay_backdrop.visible = true
-	overlay_label.text    = "LEVEL COMPLETE!\nR: restart   Z: undo   SPACE/ESC: level select"
-	overlay_label.visible = true
+	# Toast instead of full-screen overlay
+	toast_sub.text = "Level %s  ·  %d steps" % [level_id, controller.input_log.size()]
+	toast_dot.color = Color(0.29, 0.54, 0.29)
+	win_toast.modulate.a = 0.0
+	win_toast.visible = true
+	if _win_tween != null:
+		_win_tween.kill()
+	_win_tween = create_tween()
+	_win_tween.tween_property(win_toast, "modulate:a", 1.0, 0.35) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 func _on_collapse() -> void:
@@ -443,6 +472,7 @@ func _full_refresh() -> void:
 	if should_hide_overlay:
 		overlay_backdrop.visible = false
 		overlay_label.visible = false
+		win_toast.visible = false
 	else:
 		_vlog("_full_refresh called in end-state; keep overlay visible")
 	_apply_frame_spec()
@@ -582,6 +612,31 @@ func _save_selected_level_idx() -> void:
 	var gd = _get_game_data()
 	if gd != null:
 		gd.selected_level_idx = current_level_idx
+
+
+func show_instruction(title: String, body_bbcode: String) -> void:
+	instr_title.text = title
+	instr_body.text = body_bbcode
+	var already_visible := instr_toast.visible and instr_toast.modulate.a > 0.9
+	if not already_visible:
+		instr_toast.modulate.a = 0.0
+		instr_toast.visible = true
+		if _instr_tween != null:
+			_instr_tween.kill()
+		_instr_tween = create_tween()
+		_instr_tween.tween_property(instr_toast, "modulate:a", 1.0, 0.3) \
+			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+
+func hide_instruction() -> void:
+	if not instr_toast.visible:
+		return
+	if _instr_tween != null:
+		_instr_tween.kill()
+	_instr_tween = create_tween()
+	_instr_tween.tween_property(instr_toast, "modulate:a", 0.0, 0.2) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	_instr_tween.tween_callback(func(): instr_toast.visible = false)
 
 
 func _get_game_data():

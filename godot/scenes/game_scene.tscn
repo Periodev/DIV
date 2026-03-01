@@ -85,3 +85,61 @@ theme_override_font_sizes/font_size = 32
 theme_override_constants/outline_size = 4
 theme_override_colors/font_color = Color(1, 0.9, 0.35, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+
+[node name="InstructionToast" type="PanelContainer" parent="UI"]
+visible = false
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 300.0
+mouse_filter = 2
+
+[node name="InstrVBox" type="VBoxContainer" parent="UI/InstructionToast"]
+theme_override_constants/separation = 4
+
+[node name="InstrTitle" type="Label" parent="UI/InstructionToast/InstrVBox"]
+text = ""
+theme_override_font_sizes/font_size = 14
+theme_override_colors/font_color = Color(0.45, 0.75, 0.45, 1)
+
+[node name="InstrBody" type="RichTextLabel" parent="UI/InstructionToast/InstrVBox"]
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+mouse_filter = 2
+theme_override_font_sizes/normal_font_size = 13
+theme_override_colors/default_color = Color(0.75, 0.75, 0.75, 1)
+
+[node name="WinToast" type="PanelContainer" parent="UI"]
+visible = false
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -280.0
+offset_top = -110.0
+offset_right = -16.0
+offset_bottom = -16.0
+mouse_filter = 2
+
+[node name="ToastVBox" type="VBoxContainer" parent="UI/WinToast"]
+theme_override_constants/separation = 6
+
+[node name="ToastHeader" type="HBoxContainer" parent="UI/WinToast/ToastVBox"]
+
+[node name="ToastDot" type="ColorRect" parent="UI/WinToast/ToastVBox/ToastHeader"]
+custom_minimum_size = Vector2(10, 10)
+color = Color(0.29, 0.54, 0.29, 1)
+
+[node name="ToastTitle" type="Label" parent="UI/WinToast/ToastVBox/ToastHeader"]
+text = "SOLVED"
+theme_override_font_sizes/font_size = 18
+
+[node name="ToastSub" type="Label" parent="UI/WinToast/ToastVBox"]
+text = ""
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.55, 0.55, 0.55, 1)
+
+[node name="ToastHint" type="Label" parent="UI/WinToast/ToastVBox"]
+text = "[ SPACE ]  next level"
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.3, 0.6, 0.3, 1)

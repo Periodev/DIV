@@ -200,10 +200,19 @@ static func _parse_one_section(text: String) -> Dictionary:
 	if obj_result != null:
 		objective = obj_result.get_string(1).strip_edges()
 
+	# Extract tutorial ID
+	var tut_match := RegEx.new()
+	tut_match.compile("(?m)^\\s*tutorial\\s*=\\s*(\\S+)\\s*$")
+	var tut_result := tut_match.search(text)
+	var tutorial_id := ""
+	if tut_result != null:
+		tutorial_id = tut_result.get_string(1).strip_edges()
+
 	return {
 		"name":       name_val,
 		"floor_map":  floor_result.get_string(1),
 		"object_map": object_result.get_string(1),
 		"hints":      parsed_hints,
 		"objective":  objective,
+		"tutorial":   tutorial_id,
 	}

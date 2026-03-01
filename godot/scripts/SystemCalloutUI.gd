@@ -59,6 +59,8 @@ func _draw() -> void:
 		var left_end: float = center_x - line_w
 		var right_end: float = center_x + line_w
 
+
+
 		draw_line(Vector2(left_end, baseline_y), Vector2(right_end, baseline_y), COL_LINE_DIM, 1.0)
 		_draw_gated_callout_node(
 			Vector2(center_x, baseline_y),
