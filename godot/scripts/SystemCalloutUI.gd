@@ -7,6 +7,7 @@ const COL_TEXT_DIM   := Color(0.6, 0.6, 0.6, 1.0)
 const COL_TEXT_LIT   := Color(0.95, 0.95, 0.95, 1.0)
 const COL_STATUS     := Color(0.4, 0.8, 0.9, 0.8)
 const COL_DIV_DOT    := Color(0.36, 0.92, 0.48, 0.95)
+const COL_DIVERGE_DEEP := Color(0.16, 0.52, 0.24, 0.98)
 const COL_READY_DIVERGE := Color(0.36, 0.92, 0.48, 0.98)
 const COL_READY_MERGE   := Color(0.30, 0.62, 1.00, 0.98)
 const COL_READY_FETCH   := Color(1.00, 0.62, 0.18, 0.98)
@@ -64,10 +65,12 @@ func _draw() -> void:
 			"[V] DIVERGE",
 			unlock_diverge,
 			unlock_diverge and div_points > 0,
-			COL_READY_DIVERGE,
+			COL_DIVERGE_DEEP,
 			font,
 			font_size
 		)
+		if unlock_diverge and div_points > 0:
+			draw_circle(Vector2(center_x, baseline_y), 5.0, COL_READY_DIVERGE)
 		_draw_div_dots(Vector2(center_x, baseline_y), div_points)
 	else:
 		var line_w: float = size.x * 0.12
@@ -117,7 +120,7 @@ func _draw_gated_callout_node(
 	var col_line: Color = COL_LINE_LIT if is_ready else COL_LINE_DIM
 	var col_text: Color = COL_TEXT_LIT if is_ready else COL_TEXT_DIM
 	var line_len: float = 18.0
-	var node_r: float = 5.0 if is_ready else 4.0
+	var node_r: float = 10.0 if is_ready else 8.0
 
 	if is_ready:
 		draw_circle(pos, node_r, ready_col)
@@ -184,7 +187,7 @@ func _draw_div_dots(anchor_pos: Vector2, points: int) -> void:
 	var start: Vector2 = anchor_pos + Vector2(18.0, 0.0)
 	var gap: float = 12.0
 	for i in count:
-		draw_circle(start + Vector2(gap * float(i), 0.0), 3.5, COL_DIV_DOT)
+		draw_circle(start + Vector2(gap * float(i), 0.0), 5.0, COL_DIV_DOT)
 
 
 func _draw_tab_indicator(screen_w: float, y_pos: float, font: Font, font_size: int) -> void:
