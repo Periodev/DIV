@@ -781,9 +781,8 @@ func _draw_box_diamond(ent: Entity, eff: float, a: float) -> void:
 		var sc_border: Color = uid_color
 		sc_border.a = 0.88 * a
 		_draw_dashed_diamond(center, NR, sc_border, 1.8, 3.2, 0.0)
-		# White outline when this shadow is the SPACE converge target.
-		if _spec.interaction_hint != null and _spec.interaction_hint.text == "還原" \
-				and ent.pos == _spec.interaction_hint.target_pos:
+		# White outline when this is the facing-box target.
+		if _spec.facing_box_hint_pos != Vector2i(-1, -1) and ent.pos == _spec.facing_box_hint_pos:
 			_draw_diamond(center, NR, Color(1, 1, 1, 0.90 * a), false, 2.2)
 		var sc_text: Color = uid_color
 		sc_text.a = 0.92 * a
@@ -794,9 +793,8 @@ func _draw_box_diamond(ent: Entity, eff: float, a: float) -> void:
 		uc.a = a
 		_draw_diamond(center, NR, uc, true)
 		_draw_diamond(center, NR, Color(0, 0, 0, 0.88 * a), false, 2.2)
-		# Pickup target highlight uses the same-size outer frame as converge.
-		if _spec.interaction_hint != null and _spec.interaction_hint.text == "撿取" \
-				and ent.pos == _spec.interaction_hint.target_pos:
+		# Facing-box highlight uses the same-size outer frame.
+		if _spec.facing_box_hint_pos != Vector2i(-1, -1) and ent.pos == _spec.facing_box_hint_pos:
 			_draw_diamond(center, NR, Color(1, 1, 1, 0.95 * a), false, 2.2)
 		_draw_center_text(str(ent.uid), center, font_size,
 				Color(0.07, 0.07, 0.07, a))

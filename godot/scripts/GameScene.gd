@@ -491,7 +491,8 @@ func _sync_interaction_hint_gates() -> void:
 		return
 	controller.set_interaction_hint_gates(
 		_current_hints.get("converge", false) as bool,
-		_current_hints.get("pickup", false) as bool
+		_current_hints.get("pickup", false) as bool,
+		_current_hints.get("face_box", true) as bool
 	)
 
 

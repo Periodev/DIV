@@ -68,6 +68,7 @@ var just_undid: bool = false
 # Interaction-hint gates (synced from tutorial/progression hints)
 var hint_allow_converge: bool = true
 var hint_allow_pickup: bool = true
+var hint_allow_face_box: bool = true
 
 
 # ---------------------------------------------------------------------------
@@ -107,9 +108,29 @@ func get_active_branch() -> BranchState:
 	return main_branch if current_focus == 0 else sub_branch
 
 
-func set_interaction_hint_gates(allow_converge: bool, allow_pickup: bool) -> void:
+func set_interaction_hint_gates(
+		allow_converge: bool,
+		allow_pickup: bool,
+		allow_face_box: bool = true) -> void:
 	hint_allow_converge = allow_converge
 	hint_allow_pickup = allow_pickup
+	hint_allow_face_box = allow_face_box
+
+
+func get_facing_box_hint_target_pos() -> Vector2i:
+	if not hint_allow_face_box:
+		return Vector2i(-1, -1)
+	var active := get_active_branch()
+	var player := active.get_player()
+	if player == null:
+		return Vector2i(-1, -1)
+	if not active.get_held_items().is_empty():
+		return Vector2i(-1, -1)
+	var front_pos := player.pos + player.direction
+	var target := active.find_box_at(front_pos)
+	if target == null:
+		return Vector2i(-1, -1)
+	return front_pos
 
 
 # ---------------------------------------------------------------------------

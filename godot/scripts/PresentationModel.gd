@@ -28,6 +28,7 @@ class BranchViewSpec:
 	var is_focused:             bool        = false
 	var border_color:           Color       = Color.WHITE
 	var interaction_hint                    = null   # InteractionHint or null
+	var facing_box_hint_pos:    Vector2i    = Vector2i(-1, -1)
 	var timeline_hint:          String      = ""
 	var highlight_branch_point: bool        = false
 	var has_branched:           bool        = false
@@ -177,6 +178,7 @@ static func build(
 	var hint_d: Dictionary = controller.get_interaction_hint()
 	var hint_text: String  = hint_d.get("text", "") as String
 	var ih = null
+	var face_box_hint_pos: Vector2i = Vector2i(-1, -1)
 	if hint_text != "":
 		var is_inset: bool = bool(hint_d.get("is_drop", hint_d.get("is_inset", false)))
 		ih = InteractionHint.new(
@@ -184,6 +186,8 @@ static func build(
 			hint_d.get("color", Color.WHITE) as Color,
 			hint_d.get("target_pos", Vector2i(-1, -1)) as Vector2i,
 			is_inset)
+	if controller.has_method("get_facing_box_hint_target_pos"):
+		face_box_hint_pos = controller.get_facing_box_hint_target_pos()
 
 	# Build main branch spec (DIV 0)
 	spec.main_branch = _make_spec(
@@ -192,6 +196,7 @@ static func build(
 		"DIV 0" if has_branched else "MAIN",
 		BORDER_FOCUSED if (focus == 0) else BORDER_UNFOCUSED,
 		ih if (focus == 0) else null,
+		face_box_hint_pos if (focus == 0) else Vector2i(-1, -1),
 		spec.timeline_hint if (focus == 0) else "",
 		has_branched, preview_on, cell_sz,
 		main_s, main_x, main_y, main_a,
@@ -215,6 +220,7 @@ static func build(
 			"DIV 1",
 			BORDER_FOCUSED if (focus == 1) else BORDER_UNFOCUSED,
 			ih if (focus == 1) else null,
+			face_box_hint_pos if (focus == 1) else Vector2i(-1, -1),
 			spec.timeline_hint if (focus == 1) else "",
 			has_branched, preview_on, cell_sz,
 			sub_s, sub_x, sub_y, sub_a,
@@ -239,6 +245,7 @@ static func _make_spec(
 		p_title:      String,
 		p_border:     Color,
 		p_hint,
+		p_facing_box_hint_pos: Vector2i,
 		p_timeline:   String,
 		p_branched:   bool,
 		p_preview:    bool,
@@ -266,6 +273,7 @@ static func _make_spec(
 	s.title                  = p_title
 	s.border_color           = p_border
 	s.interaction_hint       = p_hint
+	s.facing_box_hint_pos    = p_facing_box_hint_pos
 	s.timeline_hint          = p_timeline
 	s.has_branched           = p_branched
 	s.highlight_branch_point = _is_on_branch_point(p_state) and p_focused and not p_branched
