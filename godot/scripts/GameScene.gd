@@ -56,7 +56,9 @@ var _move_cooldown: float = 0.0
 var _last_held_dir: Vector2i = Vector2i(0, 0)
 var _win_tween: Tween = null
 var _instr_tween: Tween = null
+const _SpotlightScript := preload("res://scripts/SymbolSpotlightUI.gd")
 var tutorial: TutorialController = TutorialController.new()
+var _spotlight: Control = null
 const DEBUG_VICTORY := true
 
 
@@ -129,10 +131,11 @@ func _start_level(idx: int) -> void:
 	hint_overlay.clear_overlay()
 	if _desc_overlay != null:
 		_desc_overlay.hide_desc()
-		var objective: String = level_dict.get("objective", "")
-		if objective != "":
-			var level_name: String = str(level_dict.get("name", ""))
-			_desc_overlay.show_desc(level_name, objective)
+		#var objective: String = level_dict.get("objective", "")
+		#if objective != "":
+		#	var level_name: String = str(level_dict.get("name", ""))
+		#	_desc_overlay.show_desc(level_name, objective)
+
 	merge_preview_active  = false
 	merge_preview_progress = 0.0
 	_set_peek_floor_mode(false)
@@ -143,6 +146,14 @@ func _start_level(idx: int) -> void:
 
 	_apply_frame_spec()
 	_update_ui()
+
+	# Blocking symbol spotlight — built after _apply_frame_spec() so renderer positions are ready.
+	var spotlight_seq: Array = tutorial.get_spotlight_sequence()
+	if not spotlight_seq.is_empty():
+		_ensure_spotlight()
+		var screen_items := _build_spotlight_screen_items(spotlight_seq)
+		if not screen_items.is_empty():
+			_spotlight.show_sequence(screen_items)
 
 
 # ---------------------------------------------------------------------------
@@ -257,6 +268,10 @@ func _process(delta: float) -> void:
 
 func _input(event: InputEvent) -> void:
 	if controller == null:
+		return
+
+	# Spotlight is blocking — let SymbolSpotlightUI handle the event first.
+	if _spotlight != null and _spotlight.visible:
 		return
 
 	if controller.collapsed or controller.victory:
@@ -584,6 +599,9 @@ func _update_ui() -> void:
 				"annotations": ["藍色 = 可合併", "灰色 = 無法合併"]
 			}
 	callout_ui.set_highlight(hl.get("node", ""), hl.get("annotations", []))
+	var world_ann: Dictionary = hl if hl.has("world_domain") else {}
+	renderer0.set_world_annotation(world_ann)
+	renderer1.set_world_annotation(world_ann)
 
 
 func _ensure_hint_overlay() -> void:
@@ -602,6 +620,38 @@ func _ensure_desc_overlay() -> void:
 	_desc_overlay = LevelDescOverlay.new()
 	_desc_overlay.name = "LevelDescOverlay"
 	$UI.add_child(_desc_overlay)
+
+
+func _build_spotlight_screen_items(seq: Array) -> Array:
+	var result: Array = []
+	for item in seq:
+		var domain: String = item.get("domain", "")
+		var type_val: int  = item.get("type", -1)
+		var grid_pos       := Vector2i(-1, -1)
+		if domain == "entity":
+			grid_pos = renderer0.find_entity_pos(type_val)
+		elif domain == "terrain":
+			grid_pos = renderer0.find_terrain_pos(type_val)
+		if grid_pos == Vector2i(-1, -1):
+			continue
+		result.append({
+			"screen_center": renderer0.get_cell_screen_center(grid_pos),
+			"cell_size":     renderer0.get_cell_screen_size(),
+			"title":         item.get("title", ""),
+			"lines":         item.get("lines", []),
+		})
+	return result
+
+
+func _ensure_spotlight() -> void:
+	if _spotlight != null:
+		return
+	_spotlight = _SpotlightScript.new()
+	_spotlight.name = "SymbolSpotlightUI"
+	_spotlight.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_spotlight.z_index = 200
+	_spotlight.visible = false
+	$UI.add_child(_spotlight)
 
 
 func _show_level_desc() -> void:

@@ -3,7 +3,7 @@ tutorial = walk_to_goal
 hints = none
 
 tutorial_steps = '''
-使用 W/A/S/D 或方向鍵走到黃色閃爍的終點
+使用方向鍵控制角色走到終點
 '''
 
 objective = '''
@@ -30,7 +30,7 @@ object_map = '''
 
 --------------------------
 # Core 核心
-tutorial = walk_to_goal
+tutorial = core_intro
 hints = none
 
 tutorial_steps = '''
@@ -132,6 +132,7 @@ hints = diverge
 
 objective = '''
 分裂後，若角色和另一空間核心位置重疊，會導致衝突無法合併
+可觀察下方控制區狀態
 '''
 
 floor_map = '''

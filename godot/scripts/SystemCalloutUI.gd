@@ -24,6 +24,7 @@ var preview_active: bool = false
 var highlight_node: String = ""        # "diverge", "merge", "tab", "preview", ""
 var highlight_annotations: Array = []  # ["藍色 = 可合併", ...]
 var _pulse_time: float = 0.0
+var _tab_text_rect: Rect2 = Rect2()
 
 
 func set_highlight(node_name: String, annotations: Array = []) -> void:
@@ -257,7 +258,7 @@ func _draw_tab_indicator(screen_w: float, y_pos: float, font: Font, font_size: i
 	var text_w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
 	var text_pos: Vector2 = pos + Vector2(12.0, 34.0) if show_left else pos + Vector2(-text_w - 12.0, 34.0)
 	var line_col: Color = COL_LINE_DIM
-	var text_col: Color = COL_TEXT_DIM
+	var text_col: Color = COL_TEXT_LIT
 
 	# Keep one node at mini-panel center, then extend same horizontal line toward baseline.
 	var elbow_x: float = float(PresentationModel.RIGHT_X + PresentationModel.SIDE_GRID * 0.5)
@@ -274,12 +275,21 @@ func _draw_tab_indicator(screen_w: float, y_pos: float, font: Font, font_size: i
 	draw_arc(node_pos, 3.0, 0.0, TAU, 12, line_col, 1.0, true)
 
 	draw_string(font, text_pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, text_col)
+	_tab_text_rect = Rect2(text_pos.x - 3.0, text_pos.y - font_size - 1.0, text_w + 6.0, font_size + 4.0)
 	return node_pos
 
 
 func _draw_highlight(pos: Vector2, font: Font, font_size: int) -> void:
-	# Keep highlight ring fixed in place; only the outline brightness blinks.
 	var blink: float = 0.5 + 0.5 * sin(_pulse_time * 4.0)
+
+	if highlight_node == "tab" and _tab_text_rect.size != Vector2.ZERO:
+		# Box highlight around the "[TAB]" text label
+		var rect_col := Color(1.0, 1.0, 0.6, 0.40 + 0.45 * blink)
+		draw_rect(_tab_text_rect, Color(1.0, 1.0, 0.6, 0.06 + 0.06 * blink))
+		draw_rect(_tab_text_rect, rect_col, false, 1.5)
+		return
+
+	# Default: ring around node
 	var ring_r: float = 16.0
 	var ring_col := Color(1.0, 1.0, 0.6, 0.35 + 0.45 * blink)
 	draw_arc(pos, ring_r, 0.0, TAU, 32, ring_col, 2.0, true)

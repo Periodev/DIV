@@ -79,6 +79,7 @@ var _cell_scale: float        = 0.0
 var _nr: float                = 0.0
 var _gpx: float               = 0.0
 var _alpha: float             = 1.0
+var world_annotation: Dictionary = {}  # {"world_domain": "entity"/"terrain", "world_type": int, "text": String}
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -97,6 +98,46 @@ func set_peek_floor_mode(enabled: bool) -> void:
 		return
 	_peek_floor_mode = enabled
 	queue_redraw()
+
+
+func set_world_annotation(ann: Dictionary) -> void:
+	world_annotation = ann
+	queue_redraw()
+
+
+## Returns the first grid position of an entity with the given type, or (-1,-1).
+func find_entity_pos(entity_type: int) -> Vector2i:
+	if _spec == null or _spec.state == null:
+		return Vector2i(-1, -1)
+	for e in _spec.state.entities:
+		if e.type == entity_type:
+			return e.pos
+	return Vector2i(-1, -1)
+
+
+## Returns the first grid position of a terrain cell with the given type, or (-1,-1).
+func find_terrain_pos(terrain_type: int) -> Vector2i:
+	if _spec == null or _spec.state == null:
+		return Vector2i(-1, -1)
+	for pos in _spec.state.terrain:
+		if _spec.state.terrain[pos] == terrain_type:
+			return pos
+	return Vector2i(-1, -1)
+
+
+## Returns the screen-space center of the given grid cell.
+func get_cell_screen_center(grid_pos: Vector2i) -> Vector2:
+	if _spec == null:
+		return Vector2.ZERO
+	var eff := _spec.cell_size * _spec.scale
+	return position + Vector2((grid_pos.x + 0.5) * eff, (grid_pos.y + 0.5) * eff)
+
+
+## Returns the effective cell size in screen pixels.
+func get_cell_screen_size() -> float:
+	if _spec == null:
+		return 60.0
+	return _spec.cell_size * _spec.scale
 
 
 func _ready() -> void:
@@ -163,6 +204,10 @@ func _draw() -> void:
 
 	# Title above panel
 	_draw_title(gpx, a)
+
+	# World annotation (tutorial symbol callout)
+	if not world_annotation.is_empty():
+		_draw_world_annotation()
 
 # ---------------------------------------------------------------------------
 # Terrain - connection lines
@@ -1688,6 +1733,65 @@ func _dash_offset(speed: float = -1.0) -> float:
 
 func _grid_to_local_center(pos: Vector2i, eff: float) -> Vector2:
 	return Vector2((float(pos.x) + 0.5) * eff, (float(pos.y) + 0.5) * eff)
+
+
+# ---------------------------------------------------------------------------
+# World annotation - tutorial symbol callout overlay
+# ---------------------------------------------------------------------------
+
+func _draw_world_annotation() -> void:
+	if _spec == null or _spec.state == null:
+		return
+	var domain: String = world_annotation.get("world_domain", "")
+	var type_val: int = world_annotation.get("world_type", -1)
+	var text: String = world_annotation.get("text", "")
+	if domain == "" or type_val < 0 or text == "":
+		return
+
+	# Find the first matching entity or terrain cell
+	var target_pos := Vector2i(-1, -1)
+	if domain == "entity":
+		for e in _spec.state.entities:
+			if e.type == type_val:
+				target_pos = e.pos
+				break
+	elif domain == "terrain":
+		for pos in _spec.state.terrain:
+			if _spec.state.terrain[pos] == type_val:
+				target_pos = pos
+				break
+	if target_pos == Vector2i(-1, -1):
+		return  # entity/terrain not present in this branch
+
+	var center := _grid_to_local_center(target_pos, _eff)
+	var pulse := 0.5 + 0.5 * sin(_time * 4.0)
+
+	# Small ring on the target cell
+	draw_arc(center, _nr * 0.55, 0.0, TAU, 20, Color(1.0, 1.0, 0.6, 0.5 + 0.35 * pulse), 1.5, true)
+
+	# Arrow direction: right if on left half of grid, left if on right half
+	var gs := _spec.state.grid_size
+	var go_right := float(target_pos.x) < float(gs) * 0.5
+	var h_sign := 1.0 if go_right else -1.0
+	var line_end := center + Vector2(h_sign * _eff * 1.1, _eff * 0.45)
+
+	draw_line(center, line_end, Color(1.0, 1.0, 0.6, 0.4 + 0.3 * pulse), 1.0)
+
+	# Label box
+	var font: Font = ThemeDB.fallback_font
+	if font == null:
+		return
+	var font_size := 12
+	var text_w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
+	var pad := 5.0
+	var box_w := text_w + pad * 2.0
+	var box_h := float(font_size) + pad * 2.0
+	var box_x := line_end.x if go_right else line_end.x - box_w
+	var box_y := line_end.y - box_h * 0.5
+	draw_rect(Rect2(box_x, box_y, box_w, box_h), Color(0.08, 0.08, 0.08, 0.88))
+	draw_rect(Rect2(box_x, box_y, box_w, box_h), Color(1.0, 1.0, 0.6, 0.3 + 0.35 * pulse), false, 1.0)
+	draw_string(font, Vector2(box_x + pad, box_y + pad + font_size * 0.85),
+		text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, Color(1.0, 1.0, 0.85, 0.95))
 
 
 func _pixel_snap_rect(rect: Rect2) -> Rect2:

@@ -10,6 +10,7 @@ enum Check { PLAYER_ON_GOAL, GOAL_ACTIVE, GOAL_ACTIVE_CROSS, HAS_BRANCHED, SWITC
 # Level files provide matching labels via tutorial_steps.
 const TUTORIAL_CHECKS := {
 	"walk_to_goal": [Check.PLAYER_ON_GOAL],
+	"core_intro":   [Check.PLAYER_ON_GOAL],
 	"switch_and_goal": [Check.SWITCH_PROGRESS, Check.GOAL_ACTIVE],
 	"split_switches": [
 		Check.SWITCH_ACTIVATED,
@@ -36,13 +37,44 @@ const TUTORIAL_CHECKS := {
 	],
 }
 
-## Highlight node names used by SystemCalloutUI
+## Highlight node names used by SystemCalloutUI (control bar).
 ## Check type → { "node": String, "annotations": Array[String] }
 const CHECK_HIGHLIGHTS := {
-	Check.HAS_BRANCHED: {"node": "diverge", "annotations": ["綠色 = 有充能，可分裂"]},
-	Check.INPUT_TAB: {"node": "tab", "annotations": []},
-	Check.INPUT_M: {"node": "preview", "annotations": []},
-	Check.MERGE_SUCCESS: {"node": "merge", "annotations": ["藍色 = 可合併", "灰色 = 無法合併"]},
+}
+
+## Blocking spotlight sequences per tutorial ID.
+## Each item: { "domain": "entity"/"terrain", "type": int, "title": String, "lines": Array[String] }
+const SPOTLIGHT_SEQUENCES := {
+	"walk_to_goal": [
+		{
+			"domain": "entity",
+			"type": Enums.EntityType.PLAYER,
+			"title": "角色",
+			"lines": ["藍色圓圈是你控制的角色", "白色箭頭代表角色面向方向", "使用 W/A/S/D 或方向鍵移動"]
+		},
+		{
+			"domain": "terrain",
+			"type": Enums.TerrainType.GOAL,
+			"title": "終點",
+			"lines": ["黃色圓圈是終點", "走到閃爍的終點即可過關"]
+		},
+	],
+	"core_intro": [
+		{
+			"domain": "entity",
+			"type": Enums.EntityType.BOX,
+			"title": "核心",
+			"lines": ["菱形色塊，可被推動", "面對核心移動即可推動一格", "一次只能推動一個核心"]
+		}
+	],
+	"switch_and_goal": [
+		{
+			"domain": "terrain",
+			"type": Enums.TerrainType.SWITCH,
+			"title": "目標",
+			"lines": ["灰色菱形框，啟動點", "將核心推進目標格可啟動", "所有目標啟動後，終點開啟"]
+		}
+	],
 }
 
 var _scene: GameScene
@@ -85,17 +117,32 @@ func stop() -> void:
 	_active = false
 
 
+## Returns spotlight sequence for this tutorial ID, or [] if none.
+func get_spotlight_sequence() -> Array:
+	if SPOTLIGHT_SEQUENCES.has(_tutorial_id):
+		return SPOTLIGHT_SEQUENCES[_tutorial_id]
+	return []
+
+
 ## Returns highlight info for SystemCalloutUI, or empty dict if none.
 func get_highlight() -> Dictionary:
 	if not _active:
 		return {}
-	# Find first uncompleted item that has a highlight
+	# Find first uncompleted item that has a highlight (respecting include/exclude lists)
 	for item in _items:
 		if item["done"]:
 			continue
 		var check: Check = item["check"] as Check
-		if CHECK_HIGHLIGHTS.has(check):
-			return CHECK_HIGHLIGHTS[check]
+		if not CHECK_HIGHLIGHTS.has(check):
+			continue
+		var hl: Dictionary = CHECK_HIGHLIGHTS[check]
+		var exclude: Array = hl.get("exclude", [])
+		if exclude.has(_tutorial_id):
+			continue
+		var include: Array = hl.get("include", [])
+		if not include.is_empty() and not include.has(_tutorial_id):
+			continue
+		return hl
 	return {}
 
 
