@@ -45,8 +45,9 @@ const FALL_HOLD_DURATION := 0.10
 const FALL_ANIM_DURATION := 0.25
 
 # Held-key movement (mirrors Python game_window.py on_update + move_cooldown)
-const MOVE_REPEAT_DELAY := 0.133  # seconds between repeats (~8 frames @ 60 fps)
+const MOVE_REPEAT_DELAY := 0.250  # seconds between repeats (~400ms per step)
 var _move_cooldown: float = 0.0
+var _last_held_dir: Vector2i = Vector2i(0, 0)
 const DEBUG_VICTORY := true
 
 
@@ -118,6 +119,7 @@ func _start_level(idx: int) -> void:
 	slide_progress        = 0.0
 	slide_active          = false
 	_move_cooldown        = 0.0
+	_last_held_dir        = Vector2i(0, 0)
 
 	_apply_frame_spec()
 	_update_ui()
@@ -202,12 +204,17 @@ func _process(delta: float) -> void:
 	# Movement keys are NOT handled in _input(); they are polled here every frame
 	# so that holding a direction gives smooth continuous movement.
 	if controller != null and not controller.collapsed and not controller.victory:
-		_move_cooldown -= delta
-		if _move_cooldown <= 0.0:
-			var dir := _get_held_direction()
-			if dir != Vector2i(0, 0):
+		var dir := _get_held_direction()
+		_move_cooldown = maxf(_move_cooldown - delta, 0.0)
+		if dir == Vector2i(0, 0):
+			_last_held_dir = Vector2i(0, 0)
+			_move_cooldown = 0.0
+		else:
+			var dir_changed: bool = dir != _last_held_dir
+			if dir_changed or _move_cooldown <= 0.0:
 				controller.handle_move(dir)
 				_move_cooldown = MOVE_REPEAT_DELAY
+			_last_held_dir = dir
 
 	# Physics runs every frame — mirrors Python game_window.py on_update (line 117).
 	# update_physics() is called unconditionally each frame (not only on input),
