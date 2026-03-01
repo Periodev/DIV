@@ -53,6 +53,8 @@ class BranchViewSpec:
 	var show_fetch_indicator:   bool        = false
 	var fetch_mode_enabled:     bool        = false
 	var show_player_direction:  bool        = true
+	var overlay_entity_scale:   float       = 1.0
+	var overlay_skip_positions: Dictionary  = {}   # Vector2i → true; shared positions to skip in overlay
 
 
 ## Complete visual specification for one frame.
@@ -155,6 +157,20 @@ static func build(
 
 	var preview_on := merge_preview_active or merge_preview_progress > 0.0
 
+	# Overlay entity scale: non-focused branch entities shrink during merge preview
+	var main_oes := 1.0
+	var sub_oes := 1.0
+	var main_skip: Dictionary = {}
+	var sub_skip: Dictionary = {}
+	if preview_on:
+		var oes_t := _ease_in_out(clampf(merge_preview_progress, 0.0, 1.0))
+		if focus == 0:
+			sub_oes = lerpf(1.0, 0.72, oes_t)
+			sub_skip = _shared_entity_positions(controller.main_branch, controller.sub_branch)
+		else:
+			main_oes = lerpf(1.0, 0.72, oes_t)
+			main_skip = _shared_entity_positions(controller.sub_branch, controller.main_branch)
+
 	if not has_branched:
 		main_x = CENTER_X; main_y = CENTER_Y; main_s = FOCUS_SCALE
 	elif preview_on:
@@ -210,7 +226,9 @@ static func build(
 		show_merge_hint,
 		merge_hint_enabled,
 		show_fetch_indicator,
-		fetch_mode_enabled)
+		fetch_mode_enabled,
+		main_oes,
+		main_skip)
 
 	# Build sub branch spec (DIV 1)
 	if has_branched and controller.sub_branch != null:
@@ -234,7 +252,9 @@ static func build(
 			show_merge_hint,
 			merge_hint_enabled,
 			show_fetch_indicator,
-			fetch_mode_enabled)
+			fetch_mode_enabled,
+			sub_oes,
+			sub_skip)
 
 	return spec
 
@@ -265,7 +285,9 @@ static func _make_spec(
 		p_show_merge_hint: bool,
 		p_merge_hint_enabled: bool,
 		p_show_fetch_indicator: bool,
-		p_fetch_mode_enabled: bool) -> BranchViewSpec:
+		p_fetch_mode_enabled: bool,
+		p_overlay_entity_scale: float = 1.0,
+		p_overlay_skip_positions: Dictionary = {}) -> BranchViewSpec:
 
 	var s := BranchViewSpec.new()
 	s.state                  = p_state
@@ -295,31 +317,31 @@ static func _make_spec(
 	s.merge_hint_enabled     = p_merge_hint_enabled
 	s.show_fetch_indicator   = p_show_fetch_indicator
 	s.fetch_mode_enabled     = p_fetch_mode_enabled
+	s.overlay_entity_scale   = p_overlay_entity_scale
+	s.overlay_skip_positions = p_overlay_skip_positions
 	return s
 
 
 static func _calc_merge_preview_positions(focus: int, progress: float) -> Array:
 	# Returns [main_x, main_y, main_scale, sub_x, sub_y, sub_scale, main_alpha, sub_alpha]
 	var t := _ease_in_out(clampf(progress, 0.0, 1.0))
-	var offset_x := 2
-	var offset_y := 2
 	var main_x: int; var main_y: int; var main_s: float; var main_a: float
 	var sub_x: int;  var sub_y: int;  var sub_s: float;  var sub_a: float
 
 	if focus == 0:
 		# Focused DIV0 stays centered and opaque.
 		main_x = CENTER_X; main_y = CENTER_Y; main_s = FOCUS_SCALE; main_a = 1.0
-		# DIV1 slides/grows from side to center+offset and fades to preview alpha.
-		sub_x = int(lerpf(RIGHT_X, CENTER_X + offset_x, t))
-		sub_y = int(lerpf(SIDE_Y, CENTER_Y + offset_y, t))
+		# DIV1 slides/grows from side to center exactly and fades to preview alpha.
+		sub_x = int(lerpf(RIGHT_X, CENTER_X, t))
+		sub_y = int(lerpf(SIDE_Y, CENTER_Y, t))
 		sub_s = lerpf(SIDE_SCALE, FOCUS_SCALE, t)
 		sub_a = lerpf(1.0, 0.7, t)
 	else:
 		# Focused DIV1 stays centered and opaque.
 		sub_x = CENTER_X; sub_y = CENTER_Y; sub_s = FOCUS_SCALE; sub_a = 1.0
-		# DIV0 slides/grows from side to center+offset and fades to preview alpha.
-		main_x = int(lerpf(LEFT_X, CENTER_X + offset_x, t))
-		main_y = int(lerpf(SIDE_Y, CENTER_Y + offset_y, t))
+		# DIV0 slides/grows from side to center exactly and fades to preview alpha.
+		main_x = int(lerpf(LEFT_X, CENTER_X, t))
+		main_y = int(lerpf(SIDE_Y, CENTER_Y, t))
 		main_s = lerpf(SIDE_SCALE, FOCUS_SCALE, t)
 		main_a = lerpf(1.0, 0.7, t)
 
@@ -401,3 +423,21 @@ static func _branch_has_underground_entity(branch: BranchState, uid: int, pos: V
 		if ent != null and ent.uid == uid and ent.pos == pos and ent.z == -1:
 			return true
 	return false
+
+
+## Returns positions where both branches have a floor entity (z >= 0) at the same spot.
+## Used to skip redundant overlay entities in merge preview.
+static func _shared_entity_positions(focused: BranchState, overlay: BranchState) -> Dictionary:
+	var result: Dictionary = {}
+	if focused == null or overlay == null:
+		return result
+	var focused_positions: Dictionary = {}
+	for e in focused.entities:
+		var ent := e as Entity
+		if ent != null and ent.z >= 0:
+			focused_positions[ent.pos] = true
+	for e in overlay.entities:
+		var ent := e as Entity
+		if ent != null and ent.z >= 0 and focused_positions.has(ent.pos):
+			result[ent.pos] = true
+	return result

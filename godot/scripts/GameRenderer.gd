@@ -123,7 +123,7 @@ func _draw() -> void:
 	_gpx = _eff * gs
 	_alpha = _spec.alpha
 	_cell_scale = _eff / 80.0
-	_nr = _eff * nr_factor * entity_scale
+	_nr = _eff * nr_factor * entity_scale * _spec.overlay_entity_scale
 
 	var eff: float = _eff
 	var gpx: float = _gpx
@@ -732,7 +732,12 @@ func _draw_entities(eff: float, a: float) -> void:
 		boxes.append(ent)
 	boxes.sort_custom(func(l: Entity, r: Entity) -> bool: return l.z < r.z)
 
+	var is_overlay: bool = _spec.is_merge_preview and not _spec.is_focused
+
 	for ent in boxes:
+		# Skip overlay entities at positions already occupied in the focused branch.
+		if is_overlay and _spec.overlay_skip_positions.has(ent.pos):
+			continue
 		var fade_front: bool = (
 			_peek_floor_mode
 			and _spec.is_focused
@@ -768,7 +773,7 @@ func _draw_box_diamond(ent: Entity, eff: float, a: float) -> void:
 	var is_shadow: bool   = _spec.state.is_shadow(ent.uid)
 
 	var center: Vector2 = _grid_to_local_center(ent.pos, eff)
-	var font_size: int = int(14.0 * cell_scale * entity_scale)
+	var font_size: int = int(14.0 * cell_scale * entity_scale * _spec.overlay_entity_scale)
 
 	if is_shadow:
 		# Shadow entity: bg-color fill (clears overlap) + original-color dashed border + colored text.
@@ -853,7 +858,7 @@ func _draw_overlap_box_diamond(stacked: Array, pos: Vector2i, eff: float, a: flo
 
 	# Labels: two separate numbers on each half.
 	# Solid half - black text; shadow half - original-color text.
-	var font_size: int = int(13.0 * _cell_scale * entity_scale)
+	var font_size: int = int(13.0 * _cell_scale * entity_scale * _spec.overlay_entity_scale)
 	var half_off:  float = NR * 0.32
 	var left_text_col: Color = Color(0.07, 0.07, 0.07, a) if not left_shadow \
 			else Color(left_base.r,  left_base.g,  left_base.b,  0.92 * a)
@@ -867,11 +872,26 @@ func _draw_player(player: Entity, eff: float, a: float) -> void:
 	if player == null:
 		return
 
+	var is_overlay: bool = _spec.is_merge_preview and not _spec.is_focused
+
+	# Skip overlay player if at a position shared with the focused branch.
+	if is_overlay and _spec.overlay_skip_positions.has(player.pos):
+		return
+
 	var cell_scale: float = _cell_scale
 	var NR: float         = _nr
 	var PR: float         = NR * 0.68
 	var arrow_base: float = PR
 	var center: Vector2   = _grid_to_local_center(player.pos, eff)
+
+	# Overlay mode: always draw as desaturated blue circle, no arrow.
+	if is_overlay:
+		var fill_col := _desat(Color(0.467, 0.600, 0.933, 1.0), 0.35)
+		var rim_col  := _desat(Color(0.78, 0.86, 1.0, 0.75), 0.35)
+		draw_circle(center, PR, _col(fill_col, a))
+		draw_arc(center, PR, 0, TAU, 24, _col(rim_col, a), 2.0)
+		return
+
 	var held_items: Array[int] = _spec.state.get_held_items()
 	var held_uid: int     = held_items[0] if not held_items.is_empty() else -1
 	var font_size: int    = int(14.0 * cell_scale * entity_scale)
@@ -880,7 +900,6 @@ func _draw_player(player: Entity, eff: float, a: float) -> void:
 		_spec.state.terrain.get(player.pos, Enums.TerrainType.FLOOR) == Enums.TerrainType.NO_CARRY
 
 	if on_drop_zone:
-		# DZ state: keep original blue style, but with a true hollow center.
 		var hole_r: float = PR * DROP_ZONE_HOLE_RATIO
 		var mid_r: float = (PR + hole_r) * 0.5
 		var band_w: float = maxf(1.6, PR - hole_r)
@@ -889,7 +908,6 @@ func _draw_player(player: Entity, eff: float, a: float) -> void:
 		draw_arc(center, PR, 0, TAU, 24,
 				_col(Color(0.78, 0.86, 1.0, 0.75), a), 2.0)
 	elif held_uid != -1:
-		# Holding: filled diamond in held box's colour
 		var uid_color: Color = box_colors[(held_uid - 1) % 5]
 		var uc: Color = uid_color
 		uc.a = a
@@ -898,12 +916,11 @@ func _draw_player(player: Entity, eff: float, a: float) -> void:
 		_draw_center_text(str(held_uid), center, font_size,
 				Color(0.07, 0.07, 0.07, a))
 	else:
-		# Empty-handed: circle
 		draw_circle(center, PR, _col(Color(0.467, 0.600, 0.933, 1.0), a))
 		draw_arc(center, PR, 0, TAU, 24,
 				_col(Color(0.78, 0.86, 1.0, 0.75), a), 2.0)
 
-	# Arrow keeps a fixed size/offset regardless of held item state.
+	# Arrow
 	if _spec.show_player_direction:
 		_draw_dir_arrow(center, player.direction, arrow_base, Color(1, 1, 1, 0.92 * a))
 
@@ -1187,7 +1204,7 @@ func _draw_falling_entry_overlay(
 		center: Vector2, NR: float,
 		uid_color: Color, is_shadow: bool,
 		uid: int, a: float) -> void:
-	var font_size: int = int(14.0 * _cell_scale * entity_scale)
+	var font_size: int = int(14.0 * _cell_scale * entity_scale * _spec.overlay_entity_scale)
 	if is_shadow:
 		_draw_diamond(center, NR, _col(COLOR_BG, a), true)
 		_draw_dashed_diamond(center, NR, Color(uid_color.r, uid_color.g, uid_color.b, 0.88 * a), 1.8, 3.2, 0.0)
@@ -1644,6 +1661,16 @@ func _col(c: Color, a: float) -> Color:
 	var out := c
 	out.a   *= a
 	return out
+
+
+## Reduce saturation: factor 1.0 = original, 0.0 = fully gray.
+func _desat(c: Color, factor: float) -> Color:
+	var gray: float = c.r * 0.299 + c.g * 0.587 + c.b * 0.114
+	return Color(
+		lerpf(gray, c.r, factor),
+		lerpf(gray, c.g, factor),
+		lerpf(gray, c.b, factor),
+		c.a)
 
 
 func _draw_center_text(text: String, center: Vector2, font_size: int, col: Color) -> void:
