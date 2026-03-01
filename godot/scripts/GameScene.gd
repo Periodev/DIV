@@ -124,8 +124,8 @@ func _start_level(idx: int) -> void:
 	hide_instruction()
 
 	var tutorial_id: String = level_dict.get("tutorial", "")
-	var objective: String = level_dict.get("objective", "")
-	tutorial.start_level(tutorial_id, objective, self)
+	var tutorial_steps: Array = level_dict.get("tutorial_steps", [])
+	tutorial.start_level(tutorial_id, tutorial_steps, self)
 	hint_overlay.clear_overlay()
 	if _desc_overlay != null:
 		_desc_overlay.hide_desc()
@@ -615,14 +615,15 @@ func _save_selected_level_idx() -> void:
 
 
 func show_instruction(title: String, body_bbcode: String) -> void:
+	if _instr_tween != null:
+		_instr_tween.kill()
+		_instr_tween = null
 	instr_title.text = title
 	instr_body.text = body_bbcode
 	var already_visible := instr_toast.visible and instr_toast.modulate.a > 0.9
 	if not already_visible:
 		instr_toast.modulate.a = 0.0
 		instr_toast.visible = true
-		if _instr_tween != null:
-			_instr_tween.kill()
 		_instr_tween = create_tween()
 		_instr_tween.tween_property(instr_toast, "modulate:a", 1.0, 0.3) \
 			.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)

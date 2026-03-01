@@ -1414,6 +1414,10 @@ func _draw_flash(eff: float, a: float) -> void:
 			var nr: float = _nr
 			_draw_diamond(center, nr, Color(col.r, col.g, col.b, 0.32 * alpha_k), true)
 			_draw_diamond(center, nr, Color(col.r, col.g, col.b, 0.95 * alpha_k), false, 2.4)
+		"diamond":
+			var nr: float = _nr
+			_draw_diamond(center, nr, Color(col.r, col.g, col.b, 0.40 * alpha_k), true)
+			_draw_diamond(center, nr, Color(col.r, col.g, col.b, 0.95 * alpha_k), false, 3.0)
 		_:
 			var rect := Rect2(
 				_spec.flash_pos.x * eff,

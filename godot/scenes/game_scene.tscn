@@ -1,8 +1,24 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/GameScene.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/GameRenderer.gd" id="2"]
 [ext_resource type="Script" path="res://scripts/SystemCalloutUI.gd" id="3"]
+
+[sub_resource type="StyleBoxFlat" id="toast_bg"]
+bg_color = Color(0.1, 0.1, 0.1, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.3)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_left = 6
+corner_radius_bottom_right = 6
+content_margin_left = 12.0
+content_margin_top = 10.0
+content_margin_right = 12.0
+content_margin_bottom = 10.0
 
 [node name="GameScene" type="Node2D"]
 script = ExtResource("1")
@@ -89,9 +105,10 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 [node name="InstructionToast" type="PanelContainer" parent="UI"]
 visible = false
 offset_left = 16.0
-offset_top = 16.0
+offset_top = 40.0
 offset_right = 300.0
 mouse_filter = 2
+theme_override_styles/panel = SubResource("toast_bg")
 
 [node name="InstrVBox" type="VBoxContainer" parent="UI/InstructionToast"]
 theme_override_constants/separation = 4
@@ -99,7 +116,7 @@ theme_override_constants/separation = 4
 [node name="InstrTitle" type="Label" parent="UI/InstructionToast/InstrVBox"]
 text = ""
 theme_override_font_sizes/font_size = 14
-theme_override_colors/font_color = Color(0.45, 0.75, 0.45, 1)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
 
 [node name="InstrBody" type="RichTextLabel" parent="UI/InstructionToast/InstrVBox"]
 bbcode_enabled = true
@@ -107,7 +124,7 @@ fit_content = true
 scroll_active = false
 mouse_filter = 2
 theme_override_font_sizes/normal_font_size = 13
-theme_override_colors/default_color = Color(0.75, 0.75, 0.75, 1)
+theme_override_colors/default_color = Color(1, 1, 1, 1)
 
 [node name="WinToast" type="PanelContainer" parent="UI"]
 visible = false

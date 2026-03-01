@@ -208,6 +208,17 @@ static func _parse_one_section(text: String) -> Dictionary:
 	if tut_result != null:
 		tutorial_id = tut_result.get_string(1).strip_edges()
 
+	# Extract tutorial_steps (per-line labels for checklist)
+	var steps_match := RegEx.new()
+	steps_match.compile("tutorial_steps\\s*=\\s*'''([\\s\\S]*?)'''")
+	var steps_result := steps_match.search(text)
+	var tutorial_steps: Array[String] = []
+	if steps_result != null:
+		for line in steps_result.get_string(1).split("\n"):
+			var stripped := line.strip_edges()
+			if stripped != "":
+				tutorial_steps.append(stripped)
+
 	return {
 		"name":       name_val,
 		"floor_map":  floor_result.get_string(1),
@@ -215,4 +226,5 @@ static func _parse_one_section(text: String) -> Dictionary:
 		"hints":      parsed_hints,
 		"objective":  objective,
 		"tutorial":   tutorial_id,
+		"tutorial_steps": tutorial_steps,
 	}

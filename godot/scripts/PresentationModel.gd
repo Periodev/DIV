@@ -166,10 +166,12 @@ static func build(
 		var oes_t := _ease_in_out(clampf(merge_preview_progress, 0.0, 1.0))
 		if focus == 0:
 			sub_oes = lerpf(1.0, 0.72, oes_t)
-			sub_skip = _shared_entity_positions(controller.main_branch, controller.sub_branch)
+			if merge_preview_progress >= 1.0:
+				sub_skip = _shared_entity_positions(controller.main_branch, controller.sub_branch)
 		else:
 			main_oes = lerpf(1.0, 0.72, oes_t)
-			main_skip = _shared_entity_positions(controller.sub_branch, controller.main_branch)
+			if merge_preview_progress >= 1.0:
+				main_skip = _shared_entity_positions(controller.sub_branch, controller.main_branch)
 
 	if not has_branched:
 		main_x = CENTER_X; main_y = CENTER_Y; main_s = FOCUS_SCALE
