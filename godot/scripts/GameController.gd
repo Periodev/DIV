@@ -8,6 +8,8 @@ signal state_changed
 signal victory_achieved
 ## Emitted when a branch collapses (player falls).
 signal collapse_occurred
+## Emitted when the player successfully restores a shadow (SPACE converge/fuse).
+signal restore_performed
 
 
 # ---------------------------------------------------------------------------
@@ -519,6 +521,7 @@ func handle_adaptive_action(allow_converge: bool = true, allow_pickup: bool = tr
 		_log_input("C")
 		_save_snapshot()
 		state_changed.emit()
+		restore_performed.emit()
 		return true
 	else:
 		return handle_pickup(allow_pickup)

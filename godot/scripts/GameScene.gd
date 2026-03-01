@@ -119,6 +119,7 @@ func _start_level(idx: int) -> void:
 	controller.state_changed.connect(_on_state_changed)
 	controller.victory_achieved.connect(_on_victory)
 	controller.collapse_occurred.connect(_on_collapse)
+	controller.restore_performed.connect(tutorial.on_restore)
 	_sync_interaction_hint_gates()
 
 	overlay_backdrop.visible = false

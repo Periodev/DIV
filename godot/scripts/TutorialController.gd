@@ -4,7 +4,7 @@
 class_name TutorialController
 
 # Check type constants — each tutorial ID maps to a fixed sequence of these.
-enum Check { PLAYER_ON_GOAL, GOAL_ACTIVE, GOAL_ACTIVE_CROSS, HAS_BRANCHED, SWITCH_ACTIVATED, SWITCH_PROGRESS, SWITCH_ALL_CROSS, INPUT_TAB, INPUT_M, MERGED, MERGE_SUCCESS }
+enum Check { PLAYER_ON_GOAL, GOAL_ACTIVE, GOAL_ACTIVE_CROSS, HAS_BRANCHED, SWITCH_ACTIVATED, SWITCH_PROGRESS, SWITCH_ALL_CROSS, INPUT_TAB, INPUT_M, MERGED, MERGE_SUCCESS, SPACE_RESTORE }
 
 # Tutorial ID → array of check types (defines the check sequence).
 # Level files provide matching labels via tutorial_steps.
@@ -34,6 +34,11 @@ const TUTORIAL_CHECKS := {
 		Check.INPUT_TAB,
 		Check.GOAL_ACTIVE,
 		Check.MERGE_SUCCESS,
+	],
+	"restore_intro": [
+		Check.HAS_BRANCHED,
+		Check.MERGE_SUCCESS,
+		Check.SPACE_RESTORE,
 	],
 }
 
@@ -150,6 +155,17 @@ func on_state_changed() -> void:
 	if not _active:
 		return
 	_evaluate_checks()
+
+
+func on_restore() -> void:
+	if not _active:
+		return
+	for i in _items.size():
+		if _items[i]["done"]:
+			continue
+		if _items[i]["check"] == Check.SPACE_RESTORE:
+			_complete_item(i)
+			break
 
 
 func on_input(key: int) -> void:

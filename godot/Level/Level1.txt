@@ -1,30 +1,48 @@
 # Restore 還原
-
+tutorial = restore_intro
 hints = diverge converge
 
+tutorial_steps = '''
+分裂
+在右邊空地區合併
+面對目標處殘影，按 [SPACE] 還原
+'''
+
 objective = '''
-任務：[還原]核心後走到終點
-
-合併後，來自兩個空間的核心留下殘影
-面對其中一個殘影按 [SPACE]，[還原]為核心，其它殘影會消失
-連線標示出其他將消失的殘影
-
-按 [Z] 退回上一步
-
+合併後，兩個空間的核心會化成殘影
+將殘影[還原]為核心，就能再推動
+[還原]會連帶消除其它相同來源的殘影(以虛線連結)
 '''
 
 floor_map = '''
-#v##
-#S.#
-#G.#
-####
+#v#
+#S.
+#G.
 '''
 
 object_map = '''
-.@..
-.B..
-....
-....
+.@.
+.B.
+...
+'''
+
+--------------------------
+# Cross 錯身
+
+objective = '''
+原地轉向
+'''
+
+floor_map = '''
+#v#
+S..
+#G#
+'''
+
+object_map = '''
+.@.
+.B.
+...
 '''
 
 --------------------------
@@ -33,50 +51,33 @@ object_map = '''
 hints = diverge converge
 
 objective = '''
+合併後，角色會留在當前空間的位置
+使用 [M] 預覽追蹤角色位置
 '''
 
 floor_map = '''
-######
-######
-Sv...G
-######
-######
-######
+#####
+#####
+Sv..G
+#####
+#####
 '''
 
 object_map = '''
-......
-......
-.@B...
-......
-......
-......
+.....
+.....
+@B...
+.....
+.....
 '''
 
---------------------------
-# Cross 錯身
 
-objective = '''
-'''
-
-floor_map = '''
-##.#
-v..G
-##S#
-####
-'''
-
-object_map = '''
-....
-@.B.
-....
-....
-'''
 
 --------------------------
 # Corner 轉角
 
 objective = '''
+終點前換手
 '''
 
 floor_map = '''
@@ -119,7 +120,7 @@ object_map = '''
 # Crossroad 十字路口
 
 objective = '''
-
+再轉向
 '''
 
 floor_map = '''
@@ -140,7 +141,8 @@ object_map = '''
 # Re-Restore 再還原
 
 objective = '''
-殘影可以不還原，保留到下一輪分裂
+殘影可以不還原，保留並再次分裂
+兩空間的殘影互相獨立
 '''
 
 floor_map = '''
@@ -161,13 +163,13 @@ object_map = '''
 # Triple 三重
 
 objective = '''
-分裂點外的同心圓圈數，代表額外充能次數
+利用空間獨立性，產生第三個殘影位置
 '''
 
 floor_map = '''
 ####
-....
-V...
+v...
+v...
 GSSS
 '''
 
@@ -182,6 +184,7 @@ object_map = '''
 # Edge 邊緣
 
 objective = '''
+分裂點外的同心圓圈數，代表額外充能次數
 '''
 
 floor_map = '''
@@ -195,8 +198,8 @@ V.G.#
 object_map = '''
 .....
 .....
-@B...
-.....
+.B...
+@....
 .....
 '''
 --------------------------
@@ -205,6 +208,7 @@ object_map = '''
 hints = diverge converge
 
 objective = '''
+殘影占據空間，謹慎規劃路線
 '''
 
 floor_map = '''
@@ -227,6 +231,7 @@ object_map = '''
 hints = diverge converge
 
 objective = '''
+找出關鍵節點
 '''
 
 floor_map = '''
@@ -244,33 +249,12 @@ object_map = '''
 '''
 
 --------------------------
-# Resolve 解析
-
-hints = diverge converge
-
-objective = '''
-'''
-
-floor_map = '''
-##G#
-##v.
-#S.S
-#S.V
-'''
-
-object_map = '''
-....
-..@.
-..BB
-....
-'''
-
---------------------------
 # Corridor 走廊
 
 hints = diverge converge
 
 objective = '''
+小心會車
 '''
 
 floor_map = '''
@@ -293,4 +277,27 @@ object_map = '''
 ........
 ........
 ........
+'''
+
+--------------------------
+# Resolve 解析
+
+hints = diverge converge
+
+objective = '''
+避免分裂點被鎖死
+'''
+
+floor_map = '''
+##G#
+##v.
+#S.S
+#S.V
+'''
+
+object_map = '''
+....
+..@.
+..BB
+....
 '''
