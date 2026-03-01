@@ -103,6 +103,11 @@ func _draw_fetch_and_converge_lines(
 	fetch_col.a = pulse
 
 	# Fetch line: other branch player -> focused player.
+	var show_fetch_line: bool = true
+	if _controller.has_method("is_fetch_hint_unlocked"):
+		show_fetch_line = bool(_controller.call("is_fetch_hint_unlocked"))
+	if not show_fetch_line:
+		return
 	_draw_dashed_line(other_player_center, focused_player_center, fetch_col, 3.0, 12.0, offset)
 
 	# Converge lines for fetched UIDs: focused instances -> focused player.

@@ -69,6 +69,7 @@ var just_undid: bool = false
 var hint_allow_converge: bool = true
 var hint_allow_pickup: bool = true
 var hint_allow_face_box: bool = true
+var hint_allow_fetch: bool = true
 
 
 # ---------------------------------------------------------------------------
@@ -111,10 +112,16 @@ func get_active_branch() -> BranchState:
 func set_interaction_hint_gates(
 		allow_converge: bool,
 		allow_pickup: bool,
-		allow_face_box: bool = true) -> void:
+		allow_face_box: bool = true,
+		allow_fetch: bool = true) -> void:
 	hint_allow_converge = allow_converge
 	hint_allow_pickup = allow_pickup
 	hint_allow_face_box = allow_face_box
+	hint_allow_fetch = allow_fetch
+
+
+func is_fetch_hint_unlocked() -> bool:
+	return hint_allow_fetch
 
 
 func get_facing_box_hint_target_pos() -> Vector2i:
