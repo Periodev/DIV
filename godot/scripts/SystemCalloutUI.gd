@@ -107,6 +107,8 @@ func _draw() -> void:
 		_draw_div_dots(Vector2(v_x, baseline_y), div_points)
 		_draw_tab_indicator(size.x, baseline_y, font, font_size)
 
+	_draw_persistent_footer(font, 11)
+
 
 func _draw_gated_callout_node(
 		pos: Vector2,
@@ -195,6 +197,25 @@ func _draw_div_dots(anchor_pos: Vector2, points: int) -> void:
 	var gap: float = 12.0
 	for i in count:
 		draw_circle(start + Vector2(gap * float(i), 0.0), 5.0, COL_DIV_DOT)
+
+
+func _draw_persistent_footer(font: Font, font_size: int) -> void:
+	var entries: Array[String] = ["[ESC] MENU", "[F1] INFO", "[R] RESET", "[Z] UNDO"]
+	var x_fracs: Array[float] = [0.15, 0.38, 0.62, 0.85]
+	var r := 2.5
+	var y_node := 12.0
+	draw_line(
+		Vector2(60.0, y_node + 12.0),
+		Vector2(size.x - 60.0, y_node + 12.0),
+		Color(1.0, 1.0, 1.0, 0.06), 1.0)
+	for i in entries.size():
+		var text: String = entries[i]
+		var text_w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
+		var total_w: float = r * 2.0 + 6.0 + text_w
+		var gx: float = size.x * x_fracs[i] - total_w * 0.5
+		draw_arc(Vector2(gx + r, y_node), r, 0.0, TAU, 12, COL_LINE_DIM, 1.0, true)
+		draw_string(font, Vector2(gx + r * 2.0 + 6.0, y_node + float(font_size) * 0.38),
+			text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, COL_TEXT_DIM)
 
 
 func _draw_tab_indicator(screen_w: float, y_pos: float, font: Font, font_size: int) -> void:
