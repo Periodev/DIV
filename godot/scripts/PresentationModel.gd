@@ -84,7 +84,8 @@ const CENTER_X  := (WINDOW_W - TARGET_PANEL) / 2    # 400
 const CENTER_Y  := (WINDOW_H - TARGET_PANEL) / 2    # 120
 const RIGHT_X   := CENTER_X + TARGET_PANEL + GAP    # 910
 const LEFT_X    := CENTER_X - GAP - SIDE_GRID       # 34
-const SIDE_Y    := (WINDOW_H - SIDE_GRID) / 2       # 192
+# Side mini-panels are bottom-aligned with the focused main panel.
+const SIDE_Y    := CENTER_Y + TARGET_PANEL - SIDE_GRID  # 264
 const BORDER_FOCUSED := Color(0.72, 0.72, 0.72)
 const BORDER_UNFOCUSED := Color(0.4, 0.4, 0.4)
 
@@ -334,16 +335,16 @@ static func _calc_merge_preview_positions(focus: int, progress: float) -> Array:
 		# Focused DIV0 stays centered and opaque.
 		main_x = CENTER_X; main_y = CENTER_Y; main_s = FOCUS_SCALE; main_a = 1.0
 		# DIV1 slides/grows from side to center exactly and fades to preview alpha.
-		sub_x = int(lerpf(RIGHT_X, CENTER_X, t))
-		sub_y = int(lerpf(SIDE_Y, CENTER_Y, t))
+		sub_x = roundi(lerpf(RIGHT_X, CENTER_X, t))
+		sub_y = roundi(lerpf(SIDE_Y, CENTER_Y, t))
 		sub_s = lerpf(SIDE_SCALE, FOCUS_SCALE, t)
 		sub_a = lerpf(1.0, 0.7, t)
 	else:
 		# Focused DIV1 stays centered and opaque.
 		sub_x = CENTER_X; sub_y = CENTER_Y; sub_s = FOCUS_SCALE; sub_a = 1.0
 		# DIV0 slides/grows from side to center exactly and fades to preview alpha.
-		main_x = int(lerpf(LEFT_X, CENTER_X, t))
-		main_y = int(lerpf(SIDE_Y, CENTER_Y, t))
+		main_x = roundi(lerpf(LEFT_X, CENTER_X, t))
+		main_y = roundi(lerpf(SIDE_Y, CENTER_Y, t))
 		main_s = lerpf(SIDE_SCALE, FOCUS_SCALE, t)
 		main_a = lerpf(1.0, 0.7, t)
 
@@ -358,18 +359,18 @@ static func _calc_slide_positions(
 	var sub_x: int;   var sub_y: int;   var sub_s: float
 
 	if direction == 1:  # focus 0→1: DIV0 shrinks left, DIV1 grows to center
-		main_x = int(CENTER_X + (LEFT_X  - CENTER_X) * t)
-		main_y = int(CENTER_Y + (SIDE_Y  - CENTER_Y) * t)
+		main_x = roundi(CENTER_X + (LEFT_X  - CENTER_X) * t)
+		main_y = roundi(CENTER_Y + (SIDE_Y  - CENTER_Y) * t)
 		main_s = FOCUS_SCALE + (SIDE_SCALE  - FOCUS_SCALE) * t
-		sub_x  = int(RIGHT_X  + (CENTER_X - RIGHT_X)  * t)
-		sub_y  = int(SIDE_Y   + (CENTER_Y - SIDE_Y)   * t)
+		sub_x  = roundi(RIGHT_X  + (CENTER_X - RIGHT_X)  * t)
+		sub_y  = roundi(SIDE_Y   + (CENTER_Y - SIDE_Y)   * t)
 		sub_s  = SIDE_SCALE  + (FOCUS_SCALE - SIDE_SCALE)  * t
 	else:               # focus 1→0: DIV0 grows to center, DIV1 shrinks right
-		main_x = int(LEFT_X   + (CENTER_X - LEFT_X)   * t)
-		main_y = int(SIDE_Y   + (CENTER_Y - SIDE_Y)   * t)
+		main_x = roundi(LEFT_X   + (CENTER_X - LEFT_X)   * t)
+		main_y = roundi(SIDE_Y   + (CENTER_Y - SIDE_Y)   * t)
 		main_s = SIDE_SCALE  + (FOCUS_SCALE - SIDE_SCALE)  * t
-		sub_x  = int(CENTER_X + (RIGHT_X  - CENTER_X) * t)
-		sub_y  = int(CENTER_Y + (SIDE_Y   - CENTER_Y) * t)
+		sub_x  = roundi(CENTER_X + (RIGHT_X  - CENTER_X) * t)
+		sub_y  = roundi(CENTER_Y + (SIDE_Y   - CENTER_Y) * t)
 		sub_s  = FOCUS_SCALE + (SIDE_SCALE  - FOCUS_SCALE) * t
 
 	return [main_x, main_y, main_s, sub_x, sub_y, sub_s]
