@@ -184,18 +184,7 @@ func _draw_div_dots(anchor_pos: Vector2, points: int) -> void:
 	var start: Vector2 = anchor_pos + Vector2(18.0, 0.0)
 	var gap: float = 12.0
 	for i in count:
-		_draw_diamond(start + Vector2(gap * float(i), 0.0), 7.0, COL_DIV_DOT)
-
-
-func _draw_diamond(center: Vector2, size: float, col: Color) -> void:
-	var h: float = size * 0.5
-	var pts := PackedVector2Array([
-		center + Vector2(0.0, -h),
-		center + Vector2(h, 0.0),
-		center + Vector2(0.0, h),
-		center + Vector2(-h, 0.0),
-	])
-	draw_colored_polygon(pts, col)
+		draw_circle(start + Vector2(gap * float(i), 0.0), 3.5, COL_DIV_DOT)
 
 
 func _draw_tab_indicator(screen_w: float, y_pos: float, font: Font, font_size: int) -> void:

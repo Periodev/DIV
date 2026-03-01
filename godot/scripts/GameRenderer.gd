@@ -628,7 +628,8 @@ func _draw_branch_node(pos: Vector2i, center: Vector2, tt: int, eff: float, a: f
 		Enums.TerrainType.BRANCH3: 3,
 		Enums.TerrainType.BRANCH4: 4,
 	}
-	var rings: int = uses_map.get(tt, 1)
+	# Rings represent extra uses beyond the base one.
+	var rings: int = maxi(0, int(uses_map.get(tt, 1)) - 1)
 
 	var base_color: Color = \
 		Color(0.31, 0.86, 0.39) if not _spec.has_branched else Color(0.47, 0.47, 0.47)
@@ -638,12 +639,15 @@ func _draw_branch_node(pos: Vector2i, center: Vector2, tt: int, eff: float, a: f
 	if _spec.highlight_branch_point and player != null and player.pos == pos:
 		base_color = Color(0.31, 0.95, 0.40)
 
-	for i in rings:
-		var r: float = (6.0 + float(i + 1) * 8.0) * _cell_scale * node_scale
-		var w: float = 1.5 if i == 0 else 1.0
-		draw_arc(center, r, 0, TAU, 32, _col(base_color, a), w)
+	var ring_size_scale: float = 1.2
+	var ring_line_width: float = 1.6
+	var center_dot_scale: float = 2.3
 
-	draw_circle(center, 3.0 * _cell_scale * node_scale, _col(base_color, a))
+	for i in rings:
+		var r: float = (6.0 + float(i + 1) * 8.0) * _cell_scale * node_scale * ring_size_scale
+		draw_arc(center, r, 0, TAU, 32, _col(base_color, a), ring_line_width)
+
+	draw_circle(center, 3.0 * _cell_scale * node_scale * center_dot_scale, _col(base_color, a))
 
 
 func _draw_goal_node(center: Vector2, eff: float, a: float) -> void:
