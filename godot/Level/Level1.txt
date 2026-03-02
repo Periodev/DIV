@@ -1,4 +1,4 @@
-# Restore 還原
+# Conservation 守恆
 tutorial = restore_intro
 hints = diverge converge
 
@@ -9,15 +9,15 @@ tutorial_steps = '''
 '''
 
 objective = '''
-合併後，兩個空間的核心會化成殘影
+核心化成殘影後固定不可動
 將殘影[還原]為核心，就能再推動
-[還原]會連帶消除其它相同來源的殘影(以虛線連結)
+[還原]會消除其它相同來源的殘影，確保核心唯一
 '''
 
 floor_map = '''
 #v#
 #S.
-#G.
+G..
 '''
 
 object_map = '''
@@ -30,7 +30,6 @@ object_map = '''
 # Cross 錯身
 
 objective = '''
-原地轉向
 '''
 
 floor_map = '''
@@ -66,7 +65,7 @@ Sv..G
 object_map = '''
 .....
 .....
-@B...
+.@B..
 .....
 .....
 '''
@@ -74,10 +73,9 @@ object_map = '''
 
 
 --------------------------
-# Corner 轉角
+# Handoff 換手
 
 objective = '''
-終點前換手
 '''
 
 floor_map = '''
@@ -97,30 +95,29 @@ object_map = '''
 --------------------------
 # Charge 充能
 
+tutorial = charge_intro
+
 objective = '''
-綠色圓點是[分裂點]
-走到[分裂點]取得充能，增加可分裂次數
 '''
 
 floor_map = '''
-#.#v
-...G
-v.#S
-####
+v.##
+...#
+#.##
+vGS#
 '''
 
 object_map = '''
-...@
-..B.
 ....
 ....
+.B..
+.@..
 '''
 
 --------------------------
 # Crossroad 十字路口
 
 objective = '''
-再轉向
 '''
 
 floor_map = '''
@@ -141,8 +138,8 @@ object_map = '''
 # Re-Restore 再還原
 
 objective = '''
-殘影可以不還原，保留並再次分裂
-兩空間的殘影互相獨立
+殘影可以不還原，再次分裂可保留到兩空間
+兩平行空間的殘影互相獨立
 '''
 
 floor_map = '''
@@ -208,7 +205,6 @@ object_map = '''
 hints = diverge converge
 
 objective = '''
-殘影占據空間，謹慎規劃路線
 '''
 
 floor_map = '''
@@ -231,7 +227,6 @@ object_map = '''
 hints = diverge converge
 
 objective = '''
-找出關鍵節點
 '''
 
 floor_map = '''
@@ -254,7 +249,6 @@ object_map = '''
 hints = diverge converge
 
 objective = '''
-小心會車
 '''
 
 floor_map = '''

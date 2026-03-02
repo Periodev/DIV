@@ -7,7 +7,6 @@ tutorial_steps = '''
 '''
 
 objective = '''
-角色與終點
 '''
 
 floor_map = '''
@@ -36,7 +35,6 @@ tutorial_steps = '''
 '''
 
 objective = '''
-推動核心
 '''
 
 floor_map = '''
@@ -70,7 +68,6 @@ tutorial_steps = '''
 '''
 
 objective = '''
-啟動目標
 '''
 
 floor_map = '''
@@ -178,7 +175,6 @@ object_map = '''
 hints = diverge
 
 objective = '''
-一分為二
 '''
 
 floor_map = '''
@@ -264,7 +260,6 @@ object_map = '''
 hints = diverge
 
 objective = '''
-並行處理
 '''
 
 floor_map = '''
