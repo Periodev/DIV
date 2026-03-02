@@ -60,6 +60,7 @@ const _SpotlightScript := preload("res://scripts/SymbolSpotlightUI.gd")
 var tutorial: TutorialController = TutorialController.new()
 var _spotlight: Control = null
 var _pending_spotlight: Array = []
+var _desc_close_unlock_ms: int = 0
 const DEBUG_VICTORY := true
 
 
@@ -133,10 +134,7 @@ func _start_level(idx: int) -> void:
 	hint_overlay.clear_overlay()
 	if _desc_overlay != null:
 		_desc_overlay.hide_desc()
-		var objective: String = level_dict.get("objective", "")
-		if objective != "":
-			var level_name: String = str(level_dict.get("name", ""))
-			_desc_overlay.show_desc(level_name, objective)
+		_show_level_desc()
 
 	merge_preview_active  = false
 	merge_preview_progress = 0.0
@@ -324,7 +322,9 @@ func _input(event: InputEvent) -> void:
 
 	# F1: toggle level description overlay (intercepts all other input while open).
 	if _desc_overlay != null and _desc_overlay.visible:
-		if key_event.pressed:
+		if key_event.pressed and not key_event.echo:
+			if Time.get_ticks_msec() < _desc_close_unlock_ms:
+				return
 			_desc_overlay.hide_desc()
 		return
 	if key == KEY_F1:
@@ -687,6 +687,8 @@ func _show_level_desc() -> void:
 		str(level_dict.get("name", "")),
 		str(level_dict.get("objective", ""))
 	)
+	# Prevent the same key event that opened/entered level from instantly dismissing.
+	_desc_close_unlock_ms = Time.get_ticks_msec() + 120
 
 
 func _set_peek_floor_mode(enabled: bool) -> void:

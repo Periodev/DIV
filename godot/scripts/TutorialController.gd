@@ -80,6 +80,14 @@ const SPOTLIGHT_SEQUENCES := {
 			"lines": ["灰色菱形框，啟動點", "將核心推進目標格可啟動", "所有目標啟動後，終點開啟"]
 		}
 	],
+	"charge_intro": [
+		{
+			"domain": "terrain",
+			"type": Enums.TerrainType.BRANCH1,
+			"title": "分裂點",
+			"lines": ["綠色圓點是分裂點", "走到分裂點可獲得充能", "充能可增加可分裂次數"]
+		}
+	],
 }
 
 var _scene: GameScene
