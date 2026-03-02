@@ -4,7 +4,7 @@
 class_name TutorialController
 
 # Check type constants — each tutorial ID maps to a fixed sequence of these.
-enum Check { PLAYER_ON_GOAL, GOAL_ACTIVE, GOAL_ACTIVE_CROSS, HAS_BRANCHED, SWITCH_ACTIVATED, SWITCH_PROGRESS, SWITCH_ALL_CROSS, INPUT_TAB, INPUT_M, MERGED, MERGE_SUCCESS, SPACE_RESTORE }
+enum Check { PLAYER_ON_GOAL, GOAL_ACTIVE, GOAL_ACTIVE_CROSS, HAS_BRANCHED, SWITCH_ACTIVATED, SWITCH_PROGRESS, SWITCH_ALL_CROSS, INPUT_TAB, INPUT_M, MERGED, MERGE_SUCCESS, SPACE_RESTORE, GAIN_DIV_POINT, BRANCH_TWICE }
 
 # Tutorial ID → array of check types (defines the check sequence).
 # Level files provide matching labels via tutorial_steps.
@@ -40,11 +40,20 @@ const TUTORIAL_CHECKS := {
 		Check.MERGE_SUCCESS,
 		Check.SPACE_RESTORE,
 	],
+	"charge_intro": [
+		Check.GAIN_DIV_POINT,
+		Check.BRANCH_TWICE,
+	],
 }
 
 ## Highlight node names used by SystemCalloutUI (control bar).
 ## Check type → { "node": String, "annotations": Array[String] }
 const CHECK_HIGHLIGHTS := {
+	Check.BRANCH_TWICE: {
+		"node": "diverge",
+		"annotations": ["綠色 = 可分裂", "灰色 = 無法分裂"],
+		"include": ["charge_intro"],
+	},
 }
 
 ## Blocking spotlight sequences per tutorial ID.
@@ -85,7 +94,7 @@ const SPOTLIGHT_SEQUENCES := {
 			"domain": "terrain",
 			"type": Enums.TerrainType.BRANCH1,
 			"title": "分裂點",
-			"lines": ["綠色圓點是分裂點", "走到分裂點可獲得充能", "充能可增加可分裂次數"]
+			"lines": ["綠色圓點是分裂點", "取得分裂點增加可分裂次數", "合併狀態才能取得分裂點"]
 		}
 	],
 }
@@ -94,6 +103,7 @@ var _scene: GameScene
 var _tutorial_id: String = ""
 var _active: bool = false
 var _was_branched: bool = false
+var _branch_v_accum: int = 0
 
 # Checklist state: array of { "label": String, "check": Check, "done": bool }
 var _items: Array = []
@@ -106,6 +116,7 @@ func start_level(tutorial_id: String, steps: Array, scene: GameScene) -> void:
 	_items.clear()
 	_last_bbcode = ""
 	_was_branched = false
+	_branch_v_accum = 0
 	_active = tutorial_id != "" and TUTORIAL_CHECKS.has(tutorial_id)
 	if not _active:
 		return
@@ -122,6 +133,10 @@ func start_level(tutorial_id: String, steps: Array, scene: GameScene) -> void:
 			item["base_label"] = label
 			var cross := _switch_counts_cross()
 			item["label"] = label + " (%d/%d)" % [cross[0], cross[1]]
+		elif checks[i] == Check.BRANCH_TWICE:
+			item["base_label"] = label
+			var v_count := mini(_branch_v_accum, 2)
+			item["label"] = label + " (%d/2)" % [v_count]
 		_items.append(item)
 	_refresh_toast()
 
@@ -266,6 +281,20 @@ func _evaluate_checks() -> void:
 				passed = _has_done_check(Check.HAS_BRANCHED) and not c.has_branched
 			Check.MERGE_SUCCESS:
 				passed = _was_branched and not c.has_branched
+			Check.GAIN_DIV_POINT:
+				passed = c.div_points >= 1
+			Check.BRANCH_TWICE:
+				var branch_count := 0
+				for raw_in in c.input_log:
+					if str(raw_in) == "V":
+						branch_count += 1
+				_branch_v_accum = maxi(_branch_v_accum, branch_count)
+				var v_count_now := mini(_branch_v_accum, 2)
+				var new_label3: String = _items[i]["base_label"] + " (%d/2)" % [v_count_now]
+				if new_label3 != _items[i]["label"]:
+					_items[i]["label"] = new_label3
+					changed = true
+				passed = _branch_v_accum >= 2
 			# INPUT_TAB is handled in on_input()
 		if passed:
 			_items[i]["done"] = true
@@ -371,3 +400,14 @@ func _switch_counts_cross() -> Array:
 		if v:
 			activated += 1
 	return [activated, total]
+
+
+func _branch_v_count() -> int:
+	if _scene == null or _scene.controller == null:
+		return 0
+	var c := _scene.controller
+	var count := 0
+	for raw_in in c.input_log:
+		if str(raw_in) == "V":
+			count += 1
+	return count
