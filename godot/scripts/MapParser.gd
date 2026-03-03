@@ -219,6 +219,14 @@ static func _parse_one_section(text: String) -> Dictionary:
 			if stripped != "":
 				tutorial_steps.append(stripped)
 
+	# Extract tutorial_display mode ("sequential" = show one step at a time)
+	var td_match := RegEx.new()
+	td_match.compile("(?m)^\\s*tutorial_display\\s*=\\s*(\\S+)\\s*$")
+	var td_result := td_match.search(text)
+	var tutorial_display := ""
+	if td_result != null:
+		tutorial_display = td_result.get_string(1).strip_edges()
+
 	# Extract auto_desc (default true; set false to suppress auto-show on level load)
 	var auto_desc_match := RegEx.new()
 	auto_desc_match.compile("(?m)^\\s*auto_desc\\s*=\\s*(\\S+)\\s*$")
@@ -234,6 +242,7 @@ static func _parse_one_section(text: String) -> Dictionary:
 		"hints":      parsed_hints,
 		"objective":  objective,
 		"tutorial":   tutorial_id,
-		"tutorial_steps": tutorial_steps,
-		"auto_desc":  auto_desc,
+		"tutorial_steps":   tutorial_steps,
+		"tutorial_display": tutorial_display,
+		"auto_desc":        auto_desc,
 	}

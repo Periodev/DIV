@@ -90,49 +90,57 @@ object_map = '''
 --------------------------
 # Start 開始
 
+tutorial = switch_and_goal_plain
 hints = none
+
+tutorial_steps = '''
+啟動目標
+走到終點
 
 objective = '''
 '''
 
 floor_map = '''
-####
-....
-GS..
+...#
+...#
+GS.#
 ##.#
 '''
 
 object_map = '''
 ....
+.B..
 ....
-..B@
-....
+..@.
 '''
 
 --------------------------
 # Dilemma 困境
 auto_desc = false
+tutorial_display = sequential
 tutorial = diverge_intro
 hints = diverge
 
 tutorial_steps = '''
 啟動目標
+發現終點被擋住
+按 [F1] 查看說明
+按 [Z] 退回上一步
 按 [V] 分裂出平行空間
+再次啟動開關
 按 [Tab] 切換空間到另一角色
-推開核心走到終點
+繞過核心走到終點
 按 [V] 合併
 '''
 
 objective = '''
-核心所在位置，可能會阻擋終點，使用分裂平行處理
-
-按 [Z] 可退回上一步
+核心所在位置，可能會阻擋終點，[分裂] 成平行空間處理
 '''
 
 floor_map = '''
-####
-....
-v.S.
+...#
+...#
+v.S#
 ##G#
 '''
 

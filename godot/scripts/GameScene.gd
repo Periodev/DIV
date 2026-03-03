@@ -130,7 +130,8 @@ func _start_level(idx: int) -> void:
 
 	var tutorial_id: String = level_dict.get("tutorial", "")
 	var tutorial_steps: Array = level_dict.get("tutorial_steps", [])
-	tutorial.start_level(tutorial_id, tutorial_steps, self)
+	var tutorial_display: String = level_dict.get("tutorial_display", "")
+	tutorial.start_level(tutorial_id, tutorial_steps, self, tutorial_display)
 	hint_overlay.clear_overlay()
 	if _desc_overlay != null:
 		_desc_overlay.hide_desc()
@@ -327,6 +328,7 @@ func _input(event: InputEvent) -> void:
 			if Time.get_ticks_msec() < _desc_close_unlock_ms:
 				return
 			_desc_overlay.hide_desc()
+			tutorial.on_f1_dismissed()
 		return
 	if key == KEY_F1:
 		if key_event.pressed and not key_event.echo:

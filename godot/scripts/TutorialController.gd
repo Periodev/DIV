@@ -4,7 +4,7 @@
 class_name TutorialController
 
 # Check type constants — each tutorial ID maps to a fixed sequence of these.
-enum Check { PLAYER_ON_GOAL, GOAL_ACTIVE, GOAL_ACTIVE_CROSS, HAS_BRANCHED, SWITCH_ACTIVATED, SWITCH_PROGRESS, SWITCH_ALL_CROSS, INPUT_TAB, INPUT_M, MERGED, MERGE_SUCCESS, SPACE_RESTORE, GAIN_DIV_POINT, BRANCH_TWICE }
+enum Check { PLAYER_ON_GOAL, GOAL_ACTIVE, GOAL_ACTIVE_CROSS, HAS_BRANCHED, SWITCH_ACTIVATED, SWITCH_PROGRESS, SWITCH_ALL_CROSS, INPUT_TAB, INPUT_M, MERGED, MERGE_SUCCESS, SPACE_RESTORE, GAIN_DIV_POINT, BRANCH_TWICE, INSTANT, INPUT_F1_DISMISS, INPUT_Z, SWITCH_ACTIVATED_BRANCHED }
 
 # Tutorial ID → array of check types (defines the check sequence).
 # Level files provide matching labels via tutorial_steps.
@@ -12,6 +12,7 @@ const TUTORIAL_CHECKS := {
 	"walk_to_goal": [Check.PLAYER_ON_GOAL],
 	"core_intro":   [Check.PLAYER_ON_GOAL],
 	"switch_and_goal": [Check.SWITCH_PROGRESS, Check.GOAL_ACTIVE],
+	"switch_and_goal_plain": [Check.SWITCH_PROGRESS, Check.GOAL_ACTIVE],
 	"split_switches": [
 		Check.SWITCH_ACTIVATED,
 		Check.INPUT_TAB,
@@ -29,8 +30,12 @@ const TUTORIAL_CHECKS := {
 		Check.INPUT_M,
 	],
 	"diverge_intro": [
-		Check.HAS_BRANCHED,
 		Check.SWITCH_ACTIVATED,
+		Check.INSTANT,
+		Check.INPUT_F1_DISMISS,
+		Check.INPUT_Z,
+		Check.HAS_BRANCHED,
+		Check.SWITCH_ACTIVATED_BRANCHED,
 		Check.INPUT_TAB,
 		Check.GOAL_ACTIVE,
 		Check.MERGE_SUCCESS,
@@ -104,19 +109,21 @@ var _tutorial_id: String = ""
 var _active: bool = false
 var _was_branched: bool = false
 var _branch_v_accum: int = 0
+var _sequential_mode: bool = false
 
 # Checklist state: array of { "label": String, "check": Check, "done": bool }
 var _items: Array = []
 var _last_bbcode: String = ""
 
 
-func start_level(tutorial_id: String, steps: Array, scene: GameScene) -> void:
+func start_level(tutorial_id: String, steps: Array, scene: GameScene, display_mode: String = "") -> void:
 	_scene = scene
 	_tutorial_id = tutorial_id
 	_items.clear()
 	_last_bbcode = ""
 	_was_branched = false
 	_branch_v_accum = 0
+	_sequential_mode = display_mode == "sequential"
 	_active = tutorial_id != "" and TUTORIAL_CHECKS.has(tutorial_id)
 	if not _active:
 		return
@@ -180,6 +187,18 @@ func on_state_changed() -> void:
 	_evaluate_checks()
 
 
+func on_f1_dismissed() -> void:
+	if not _active:
+		return
+	for i in _items.size():
+		if _items[i]["done"]:
+			continue
+		if _items[i]["check"] == Check.INPUT_F1_DISMISS:
+			_complete_item(i)
+			_evaluate_checks()
+			break
+
+
 func on_restore() -> void:
 	if not _active:
 		return
@@ -204,6 +223,9 @@ func on_input(key: int) -> void:
 		if _items[i]["check"] == Check.INPUT_M and key == KEY_M \
 				and _scene.controller != null and _scene.controller.has_branched:
 			_complete_item(i)
+		if _items[i]["check"] == Check.INPUT_Z and key == KEY_Z \
+				and _has_done_check(Check.SWITCH_ACTIVATED):
+			_complete_item(i)
 
 
 # ---------------------------------------------------------------------------
@@ -212,12 +234,23 @@ func on_input(key: int) -> void:
 
 func _refresh_toast() -> void:
 	var bbcode := ""
-	for item in _items:
-		if item["done"]:
-			bbcode += "[color=#73c073][✓][/color] [color=#666666]" + item["label"] + "[/color]\n"
-		else:
-			bbcode += "[  ] " + item["label"] + "\n"
-	bbcode = bbcode.strip_edges(false, true)
+	if _sequential_mode:
+		var found_current := false
+		for item in _items:
+			if item["done"]:
+				bbcode += "[color=#73c073][✓][/color] [color=#666666]" + item["label"] + "[/color]\n"
+			elif not found_current:
+				bbcode += "[  ] " + item["label"] + "\n"
+				found_current = true
+			# future steps hidden until sequential mode ends
+		bbcode = bbcode.strip_edges(false, true)
+	else:
+		for item in _items:
+			if item["done"]:
+				bbcode += "[color=#73c073][✓][/color] [color=#666666]" + item["label"] + "[/color]\n"
+			else:
+				bbcode += "[  ] " + item["label"] + "\n"
+		bbcode = bbcode.strip_edges(false, true)
 	if bbcode == _last_bbcode:
 		return
 	_last_bbcode = bbcode
@@ -283,6 +316,12 @@ func _evaluate_checks() -> void:
 				passed = _was_branched and not c.has_branched
 			Check.GAIN_DIV_POINT:
 				passed = c.div_points >= 1
+			Check.SWITCH_ACTIVATED_BRANCHED:
+				passed = c.has_branched and _any_switch_activated()
+			Check.INSTANT:
+				passed = i > 0 and _items[i - 1]["done"]
+			Check.INPUT_F1_DISMISS:
+				pass  # handled in on_f1_dismissed()
 			Check.BRANCH_TWICE:
 				var branch_count := 0
 				for raw_in in c.input_log:
