@@ -219,6 +219,14 @@ static func _parse_one_section(text: String) -> Dictionary:
 			if stripped != "":
 				tutorial_steps.append(stripped)
 
+	# Extract auto_desc (default true; set false to suppress auto-show on level load)
+	var auto_desc_match := RegEx.new()
+	auto_desc_match.compile("(?m)^\\s*auto_desc\\s*=\\s*(\\S+)\\s*$")
+	var auto_desc_result := auto_desc_match.search(text)
+	var auto_desc := true
+	if auto_desc_result != null:
+		auto_desc = auto_desc_result.get_string(1).strip_edges() != "false"
+
 	return {
 		"name":       name_val,
 		"floor_map":  floor_result.get_string(1),
@@ -227,4 +235,5 @@ static func _parse_one_section(text: String) -> Dictionary:
 		"objective":  objective,
 		"tutorial":   tutorial_id,
 		"tutorial_steps": tutorial_steps,
+		"auto_desc":  auto_desc,
 	}

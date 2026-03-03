@@ -134,7 +134,8 @@ func _start_level(idx: int) -> void:
 	hint_overlay.clear_overlay()
 	if _desc_overlay != null:
 		_desc_overlay.hide_desc()
-		_show_level_desc()
+		if level_dict.get("auto_desc", true):
+			_show_level_desc()
 
 	merge_preview_active  = false
 	merge_preview_progress = 0.0
