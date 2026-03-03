@@ -1500,9 +1500,20 @@ func _draw_interaction_hint(eff: float, a: float) -> void:
 	var font: Font = ThemeDB.fallback_font
 	if font == null:
 		return
-	var NR: float       = _nr
+	var NR: float         = _nr
 	var cell_scale: float = _cell_scale
-	var font_size: int  = maxi(10, int(round(11.0 * cell_scale)))
+	var font_size: int    = 14
+	const MARGIN := 4.0
+	var gpx: float = _gpx
+
+	var key_text:    String = "[SPACE] "
+	var action_text: String = ih.text
+	var key_w:    float = font.get_string_size(key_text,    HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
+	var action_w: float = font.get_string_size(action_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
+	var total_w:  float = key_w + action_w
+	var ascent:  float = font.get_ascent(font_size)
+	var descent: float = font.get_descent(font_size)
+
 	if ih.text == "放下":
 		var drop_center: Vector2 = _grid_to_local_center(ih.target_pos, eff)
 		var drop_size: float = NR * 0.90
@@ -1515,26 +1526,23 @@ func _draw_interaction_hint(eff: float, a: float) -> void:
 				maxf(1.2, 1.8 * cell_scale),
 				maxf(3.0, 4.0 * cell_scale),
 				0.0)
+	# Text floats above the target entity (all actions, including 放下).
 	var anchor: Vector2 = _grid_to_local_center(ih.target_pos, eff)
 	var clearance: float = NR + 9.0 * cell_scale + 2.0
 	var text_center: Vector2 = anchor - Vector2(0.0, clearance)
-	var hint_text: String = ih.text
-	var text_w: float  = font.get_string_size(hint_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
-	var ascent: float  = font.get_ascent(font_size)
-	var descent: float = font.get_descent(font_size)
+	var start_x: float = clampf(text_center.x - total_w * 0.5, MARGIN, gpx - total_w - MARGIN)
 	var baseline_y: float = text_center.y + (ascent - descent) * 0.5
-	var draw_pos: Vector2 = Vector2(text_center.x - text_w * 0.5, baseline_y)
-	# Black outline: 4 offset draws.
-	var shadow: Color = Color(0, 0, 0, 0.85 * a)
+	var draw_pos: Vector2 = Vector2(start_x, baseline_y)
+	var shadow: Color = Color(0.0, 0.0, 0.0, 0.85 * a)
 	for dx in [-1, 0, 1]:
 		for dy in [-1, 0, 1]:
 			if dx == 0 and dy == 0:
 				continue
-			draw_string(font, draw_pos + Vector2(dx, dy), hint_text,
-					HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, shadow)
-	# Fixed white foreground for interaction hint readability.
-	var col: Color = Color(1.0, 1.0, 1.0, a)
-	draw_string(font, draw_pos, hint_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, col)
+			var off := Vector2(float(dx), float(dy))
+			draw_string(font, draw_pos + off,                    key_text,    HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, shadow)
+			draw_string(font, draw_pos + off + Vector2(key_w, 0), action_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, shadow)
+	draw_string(font, draw_pos,                    key_text,    HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, Color(0.60, 0.60, 0.60, a))
+	draw_string(font, draw_pos + Vector2(key_w, 0), action_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, Color(0.95, 0.95, 0.95, a))
 
 
 # Interaction hint highlight - preserved
