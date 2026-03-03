@@ -116,6 +116,7 @@ object_map = '''
 # Detach 分離
 
 objective = '''
+若空洞內的殘影，因為還原其它位置而被消除，會回復空洞狀態
 '''
 
 floor_map = '''
@@ -176,7 +177,7 @@ object_map = '''
 # Extract 抽取
 
 objective = '''
-還原可移除空洞中的部分殘影
+若空洞內有多個殘影，可以透過還原只消除其中部份殘影
 '''
 
 floor_map = '''
