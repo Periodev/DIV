@@ -4,7 +4,7 @@
 class_name TutorialController
 
 # Check type constants — each tutorial ID maps to a fixed sequence of these.
-enum Check { PLAYER_ON_GOAL, GOAL_ACTIVE, GOAL_ACTIVE_CROSS, HAS_BRANCHED, SWITCH_ACTIVATED, SWITCH_PROGRESS, SWITCH_ALL_CROSS, INPUT_TAB, INPUT_M, MERGED, MERGE_SUCCESS, SPACE_RESTORE, GAIN_DIV_POINT, BRANCH_TWICE, INSTANT, INPUT_F1_DISMISS, INPUT_Z, SWITCH_ACTIVATED_BRANCHED }
+enum Check { PLAYER_ON_GOAL, GOAL_ACTIVE, GOAL_ACTIVE_CROSS, HAS_BRANCHED, SWITCH_ACTIVATED, SWITCH_PROGRESS, SWITCH_ALL_CROSS, INPUT_TAB, INPUT_M, MERGED, MERGE_SUCCESS, SPACE_RESTORE, GAIN_DIV_POINT, BRANCH_TWICE, INSTANT, INPUT_F1_DISMISS, INPUT_Z, SWITCH_ACTIVATED_BRANCHED, RESTORE_COUNT }
 
 # Tutorial ID → array of check types (defines the check sequence).
 # Level files provide matching labels via tutorial_steps.
@@ -60,6 +60,7 @@ const TUTORIAL_CHECKS := {
 
 	"branch_only":    [Check.HAS_BRANCHED],
 	"switches_cross": [Check.SWITCH_ALL_CROSS],
+	"re_restore":     [Check.RESTORE_COUNT],
 }
 
 ## Blocking tutorial: check → required action string.
@@ -168,6 +169,9 @@ func start_level(tutorial_id: String, steps: Array, scene: GameScene, display_mo
 			item["base_label"] = label
 			var v_count := mini(_branch_v_accum, 2)
 			item["label"] = label + " (%d/2)" % [v_count]
+		elif checks[i] == Check.RESTORE_COUNT:
+			item["base_label"] = label
+			item["label"] = label + " (0/3)"
 		_items.append(item)
 	_refresh_toast()
 
@@ -378,6 +382,16 @@ func _evaluate_checks() -> void:
 					_items[i]["label"] = new_label3
 					changed = true
 				passed = _branch_v_accum >= 2
+			Check.RESTORE_COUNT:
+				var restore_count := 0
+				for raw_in in c.input_log:
+					if str(raw_in) == "C":
+						restore_count += 1
+				var new_label_r: String = _items[i]["base_label"] + " (%d/3)" % [mini(restore_count, 3)]
+				if new_label_r != _items[i]["label"]:
+					_items[i]["label"] = new_label_r
+					changed = true
+				passed = restore_count >= 3
 			# INPUT_TAB is handled in on_input()
 		if passed:
 			_items[i]["done"] = true

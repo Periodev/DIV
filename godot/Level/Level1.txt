@@ -141,6 +141,11 @@ object_map = '''
 
 --------------------------
 # Re-Restore 再還原
+tutorial = re_restore
+
+tutorial_steps = '''
+還原三次
+'''
 
 objective = '''
 殘影可以不還原，下次分裂可保留殘影到兩空間
