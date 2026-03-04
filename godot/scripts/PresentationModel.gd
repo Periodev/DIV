@@ -44,6 +44,8 @@ class BranchViewSpec:
 	var flash_pos:              Vector2i    = Vector2i(-1, -1)
 	var flash_intensity:        float       = 0.0
 	var flash_style:            String      = "cell"
+	var restore_flash_pos:      Vector2i    = Vector2i(-1, -1)
+	var restore_flash_t:        float       = -1.0   # -1 = inactive
 	var falling_progress:       Dictionary  = {}
 	# Adaptive hint flags (mirrors render_arc high-level behavior)
 	var branch_hint_active:     bool        = false
@@ -262,6 +264,19 @@ static func build(
 			show_shadow_connections,
 			sub_oes,
 			sub_skip)
+
+	# Restore flash (fuse/converge success) — active branch panel only
+	const RESTORE_FLASH_DURATION := 0.35
+	if controller.restore_flash_pos != Vector2i(-1, -1):
+		var elapsed := Time.get_unix_time_from_system() - controller.restore_flash_time
+		if elapsed < RESTORE_FLASH_DURATION:
+			var rt: float = elapsed / RESTORE_FLASH_DURATION
+			if focus == 0:
+				spec.main_branch.restore_flash_pos = controller.restore_flash_pos
+				spec.main_branch.restore_flash_t   = rt
+			elif spec.sub_branch != null:
+				spec.sub_branch.restore_flash_pos = controller.restore_flash_pos
+				spec.sub_branch.restore_flash_t   = rt
 
 	return spec
 

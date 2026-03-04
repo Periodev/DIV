@@ -61,6 +61,10 @@ var failed_action_pos:  Vector2i = Vector2i(-1, -1)
 var failed_action_time: float    = 0.0
 var failed_action_style: String  = "cell"
 
+# Restore flash (fuse/converge success)
+var restore_flash_pos:  Vector2i = Vector2i(-1, -1)
+var restore_flash_time: float    = 0.0
+
 # Falling animation (box → hole)
 var falling_boxes: Dictionary = {}  # {[uid, pos]: start_time}
 
@@ -97,6 +101,8 @@ func reset() -> void:
 	failed_action_pos  = Vector2i(-1, -1)
 	failed_action_time = 0.0
 	failed_action_style = "cell"
+	restore_flash_pos  = Vector2i(-1, -1)
+	restore_flash_time = 0.0
 	falling_boxes.clear()
 	just_undid = false
 	_check_charge_pickup(main_branch)  # ?��?站在?�能?�直?�給 charge
@@ -180,6 +186,8 @@ func undo() -> bool:
 	failed_action_pos  = Vector2i(-1, -1)
 	failed_action_time = 0.0
 	failed_action_style = "cell"
+	restore_flash_pos  = Vector2i(-1, -1)
+	restore_flash_time = 0.0
 	just_undid         = true
 
 	state_changed.emit()
@@ -518,6 +526,8 @@ func handle_adaptive_action(allow_converge: bool = true, allow_pickup: bool = tr
 				else:
 					Timeline.converge(active, target.uid, front_pos)
 
+		restore_flash_pos  = front_pos
+		restore_flash_time = Time.get_unix_time_from_system()
 		_log_input("C")
 		_save_snapshot()
 		state_changed.emit()

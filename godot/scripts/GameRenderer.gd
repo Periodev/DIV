@@ -199,6 +199,10 @@ func _draw() -> void:
 	if _spec.flash_intensity > 0.0 and _spec.flash_pos != Vector2i(-1, -1):
 		_draw_flash(eff, a)
 
+	# Restore flash (fuse/converge success)
+	if _spec.restore_flash_t >= 0.0 and _spec.restore_flash_pos != Vector2i(-1, -1):
+		_draw_restore_flash(eff, a)
+
 	# Panel border (thin)
 	_draw_border(gpx, a)
 
@@ -1469,6 +1473,26 @@ func _draw_flash(eff: float, a: float) -> void:
 				_spec.flash_pos.y * eff,
 				eff, eff)
 			draw_rect(rect, col)
+
+
+func _draw_restore_flash(eff: float, a: float) -> void:
+	var center: Vector2 = _grid_to_local_center(_spec.restore_flash_pos, eff)
+	var nr: float = _nr
+	var t: float  = _spec.restore_flash_t
+	const FLASH_CUT := 0.40
+	var fill_a: float
+	var line_a: float
+	if t < FLASH_CUT:
+		var p: float = t / FLASH_CUT
+		var pulse: float = sin(p * PI * 0.5)
+		fill_a = (0.15 + 0.70 * pulse) * a
+		line_a = (0.30 + 0.60 * pulse) * a
+	else:
+		var p2: float = (t - FLASH_CUT) / (1.0 - FLASH_CUT)
+		fill_a = (1.0 - p2) * 0.85 * a
+		line_a = (1.0 - p2) * 0.90 * a
+	_draw_diamond(center, nr, Color(1, 1, 1, fill_a), true)
+	_draw_diamond(center, nr, Color(1, 1, 1, line_a), false, 3.0)
 
 
 func _draw_border(gpx: float, a: float) -> void:
