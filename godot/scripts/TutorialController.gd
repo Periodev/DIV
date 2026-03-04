@@ -22,8 +22,6 @@ const TUTORIAL_CHECKS := {
 		Check.SWITCH_ACTIVATED,
 		Check.INPUT_TAB,
 		Check.SWITCH_ALL_CROSS,
-		Check.GOAL_ACTIVE_CROSS,
-		Check.MERGE_SUCCESS,
 	],
 	"preview_intro": [
 		Check.HAS_BRANCHED,
@@ -49,6 +47,33 @@ const TUTORIAL_CHECKS := {
 		Check.GAIN_DIV_POINT,
 		Check.BRANCH_TWICE,
 	],
+	"diverge_guided": [
+		Check.SWITCH_ACTIVATED,
+		Check.INPUT_F1_DISMISS,
+		Check.HAS_BRANCHED,
+		Check.INPUT_TAB,
+		Check.PLAYER_ON_GOAL,
+		Check.MERGE_SUCCESS,
+	],
+	"loop_practice": [
+		Check.HAS_BRANCHED,
+		Check.SWITCH_ALL_CROSS,
+		Check.INPUT_TAB,
+		Check.MERGE_SUCCESS,
+	],
+	"branch_only":    [Check.HAS_BRANCHED],
+	"switches_cross": [Check.SWITCH_ALL_CROSS],
+}
+
+## Blocking tutorial: check → required action string.
+## "" = no blocking (free step). "horizontal" = A/D movement only.
+const BLOCKING_ACTION := {
+	Check.SWITCH_ACTIVATED:  "",
+	Check.INPUT_F1_DISMISS:  "f1",
+	Check.HAS_BRANCHED:      "branch_v",
+	Check.INPUT_TAB:         "tab",
+	Check.PLAYER_ON_GOAL:    "horizontal",
+	Check.MERGE_SUCCESS:     "branch_v",
 }
 
 ## Highlight node names used by SystemCalloutUI (control bar).
@@ -110,6 +135,7 @@ var _active: bool = false
 var _was_branched: bool = false
 var _branch_v_accum: int = 0
 var _sequential_mode: bool = false
+var _blocking_mode: bool = false
 
 # Checklist state: array of { "label": String, "check": Check, "done": bool }
 var _items: Array = []
@@ -123,7 +149,8 @@ func start_level(tutorial_id: String, steps: Array, scene: GameScene, display_mo
 	_last_bbcode = ""
 	_was_branched = false
 	_branch_v_accum = 0
-	_sequential_mode = display_mode == "sequential"
+	_blocking_mode = display_mode == "blocking"
+	_sequential_mode = display_mode == "sequential" or _blocking_mode
 	_active = tutorial_id != "" and TUTORIAL_CHECKS.has(tutorial_id)
 	if not _active:
 		return
@@ -150,6 +177,17 @@ func start_level(tutorial_id: String, steps: Array, scene: GameScene, display_mo
 
 func stop() -> void:
 	_active = false
+
+
+## Returns the required blocking action for the current step, or "" if no blocking.
+## "f1" = F1 key; "branch_v" = V key; "tab" = Tab key; "horizontal" = A/D only; "" = free.
+func get_blocking_action() -> String:
+	if not _blocking_mode or not _active:
+		return ""
+	for item in _items:
+		if not item["done"]:
+			return BLOCKING_ACTION.get(item["check"], "")
+	return ""
 
 
 ## Returns spotlight sequence for this tutorial ID, or [] if none.
@@ -194,8 +232,15 @@ func on_f1_dismissed() -> void:
 		if _items[i]["done"]:
 			continue
 		if _items[i]["check"] == Check.INPUT_F1_DISMISS:
-			_complete_item(i)
-			_evaluate_checks()
+			# In blocking mode, only complete if all previous steps are already done.
+			var prev_done := true
+			for j in i:
+				if not _items[j]["done"]:
+					prev_done = false
+					break
+			if prev_done:
+				_complete_item(i)
+				_evaluate_checks()
 			break
 
 

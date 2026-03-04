@@ -117,19 +117,16 @@ object_map = '''
 --------------------------
 # Dilemma 困境
 auto_desc = false
-tutorial_display = sequential
-tutorial = diverge_intro
+tutorial_display = blocking
+tutorial = diverge_guided
 hints = diverge
 
 tutorial_steps = '''
 啟動目標
-發現終點被擋住
-按 [F1] 查看說明
-按 [Z] 退回上一步
-按 [V] 分裂出平行空間
-再次啟動開關
-按 [Tab] 切換空間到另一角色
-繞過核心走到終點
+發現無法通過，按 [F1] 說明
+按 [V] 分裂
+按 [Tab] 切換空間
+走到終點
 按 [V] 合併
 '''
 
@@ -138,22 +135,59 @@ objective = '''
 '''
 
 floor_map = '''
-...#
-...#
-v.S#
-##G#
+#####
+#####
+.vSG.
+#####
+#####
+'''
+
+object_map = '''
+.....
+.....
+@B...
+.....
+.....
+'''
+
+--------------------------
+# Loop 循環
+tutorial = loop_practice
+hints = diverge
+
+tutorial_steps = '''
+按 [V] 分裂
+啟動兩個目標
+按 [Tab] 切換
+按 [V] 合併
+'''
+
+objective = '''
+合併後，終點才會完全啟動
+'''
+
+floor_map = '''
+GS##
+S...
+#...
+#..v
 '''
 
 object_map = '''
 ....
+.BB.
 ....
-@B..
-....
+...@
 '''
 
 --------------------------
 # Mutex 互斥
+tutorial = branch_only
 hints = diverge
+
+tutorial_steps = '''
+按 [V] 分裂
+'''
 
 objective = '''
 若角色和另一空間核心位置重疊，會導致衝突無法合併
@@ -187,8 +221,6 @@ tutorial_steps = '''
 objective = '''
 核心可在兩個空間分別啟動不同目標
 合併後可同時保留啟動狀態
-
-按 [Z] 可退回上一步
 '''
 
 floor_map = '''
@@ -205,8 +237,12 @@ object_map = '''
 
 --------------------------
 # Branch 分叉
-
+tutorial = switches_cross
 hints = diverge
+
+tutorial_steps = '''
+啟動兩個目標
+'''
 
 objective = '''
 '''
@@ -229,22 +265,16 @@ object_map = '''
 
 --------------------------
 # Trace 殘影
-tutorial = split_switches_merge
+tutorial = switches_cross
 hints = diverge
 
 tutorial_steps = '''
-分裂後啟動目標
-按 [Tab] 切換空間
-啟動另一個目標
-走到終點
-在終點按 [V] 合併
+啟動兩個目標
 '''
 
 objective = '''
 若一個核心在兩個空間位置不同
 合併後將化成不可推動的[殘影]
-
-按 [Z] 可退回上一步
 '''
 
 floor_map = '''

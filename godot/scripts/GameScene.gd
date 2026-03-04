@@ -345,6 +345,22 @@ func _input(event: InputEvent) -> void:
 	if not key_event.pressed:
 		return
 
+	# Blocking tutorial gate: only the required key is accepted.
+	# R and ESC are always allowed so the player can reset or exit.
+	var _req_action := tutorial.get_blocking_action()
+	if _req_action != "":
+		if key != KEY_R and key != KEY_ESCAPE:
+			if _req_action == "horizontal":
+				# A/D movement is polled in _process(); block all _input() keys here.
+				return
+			var _allowed_key := 0
+			match _req_action:
+				"f1":       _allowed_key = KEY_F1
+				"branch_v": _allowed_key = KEY_V
+				"tab":      _allowed_key = KEY_TAB
+			if key != _allowed_key:
+				return
+
 	match key:
 		# Movement keys are polled in _process() for held-key repeat — not here.
 
@@ -410,10 +426,15 @@ func _start_slide() -> void:
 
 # Returns the movement direction currently held by the player, or (0,0) if none.
 func _get_held_direction() -> Vector2i:
-	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
-		return Vector2i(0, -1)
-	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN):
-		return Vector2i(0, 1)
+	var req := tutorial.get_blocking_action()
+	if req != "" and req != "horizontal":
+		return Vector2i(0, 0)
+	var horizontal_only := req == "horizontal"
+	if not horizontal_only:
+		if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
+			return Vector2i(0, -1)
+		if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN):
+			return Vector2i(0, 1)
 	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
 		return Vector2i(-1, 0)
 	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
