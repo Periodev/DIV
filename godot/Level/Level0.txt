@@ -86,34 +86,6 @@ object_map = '''
 .....
 '''
 
-
---------------------------
-# Start 開始
-
-tutorial = switch_and_goal_plain
-hints = none
-
-tutorial_steps = '''
-啟動目標
-走到終點
-
-objective = '''
-'''
-
-floor_map = '''
-...#
-...#
-GS.#
-##.#
-'''
-
-object_map = '''
-....
-.B..
-....
-..@.
-'''
-
 --------------------------
 # Dilemma 困境
 auto_desc = false
@@ -131,7 +103,7 @@ tutorial_steps = '''
 '''
 
 objective = '''
-核心所在位置，可能會阻擋終點，使用[V]分裂出平行空間
+核心所在位置，可能會阻擋終點，按[V]使用分裂產生平行空間
 '''
 
 floor_map = '''
@@ -151,19 +123,20 @@ object_map = '''
 '''
 
 --------------------------
-# Loop 循環
+# Process 流程
 tutorial = loop_practice
 hints = diverge
 
 tutorial_steps = '''
 按 [V] 分裂
 啟動兩個目標
-按 [Tab] 切換
+按 [Tab] 切換空間
+走到終點
 按 [V] 合併
 '''
 
 objective = '''
-合併後，終點才會完全啟動
+合併只會保留目前控制的角色
 '''
 
 floor_map = '''
@@ -182,11 +155,14 @@ object_map = '''
 
 --------------------------
 # Mutex 互斥
-tutorial = branch_only
+tutorial = mutex
 hints = diverge
 
 tutorial_steps = '''
 按 [V] 分裂
+啟動兩個目標
+按 [V] 合併
+
 '''
 
 objective = '''
@@ -245,6 +221,7 @@ tutorial_steps = '''
 '''
 
 objective = '''
+可在終點以外的位置合併
 '''
 
 floor_map = '''
@@ -305,16 +282,16 @@ objective = '''
 '''
 
 floor_map = '''
-GS..
-S...
-##Sv
+.S..
+SG..
+##vS
 ####
 '''
 
 object_map = '''
 ..B.
 ..B.
-...@
+..@.
 ....
 '''
 

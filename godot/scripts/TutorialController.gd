@@ -12,7 +12,6 @@ const TUTORIAL_CHECKS := {
 	"walk_to_goal": [Check.PLAYER_ON_GOAL],
 	"core_intro":   [Check.PLAYER_ON_GOAL],
 	"switch_and_goal": [Check.SWITCH_PROGRESS, Check.GOAL_ACTIVE],
-	"switch_and_goal_plain": [Check.SWITCH_PROGRESS, Check.GOAL_ACTIVE],
 	"split_switches": [
 		Check.SWITCH_ACTIVATED,
 		Check.INPUT_TAB,
@@ -26,17 +25,6 @@ const TUTORIAL_CHECKS := {
 	"preview_intro": [
 		Check.HAS_BRANCHED,
 		Check.INPUT_M,
-	],
-	"diverge_intro": [
-		Check.SWITCH_ACTIVATED,
-		Check.INSTANT,
-		Check.INPUT_F1_DISMISS,
-		Check.INPUT_Z,
-		Check.HAS_BRANCHED,
-		Check.SWITCH_ACTIVATED_BRANCHED,
-		Check.INPUT_TAB,
-		Check.GOAL_ACTIVE,
-		Check.MERGE_SUCCESS,
 	],
 	"restore_intro": [
 		Check.HAS_BRANCHED,
@@ -59,8 +47,15 @@ const TUTORIAL_CHECKS := {
 		Check.HAS_BRANCHED,
 		Check.SWITCH_ALL_CROSS,
 		Check.INPUT_TAB,
+		Check.PLAYER_ON_GOAL,
 		Check.MERGE_SUCCESS,
 	],
+	"mutex": [
+		Check.HAS_BRANCHED,
+		Check.SWITCH_ALL_CROSS,
+		Check.MERGE_SUCCESS,
+	],
+
 	"branch_only":    [Check.HAS_BRANCHED],
 	"switches_cross": [Check.SWITCH_ALL_CROSS],
 }
@@ -232,13 +227,15 @@ func on_f1_dismissed() -> void:
 		if _items[i]["done"]:
 			continue
 		if _items[i]["check"] == Check.INPUT_F1_DISMISS:
-			# In blocking mode, only complete if all previous steps are already done.
+			# Allow completion if all previous steps are done (normal flow),
+			# OR if the current step is a free step (blocking action = ""),
+			# which lets the player read F1 before completing step 0.
 			var prev_done := true
 			for j in i:
 				if not _items[j]["done"]:
 					prev_done = false
 					break
-			if prev_done:
+			if prev_done or get_blocking_action() == "":
 				_complete_item(i)
 				_evaluate_checks()
 			break
