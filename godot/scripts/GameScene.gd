@@ -48,6 +48,7 @@ var peek_floor_active: bool = false
 var _merge_anim_active: bool = false
 var _merge_anim_entity_phase: bool = false  # true = entity scale-up phase
 var _merge_entity_scale: float = -1.0       # -1 = off; 0.72→1.0 during entity phase
+var _merge_hide_overlay_player: bool = false
 const MERGE_ENTITY_ANIM_DURATION := 0.20
 
 # Falling box Tween animations
@@ -149,6 +150,7 @@ func _start_level(idx: int) -> void:
 	_merge_anim_active    = false
 	_merge_anim_entity_phase = false
 	_merge_entity_scale   = -1.0
+	_merge_hide_overlay_player = false
 	_set_peek_floor_mode(false)
 	slide_progress        = 0.0
 	slide_active          = false
@@ -450,6 +452,7 @@ func _input(event: InputEvent) -> void:
 
 func _start_merge_anim() -> void:
 	_merge_anim_active = true
+	_merge_hide_overlay_player = true  # hide non-focused player immediately
 	var from_preview := merge_preview_active and merge_preview_progress > 0.9
 	if from_preview:
 		# Panels already overlapped — jump straight to entity scale-up phase
@@ -466,6 +469,7 @@ func _finish_merge_anim() -> void:
 	_merge_anim_active = false
 	_merge_anim_entity_phase = false
 	_merge_entity_scale = -1.0
+	_merge_hide_overlay_player = false
 	merge_preview_active = false
 	merge_preview_progress = 0.0
 	controller.try_merge()
@@ -611,7 +615,8 @@ func _apply_frame_spec() -> void:
 		slide_direction,
 		merge_preview_active,
 		merge_preview_progress,
-		_merge_entity_scale)
+		_merge_entity_scale,
+		_merge_hide_overlay_player)
 
 	_update_renderer_layering(preview_on)
 

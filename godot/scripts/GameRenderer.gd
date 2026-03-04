@@ -953,7 +953,7 @@ func _draw_overlap_box_diamond(stacked: Array, pos: Vector2i, eff: float, a: flo
 
 
 func _draw_player(player: Entity, eff: float, a: float) -> void:
-	if player == null:
+	if player == null or _spec.hide_player:
 		return
 
 	var is_overlay: bool = _spec.is_merge_preview and not _spec.is_focused

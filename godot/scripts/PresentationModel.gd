@@ -58,6 +58,7 @@ class BranchViewSpec:
 	var show_player_direction:  bool        = true
 	var overlay_entity_scale:   float       = 1.0
 	var overlay_skip_positions: Dictionary  = {}   # Vector2i → true; shared positions to skip in overlay
+	var hide_player:            bool        = false  # suppress player draw (merge anim)
 
 
 ## Complete visual specification for one frame.
@@ -105,7 +106,8 @@ static func build(
 		slide_direction:      int   = 0,
 		merge_preview_active: bool  = false,
 		merge_preview_progress: float = 0.0,
-		merge_entity_scale_override: float = -1.0) -> FrameViewSpec:
+		merge_entity_scale_override: float = -1.0,
+		hide_overlay_player: bool = false) -> FrameViewSpec:
 
 	var spec := FrameViewSpec.new()
 	spec.has_branched  = controller.has_branched
@@ -239,7 +241,8 @@ static func build(
 		fetch_mode_enabled,
 		show_shadow_connections,
 		main_oes,
-		main_skip)
+		main_skip,
+		hide_overlay_player if focus == 1 else false)
 
 	# Build sub branch spec (DIV 1)
 	if has_branched and controller.sub_branch != null:
@@ -266,7 +269,8 @@ static func build(
 			fetch_mode_enabled,
 			show_shadow_connections,
 			sub_oes,
-			sub_skip)
+			sub_skip,
+			hide_overlay_player if focus == 0 else false)
 
 	# Restore flash (fuse/converge success) — active branch panel only
 	const RESTORE_FLASH_DURATION := 0.35
@@ -313,7 +317,8 @@ static func _make_spec(
 		p_fetch_mode_enabled: bool,
 		p_show_shadow_connections: bool,
 		p_overlay_entity_scale: float = 1.0,
-		p_overlay_skip_positions: Dictionary = {}) -> BranchViewSpec:
+		p_overlay_skip_positions: Dictionary = {},
+		p_hide_player: bool = false) -> BranchViewSpec:
 
 	var s := BranchViewSpec.new()
 	s.state                  = p_state
@@ -346,6 +351,7 @@ static func _make_spec(
 	s.show_shadow_connections = p_show_shadow_connections
 	s.overlay_entity_scale   = p_overlay_entity_scale
 	s.overlay_skip_positions = p_overlay_skip_positions
+	s.hide_player            = p_hide_player
 	return s
 
 
