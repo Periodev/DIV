@@ -106,7 +106,7 @@ static func _build_timeline_box(is_active: bool, viewport_size: Vector2) -> Hint
 
 	var box := HintBoxSpec.new()
 	box.id = "diverge"
-	box.text = "[V] Diverge"
+	box.text = "[V] 分裂"
 	box.rect = rect
 	box.text_center = rect.get_center()
 	box.font_size = 16
@@ -146,7 +146,7 @@ static func _build_merge_box(enabled: bool, viewport_size: Vector2) -> HintBoxSp
 
 	var box := HintBoxSpec.new()
 	box.id = "merge"
-	box.text = "[V] Merge"
+	box.text = "[V] 合併"
 	box.rect = rect
 	box.text_center = rect.get_center()
 	box.font_size = 16

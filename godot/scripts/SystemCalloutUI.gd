@@ -85,7 +85,7 @@ func _draw() -> void:
 		node_positions["diverge"] = diverge_pos
 		_draw_gated_callout_node(
 			diverge_pos,
-			"[V] DIVERGE",
+			"[V] 分裂",
 			unlock_diverge,
 			unlock_diverge and div_points > 0,
 			COL_DIVERGE_DEEP,
@@ -120,7 +120,7 @@ func _draw() -> void:
 		node_positions["merge"] = Vector2(v_x, baseline_y)
 		_draw_gated_callout_node(
 			Vector2(v_x, baseline_y),
-			"[V] MERGE",
+			"[V] 合併",
 			unlock_merge,
 			unlock_merge and can_v_merge,
 			COL_READY_MERGE,
@@ -175,7 +175,7 @@ func _draw_preview_toggle_node(pos: Vector2, is_active: bool, font: Font, font_s
 	var col_line: Color = COL_LINE_LIT
 	var col_text: Color = COL_TEXT_LIT
 	var node_r: float = 5.0 if not is_active else 4.0
-	var label_text: String = "[M] CANCEL" if is_active else "[M] PREVIEW"
+	var label_text: String = "[M] 取消預覽" if is_active else "[M] 預覽"
 
 	if is_active:
 		draw_arc(pos, node_r, 0.0, TAU, 16, col_line, 1.5, true)
@@ -231,7 +231,7 @@ func _draw_div_dots(anchor_pos: Vector2, points: int) -> void:
 
 
 func _draw_persistent_footer(font: Font, font_size: int) -> void:
-	var entries: Array[String] = ["[ESC] MENU", "[F1] INFO", "[R] RESET", "[Z] UNDO"]
+	var entries: Array[String] = ["[ESC] 選擇關卡", "[F1] 說明", "[R] 重置", "[Z] 退回"]
 	var x_fracs: Array[float] = [0.15, 0.38, 0.62, 0.85]
 	var r := 2.5
 	var y_node := 12.0
