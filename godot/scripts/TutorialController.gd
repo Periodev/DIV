@@ -12,6 +12,8 @@ const TUTORIAL_CHECKS := {
 	"walk_to_goal": [Check.PLAYER_ON_GOAL],
 	"core_intro":   [Check.PLAYER_ON_GOAL],
 	"switch_and_goal": [Check.SWITCH_PROGRESS, Check.GOAL_ACTIVE],
+	"revert": [Check.SWITCH_PROGRESS, Check.GOAL_ACTIVE],
+
 	"split_switches": [
 		Check.SWITCH_ACTIVATED,
 		Check.INPUT_TAB,
