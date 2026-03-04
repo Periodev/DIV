@@ -44,6 +44,12 @@ var merge_preview_progress: float = 0.0
 const MERGE_PREVIEW_DURATION := 0.20
 var peek_floor_active: bool = false
 
+# Merge animation (plays before try_merge() is called)
+var _merge_anim_active: bool = false
+var _merge_anim_entity_phase: bool = false  # true = entity scale-up phase
+var _merge_entity_scale: float = -1.0       # -1 = off; 0.72→1.0 during entity phase
+const MERGE_ENTITY_ANIM_DURATION := 0.20
+
 # Falling box Tween animations
 var _fall_progress: Dictionary = {}  # {[branch_id, uid, pos]: float 0-1} driven by Tweens
 var _fall_tweens:   Dictionary = {}  # {str_key: Tween}
@@ -140,6 +146,9 @@ func _start_level(idx: int) -> void:
 
 	merge_preview_active  = false
 	merge_preview_progress = 0.0
+	_merge_anim_active    = false
+	_merge_anim_entity_phase = false
+	_merge_entity_scale   = -1.0
 	_set_peek_floor_mode(false)
 	slide_progress        = 0.0
 	slide_active          = false
@@ -239,10 +248,23 @@ func _process(delta: float) -> void:
 		if needs_effect:
 			needs_redraw = true
 
+	# Merge animation — advances before movement / physics so entity scale is current.
+	if _merge_anim_active:
+		needs_redraw = true
+		if _merge_anim_entity_phase:
+			_merge_entity_scale = minf(_merge_entity_scale + delta / MERGE_ENTITY_ANIM_DURATION, 1.0)
+			if _merge_entity_scale >= 1.0:
+				_finish_merge_anim()
+		elif merge_preview_progress >= 0.99:
+			# Panels converged — start entity scale-up phase
+			_merge_anim_entity_phase = true
+			_merge_entity_scale = 0.72
+
 	# Held-key movement — mirrors Python game_window.py on_update + move_cooldown.
 	# Movement keys are NOT handled in _input(); they are polled here every frame
 	# so that holding a direction gives smooth continuous movement.
-	if controller != null and not controller.collapsed and not controller.victory:
+	if controller != null and not controller.collapsed and not controller.victory \
+			and not _merge_anim_active:
 		var dir := _get_held_direction()
 		_move_cooldown = maxf(_move_cooldown - delta, 0.0)
 		if dir == Vector2i(0, 0):
@@ -258,12 +280,13 @@ func _process(delta: float) -> void:
 	# Physics runs every frame — mirrors Python game_window.py on_update (line 117).
 	# update_physics() is called unconditionally each frame (not only on input),
 	# so future time-driven or multi-step physics settle correctly.
-	if controller != null and not controller.collapsed and not controller.victory:
+	if controller != null and not controller.collapsed and not controller.victory \
+			and not _merge_anim_active:
 		controller.update_physics()
 		needs_redraw = true
 
 	# Victory check every frame — mirrors Python game_window.py on_update (line 120).
-	if controller != null and not controller.victory:
+	if controller != null and not controller.victory and not _merge_anim_active:
 		controller.check_victory()
 
 	if needs_redraw:
@@ -276,6 +299,10 @@ func _process(delta: float) -> void:
 
 func _input(event: InputEvent) -> void:
 	if controller == null:
+		return
+
+	# Merge animation is playing — block all input until it completes.
+	if _merge_anim_active:
 		return
 
 	# Spotlight is blocking — let SymbolSpotlightUI handle the event first.
@@ -366,7 +393,10 @@ func _input(event: InputEvent) -> void:
 
 		KEY_V:
 			if controller.has_branched:
-				if controller.try_merge():
+				if controller.has_method("can_normal_merge") and controller.can_normal_merge():
+					_start_merge_anim()
+				else:
+					controller.try_merge()
 					_full_refresh()
 			elif _current_hints.get("diverge", true):
 				if controller.try_branch():
@@ -417,6 +447,30 @@ func _input(event: InputEvent) -> void:
 # ---------------------------------------------------------------------------
 # Slide animation
 # ---------------------------------------------------------------------------
+
+func _start_merge_anim() -> void:
+	_merge_anim_active = true
+	var from_preview := merge_preview_active and merge_preview_progress > 0.9
+	if from_preview:
+		# Panels already overlapped — jump straight to entity scale-up phase
+		_merge_anim_entity_phase = true
+		_merge_entity_scale = 0.72
+	else:
+		# Panels separate — enable merge preview so they converge first
+		_merge_anim_entity_phase = false
+		_merge_entity_scale = -1.0
+		merge_preview_active = true
+
+
+func _finish_merge_anim() -> void:
+	_merge_anim_active = false
+	_merge_anim_entity_phase = false
+	_merge_entity_scale = -1.0
+	merge_preview_active = false
+	merge_preview_progress = 0.0
+	controller.try_merge()
+	_full_refresh()
+
 
 func _start_slide() -> void:
 	slide_direction = 1 if controller.current_focus == 1 else -1
@@ -556,7 +610,8 @@ func _apply_frame_spec() -> void:
 		slide_progress if slide_active else 0.0,
 		slide_direction,
 		merge_preview_active,
-		merge_preview_progress)
+		merge_preview_progress,
+		_merge_entity_scale)
 
 	_update_renderer_layering(preview_on)
 

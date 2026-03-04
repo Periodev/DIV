@@ -104,7 +104,8 @@ static func build(
 		slide_progress:       float = 0.0,
 		slide_direction:      int   = 0,
 		merge_preview_active: bool  = false,
-		merge_preview_progress: float = 0.0) -> FrameViewSpec:
+		merge_preview_progress: float = 0.0,
+		merge_entity_scale_override: float = -1.0) -> FrameViewSpec:
 
 	var spec := FrameViewSpec.new()
 	spec.has_branched  = controller.has_branched
@@ -170,11 +171,13 @@ static func build(
 	if preview_on:
 		var oes_t := _ease_in_out(clampf(merge_preview_progress, 0.0, 1.0))
 		if focus == 0:
-			sub_oes = lerpf(1.0, 0.72, oes_t)
+			sub_oes = merge_entity_scale_override if merge_entity_scale_override >= 0.0 \
+				else lerpf(1.0, 0.72, oes_t)
 			if merge_preview_progress >= 1.0:
 				sub_skip = _shared_entity_positions(controller.main_branch, controller.sub_branch)
 		else:
-			main_oes = lerpf(1.0, 0.72, oes_t)
+			main_oes = merge_entity_scale_override if merge_entity_scale_override >= 0.0 \
+				else lerpf(1.0, 0.72, oes_t)
 			if merge_preview_progress >= 1.0:
 				main_skip = _shared_entity_positions(controller.sub_branch, controller.main_branch)
 
