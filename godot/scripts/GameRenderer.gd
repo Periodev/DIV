@@ -840,7 +840,7 @@ func _draw_entities(eff: float, a: float) -> void:
 	_draw_falling_boxes(eff, a)
 
 	# Shadow connections (focused full-size only)
-	if _spec.is_focused and _spec.scale >= 1.0:
+	if _spec.show_shadow_connections and _spec.is_focused and _spec.scale >= 1.0:
 		_draw_shadow_connections(eff, a)
 
 	_draw_player(player, eff, a)

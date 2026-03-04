@@ -52,6 +52,7 @@ class BranchViewSpec:
 	var merge_hint_enabled:     bool        = true
 	var show_fetch_indicator:   bool        = false
 	var fetch_mode_enabled:     bool        = false
+	var show_shadow_connections: bool       = true
 	var show_player_direction:  bool        = true
 	var overlay_entity_scale:   float       = 1.0
 	var overlay_skip_positions: Dictionary  = {}   # Vector2i → true; shared positions to skip in overlay
@@ -124,6 +125,7 @@ static func build(
 	# Color indicates whether fetch merge is currently usable.
 	var show_fetch_indicator: bool = has_branched
 	var fetch_mode_enabled: bool = has_branched and controller.can_show_fetch_hint()
+	var show_shadow_connections: bool = controller.hint_allow_converge
 
 	# Goal glow level: 2=strong (merged+switches done), 1=weak (branched+preview switches done).
 	var preview := controller.get_merge_preview()
@@ -220,9 +222,9 @@ static func build(
 		has_branched, preview_on, cell_sz,
 		main_s, main_x, main_y, main_a,
 		goal_glow, animation_frame,
-		flash_pos if (focus == 0) else Vector2i(-1, -1),
-		flash_int if (focus == 0) else 0.0,
-		flash_style if (focus == 0) else "cell",
+		flash_pos if (focus == 0 or flash_style == "diamond") else Vector2i(-1, -1),
+		flash_int if (focus == 0 or flash_style == "diamond") else 0.0,
+		flash_style if (focus == 0 or flash_style == "diamond") else "cell",
 		falling_main,
 		branch_hint_active if (focus == 0) else false,
 		show_merge_preview_hint,
@@ -230,6 +232,7 @@ static func build(
 		merge_hint_enabled,
 		show_fetch_indicator,
 		fetch_mode_enabled,
+		show_shadow_connections,
 		main_oes,
 		main_skip)
 
@@ -246,9 +249,9 @@ static func build(
 			has_branched, preview_on, cell_sz,
 			sub_s, sub_x, sub_y, sub_a,
 			goal_glow, animation_frame,
-			flash_pos if (focus == 1) else Vector2i(-1, -1),
-			flash_int if (focus == 1) else 0.0,
-			flash_style if (focus == 1) else "cell",
+			flash_pos if (focus == 1 or flash_style == "diamond") else Vector2i(-1, -1),
+			flash_int if (focus == 1 or flash_style == "diamond") else 0.0,
+			flash_style if (focus == 1 or flash_style == "diamond") else "cell",
 			falling_sub,
 			branch_hint_active if (focus == 1) else false,
 			show_merge_preview_hint,
@@ -256,6 +259,7 @@ static func build(
 			merge_hint_enabled,
 			show_fetch_indicator,
 			fetch_mode_enabled,
+			show_shadow_connections,
 			sub_oes,
 			sub_skip)
 
@@ -289,6 +293,7 @@ static func _make_spec(
 		p_merge_hint_enabled: bool,
 		p_show_fetch_indicator: bool,
 		p_fetch_mode_enabled: bool,
+		p_show_shadow_connections: bool,
 		p_overlay_entity_scale: float = 1.0,
 		p_overlay_skip_positions: Dictionary = {}) -> BranchViewSpec:
 
@@ -320,6 +325,7 @@ static func _make_spec(
 	s.merge_hint_enabled     = p_merge_hint_enabled
 	s.show_fetch_indicator   = p_show_fetch_indicator
 	s.fetch_mode_enabled     = p_fetch_mode_enabled
+	s.show_shadow_connections = p_show_shadow_connections
 	s.overlay_entity_scale   = p_overlay_entity_scale
 	s.overlay_skip_positions = p_overlay_skip_positions
 	return s
