@@ -140,6 +140,8 @@ func _start_level(idx: int) -> void:
 	var tutorial_display: String = level_dict.get("tutorial_display", "")
 	tutorial.start_level(tutorial_id, tutorial_steps, self, tutorial_display)
 	hint_overlay.clear_overlay()
+	if _spotlight != null:
+		_spotlight.clear_corner_hint()
 	if _desc_overlay != null:
 		_desc_overlay.hide_desc()
 		if level_dict.get("auto_desc", true):
@@ -308,7 +310,7 @@ func _input(event: InputEvent) -> void:
 		return
 
 	# Spotlight is blocking — let SymbolSpotlightUI handle the event first.
-	if _spotlight != null and _spotlight.visible:
+	if _spotlight != null and _spotlight.is_sequence_active():
 		return
 
 	if controller.collapsed or controller.victory:
@@ -444,6 +446,9 @@ func _input(event: InputEvent) -> void:
 			_save_selected_level_idx()
 
 	tutorial.on_input(key)
+	var _input_pending := tutorial.get_pending_panel_spotlight()
+	if not _input_pending.is_empty():
+		_show_panel_spotlight(_input_pending)
 
 
 # ---------------------------------------------------------------------------
@@ -761,15 +766,19 @@ func _show_panel_spotlight(items: Array) -> void:
 	var screen_items: Array = []
 	for item in items:
 		var d: Dictionary = item.duplicate()
-		if d.get("domain", "") == "panel":
-			d.erase("domain")
+		d.erase("domain")
+		if d.get("corner", false):
+			d.erase("corner")
+			_spotlight.show_corner_hint(d)
+		else:
 			d["panel_rect"] = Rect2(
 				PresentationModel.CENTER_X,
 				PresentationModel.CENTER_Y,
 				PresentationModel.TARGET_PANEL,
 				PresentationModel.TARGET_PANEL)
-		screen_items.append(d)
-	_spotlight.show_sequence(screen_items)
+			screen_items.append(d)
+	if not screen_items.is_empty():
+		_spotlight.show_sequence(screen_items)
 
 
 func _show_pending_spotlight() -> void:

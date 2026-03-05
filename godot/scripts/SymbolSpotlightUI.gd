@@ -20,6 +20,26 @@ var _items: Array = []
 var _index: int   = 0
 var _time:  float = 0.0
 var _input_blocked: bool = false  # ignore input on the same frame the spotlight was shown
+var _corner_item: Dictionary = {}  # persistent non-blocking hint in top-right corner
+
+
+func is_sequence_active() -> bool:
+	return visible and _index < _items.size()
+
+
+func show_corner_hint(item: Dictionary) -> void:
+	_corner_item = item
+	visible = true
+	set_process(true)
+	queue_redraw()
+
+
+func clear_corner_hint() -> void:
+	_corner_item = {}
+	if _index >= _items.size():
+		visible = false
+		set_process(false)
+	queue_redraw()
 
 
 func show_sequence(items: Array) -> void:
@@ -44,18 +64,58 @@ func _input(event: InputEvent) -> void:
 	if _input_blocked:
 		accept_event()
 		return
+	if _index >= _items.size():
+		return  # only corner hint showing — do not consume input
 	if event is InputEventKey and event.pressed and not event.echo:
 		accept_event()
 		_index += 1
 		if _index >= _items.size():
-			visible = false
-			set_process(false)
+			if _corner_item.is_empty():
+				visible = false
+				set_process(false)
 			finished.emit()
 		else:
 			queue_redraw()
 
 
+func _draw_corner_hint(pulse: float) -> void:
+	var font: Font = ThemeDB.fallback_font
+	if font == null or _corner_item.is_empty():
+		return
+	var title: String = _corner_item.get("title", "")
+	var lines: Array  = _corner_item.get("lines", [])
+	var title_fs: int   = 16
+	var text_fs:  int   = 13
+	var line_h:   float = text_fs + 6.0
+	var pad:      float = 14.0
+	var max_w: float = font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1.0, title_fs).x
+	for line in lines:
+		var lw := font.get_string_size(str(line), HORIZONTAL_ALIGNMENT_LEFT, -1.0, text_fs).x
+		if lw > max_w:
+			max_w = lw
+	var box_w := max_w + pad * 2.0
+	var box_h := pad + title_fs + pad * 0.5 + lines.size() * line_h + pad
+	var margin := 20.0
+	var box_x  := size.x - box_w - margin
+	var box_y  := margin
+	draw_rect(Rect2(box_x, box_y, box_w, box_h), COL_PANEL)
+	draw_rect(Rect2(box_x, box_y, box_w, box_h),
+		Color(COL_BORDER.r, COL_BORDER.g, COL_BORDER.b, 0.22 + 0.20 * pulse), false, 1.0)
+	var title_y := box_y + pad + title_fs * 0.85
+	draw_string(font, Vector2(box_x + pad, title_y),
+		title, HORIZONTAL_ALIGNMENT_LEFT, -1.0, title_fs, COL_TITLE)
+	var sep_y := title_y + 7.0
+	draw_line(Vector2(box_x + pad * 0.5, sep_y), Vector2(box_x + box_w - pad * 0.5, sep_y),
+		Color(0.4, 0.4, 0.4, 0.55), 1.0)
+	for i in lines.size():
+		draw_string(font, Vector2(box_x + pad, sep_y + 5.0 + (i + 1) * line_h),
+			str(lines[i]), HORIZONTAL_ALIGNMENT_LEFT, -1.0, text_fs, COL_TEXT)
+
+
 func _draw() -> void:
+	var font_check: Font = ThemeDB.fallback_font
+	if font_check != null and not _corner_item.is_empty():
+		_draw_corner_hint(0.5 + 0.5 * sin(_time * 3.0))
 	if _index >= _items.size():
 		return
 	var item: Dictionary = _items[_index]

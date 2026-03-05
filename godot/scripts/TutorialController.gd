@@ -325,6 +325,18 @@ func _refresh_toast() -> void:
 func _complete_item(index: int) -> void:
 	if index >= 0 and index < _items.size():
 		_items[index]["done"] = true
+		if _tutorial_id == "preview_intro" \
+				and _items[index]["check"] == Check.INPUT_M:
+			_pending_panel_spotlight = [{
+				"domain": "panel",
+				"corner": true,
+				"title": "預覽模式",
+				"lines": [
+					"兩空間疊合，另一空間的角色變灰、核心呈現縮小半透明",
+					"可以繼續操作角色，按 [Tab] 即時切換",
+					"再按 [V] 合併或 [M] 退出預覽"
+				],
+			}]
 	_refresh_toast()
 	var all_done := true
 	for item in _items:
