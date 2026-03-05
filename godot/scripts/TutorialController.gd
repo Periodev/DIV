@@ -429,7 +429,8 @@ func _evaluate_checks() -> void:
 				_pending_panel_spotlight = [{
 					"domain": "panel",
 					"title": "分裂空間",
-					"lines": ["你可以分別控制兩個空間的角色", "目前控制對象會在中央大圖", "已完成部份任務，按Tab切換到另一角色"],
+					"lines": ["複製當前狀態，產生兩個分裂空間",
+					"一次可控制一個空間的角色", "目前控制對象會在中央大圖", "按 [Tab] 切換空間，轉移控制權"],
 				}]
 
 	_was_branched = c.has_branched

@@ -51,6 +51,13 @@ var _merge_entity_scale: float = -1.0       # -1 = off; 0.72→1.0 during entity
 var _merge_hide_overlay_player: bool = false
 const MERGE_ENTITY_ANIM_DURATION := 0.20
 
+# Branch animation (plays after try_branch() — reverse of merge anim)
+var _branch_anim_active: bool = false
+var _branch_anim_progress: float = 0.0    # Phase A: 0=overlapped → 1=split
+var _branch_reveal_progress: float = 0.0  # Phase B: 0=hidden → 1=text/elbow visible
+const BRANCH_SPLIT_DURATION   := 0.25
+const BRANCH_REVEAL_DURATION  := 0.05
+
 # Falling box Tween animations
 var _fall_progress: Dictionary = {}  # {[branch_id, uid, pos]: float 0-1} driven by Tweens
 var _fall_tweens:   Dictionary = {}  # {str_key: Tween}
@@ -153,6 +160,9 @@ func _start_level(idx: int) -> void:
 	_merge_anim_entity_phase = false
 	_merge_entity_scale   = -1.0
 	_merge_hide_overlay_player = false
+	_branch_anim_active   = false
+	_branch_anim_progress = 0.0
+	_branch_reveal_progress = 0.0
 	_set_peek_floor_mode(false)
 	slide_progress        = 0.0
 	slide_active          = false
@@ -232,7 +242,7 @@ func _process(delta: float) -> void:
 		needs_redraw = true
 
 	# Merge preview animation (M): side branch slides/scales into overlap.
-	if controller != null:
+	if controller != null and not _branch_anim_active:
 		if not controller.has_branched:
 			merge_preview_active = false
 		var preview_target: float = 1.0 if (controller.has_branched and merge_preview_active) else 0.0
@@ -252,6 +262,18 @@ func _process(delta: float) -> void:
 		if needs_effect:
 			needs_redraw = true
 
+	# Branch animation (reverse of merge: panels split outward, then text/elbow fade in).
+	if _branch_anim_active:
+		needs_redraw = true
+		if _branch_anim_progress < 1.0:
+			_branch_anim_progress = minf(_branch_anim_progress + delta / BRANCH_SPLIT_DURATION, 1.0)
+		else:
+			_branch_reveal_progress = minf(_branch_reveal_progress + delta / BRANCH_REVEAL_DURATION, 1.0)
+			if _branch_reveal_progress >= 1.0:
+				_branch_anim_active = false
+				_branch_anim_progress = 0.0
+				_branch_reveal_progress = 0.0
+
 	# Merge animation — advances before movement / physics so entity scale is current.
 	if _merge_anim_active:
 		needs_redraw = true
@@ -268,7 +290,7 @@ func _process(delta: float) -> void:
 	# Movement keys are NOT handled in _input(); they are polled here every frame
 	# so that holding a direction gives smooth continuous movement.
 	if controller != null and not controller.collapsed and not controller.victory \
-			and not _merge_anim_active:
+			and not _merge_anim_active and not _branch_anim_active:
 		var dir := _get_held_direction()
 		_move_cooldown = maxf(_move_cooldown - delta, 0.0)
 		if dir == Vector2i(0, 0):
@@ -285,12 +307,12 @@ func _process(delta: float) -> void:
 	# update_physics() is called unconditionally each frame (not only on input),
 	# so future time-driven or multi-step physics settle correctly.
 	if controller != null and not controller.collapsed and not controller.victory \
-			and not _merge_anim_active:
+			and not _merge_anim_active and not _branch_anim_active:
 		controller.update_physics()
 		needs_redraw = true
 
 	# Victory check every frame — mirrors Python game_window.py on_update (line 120).
-	if controller != null and not controller.victory and not _merge_anim_active:
+	if controller != null and not controller.victory and not _merge_anim_active and not _branch_anim_active:
 		controller.check_victory()
 
 	if needs_redraw:
@@ -305,8 +327,8 @@ func _input(event: InputEvent) -> void:
 	if controller == null:
 		return
 
-	# Merge animation is playing — block all input until it completes.
-	if _merge_anim_active:
+	# Merge or branch animation is playing — block all input until it completes.
+	if _merge_anim_active or _branch_anim_active:
 		return
 
 	# Spotlight is blocking — let SymbolSpotlightUI handle the event first.
@@ -404,6 +426,7 @@ func _input(event: InputEvent) -> void:
 					_full_refresh()
 			elif _current_hints.get("diverge", true):
 				if controller.try_branch():
+					_start_branch_anim()
 					_full_refresh()
 
 		KEY_F:
@@ -479,6 +502,14 @@ func _finish_merge_anim() -> void:
 	merge_preview_progress = 0.0
 	controller.try_merge()
 	_full_refresh()
+
+
+func _start_branch_anim() -> void:
+	_branch_anim_active = true
+	_branch_anim_progress = 0.0
+	_branch_reveal_progress = 0.0
+	merge_preview_active = false
+	merge_preview_progress = 0.0
 
 
 func _start_slide() -> void:
@@ -614,15 +645,27 @@ func _apply_frame_spec() -> void:
 		return
 	_sync_interaction_hint_gates()
 
-	var preview_on := merge_preview_progress > 0.0
+	# During branch animation: Phase A drives panels from overlapped→split,
+	# Phase B just lets panels stay at final position.
+	var eff_preview_active := merge_preview_active
+	var eff_preview_progress := merge_preview_progress
+	if _branch_anim_active:
+		if _branch_anim_progress < 1.0:
+			eff_preview_active   = true
+			eff_preview_progress = 1.0 - _branch_anim_progress
+		else:
+			eff_preview_active   = false
+			eff_preview_progress = 0.0
+
+	var preview_on := eff_preview_progress > 0.0
 	var spec := PresentationModel.build(
 		controller,
 		animation_frame,
 		_fall_progress,
 		slide_progress if slide_active else 0.0,
 		slide_direction,
-		merge_preview_active,
-		merge_preview_progress,
+		eff_preview_active,
+		eff_preview_progress,
 		_merge_entity_scale,
 		_merge_hide_overlay_player)
 
@@ -644,6 +687,13 @@ func _apply_frame_spec() -> void:
 		var merge_t := 0.0
 		if _merge_anim_active:
 			merge_t = 1.0 if _merge_anim_entity_phase else merge_preview_progress
+		elif _branch_anim_active:
+			if _branch_anim_progress < 1.0:
+				# Phase A: elbow/text retracted (1.0) → elbow collapsed, text gone (0.45)
+				merge_t = lerpf(1.0, 0.45, _branch_anim_progress)
+			else:
+				# Phase B: elbow appears, text fades in (0.45 → 0.0)
+				merge_t = lerpf(0.45, 0.0, _branch_reveal_progress)
 		callout_ui.set_merge_anim_t(merge_t)
 
 
