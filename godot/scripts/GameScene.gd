@@ -375,10 +375,10 @@ func _input(event: InputEvent) -> void:
 		return
 
 	# Blocking tutorial gate: only the required key is accepted.
-	# R and ESC are always allowed so the player can reset or exit.
+	# ESC is always allowed to exit; R is blocked in blocking mode to prevent soft-lock.
 	var _req_action := tutorial.get_blocking_action()
 	if _req_action != "":
-		if key != KEY_R and key != KEY_ESCAPE:
+		if key != KEY_ESCAPE:
 			if _req_action == "horizontal":
 				# A/D movement is polled in _process(); block all _input() keys here.
 				return
