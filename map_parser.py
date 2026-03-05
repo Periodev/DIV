@@ -9,8 +9,15 @@ All IDs are auto-generated in left-to-right, top-to-bottom order.
 
 from timeline_system import LevelSource, EntityType, TerrainType
 
+_FACING_MAP = {
+    "right": (1, 0),
+    "left":  (-1, 0),
+    "up":    (0, -1),
+    "down":  (0, 1),
+}
 
-def parse_dual_layer(floor_map_str, object_map_str) -> LevelSource:
+
+def parse_dual_layer(floor_map_str, object_map_str, player_facing: str = None) -> LevelSource:
     """
     Parse dual-layer map strings and return a LevelSource.
     All symbols are single characters; IDs are auto-generated.
@@ -68,11 +75,14 @@ def parse_dual_layer(floor_map_str, object_map_str) -> LevelSource:
     if TerrainType.GOAL not in terrain.values():
         raise ValueError("Goal position (G) not found")
 
+    facing = _FACING_MAP.get(player_facing.strip().lower()) if player_facing else None
+
     return LevelSource(
         grid_size=grid_size,
         terrain=terrain,
         entity_definitions=entity_definitions,
-        next_uid=uid + 1
+        next_uid=uid + 1,
+        player_facing=facing,
     )
 
 

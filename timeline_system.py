@@ -35,6 +35,7 @@ class LevelSource:
     entity_definitions: Dict[int, Tuple[EntityType, Position]]
     # {0: (PLAYER, (2,5)), 1: (BOX, (1,1)), ...}
     next_uid: int
+    player_facing: Optional[Position] = None  # explicit initial direction; None = auto
 
 # ===== Runtime Entity =====
 @dataclass(slots=True)
@@ -551,13 +552,10 @@ def init_branch_from_source(source: LevelSource) -> BranchState:
     # Instantiate all entity definitions
     for uid in sorted(source.entity_definitions.keys()):
         etype, pos = source.entity_definitions[uid]
-        state.entities.append(Entity(
-            uid=uid,
-            type=etype,
-            pos=pos,
-            collision=1,
-            weight=1
-        ))
+        kwargs = dict(uid=uid, type=etype, pos=pos, collision=1, weight=1)
+        if uid == 0 and source.player_facing is not None:
+            kwargs['direction'] = source.player_facing
+        state.entities.append(Entity(**kwargs))
 
     state.next_uid = source.next_uid
     return state

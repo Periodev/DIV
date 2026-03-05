@@ -46,12 +46,16 @@ def _parse_sections(text: str):
         else:
             parsed_hints = None
 
+        facing_match = re.search(r"^\s*player_facing\s*=\s*(\w+)\s*$", content, flags=re.MULTILINE)
+        player_facing = facing_match.group(1) if facing_match else None
+
         yield {
             "name": name,
             "floor_map": _clean_map_block(floor_match.group(1)),
             "object_map": _clean_map_block(object_match.group(1)),
             "objective_items": objective_items,
             "parsed_hints": parsed_hints,
+            "player_facing": player_facing,
         }
 
 
@@ -114,6 +118,7 @@ def load_main_levels(level_dir: str | None = None):
                     "object_map": item["object_map"],
                     "hints": hints,
                     "objective": objective,
+                    "player_facing": item.get("player_facing"),
                 }
             )
 

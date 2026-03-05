@@ -237,5 +237,6 @@ class MenuView(arcade.View):
             all_levels=self.levels,
             progress=self.progress,
             level_id=level_id,
+            player_facing=level.get("player_facing"),
         )
         self.window.show_view(game_view)

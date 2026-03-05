@@ -21,13 +21,15 @@ class GameView(arcade.View):
     def __init__(self, floor_map: str, object_map: str, hints: dict = None,
                  objective: dict = None, first_time: bool = False,
                  cursor_index: int = 0, all_levels: list = None,
-                 progress: set = None, level_id: str = None):
+                 progress: set = None, level_id: str = None,
+                 player_facing: str = None):
         super().__init__()
 
         # Parse map and create controller
-        source = parse_dual_layer(floor_map, object_map)
+        source = parse_dual_layer(floor_map, object_map, player_facing=player_facing)
+        self._source = source
         self.controller = GameController(source)
-        self._set_initial_facing()
+        self._set_initial_facing(source)
 
         # Renderer
         self.renderer = ArcadeRenderer()
@@ -179,7 +181,7 @@ class GameView(arcade.View):
         # Reset
         if key == arcade.key.F5 or key == arcade.key.R:
             self.controller.reset()
-            self._set_initial_facing()
+            self._set_initial_facing(self._source)
             self.slide_start_time = None
             self.slide_direction = 0
             self.merge_preview_active = False
@@ -312,8 +314,15 @@ class GameView(arcade.View):
         if self.show_objective and self.objective:
             self.renderer._draw_tutorial(self.objective, close_hint='ESC / Enter / Space 關閉')
 
-    def _set_initial_facing(self):
-        """Face the player toward the nearest grounded box on level start."""
+    def _set_initial_facing(self, source):
+        """Set player's initial facing direction.
+
+        If the level specifies player_facing in metadata, that takes priority.
+        Otherwise, fall back to facing toward the nearest grounded box.
+        """
+        if source.player_facing is not None:
+            return  # already applied in init_branch_from_source()
+
         branch = self.controller.main_branch
         player = branch.player
         boxes = [e for e in branch.entities
