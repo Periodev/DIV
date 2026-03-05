@@ -25,6 +25,12 @@ var highlight_node: String = ""        # "diverge", "merge", "tab", "preview", "
 var highlight_annotations: Array = []  # ["藍色 = 可合併", ...]
 var _pulse_time: float = 0.0
 var _tab_text_rect: Rect2 = Rect2()
+var merge_anim_t: float = 0.0
+
+
+func set_merge_anim_t(t: float) -> void:
+	merge_anim_t = t
+	queue_redraw()
 
 
 func set_highlight(node_name: String, annotations: Array = []) -> void:
@@ -98,8 +104,8 @@ func _draw() -> void:
 		_draw_div_dots(diverge_pos, div_points)
 	else:
 		var line_w: float = size.x * 0.12
-		var left_end: float = center_x - line_w - 40.0
-		var right_end: float = center_x + line_w + 40.0
+		var left_end: float = center_x - 200.0
+		var right_end: float = center_x + 200.0
 
 		var f_x: float = center_x - line_w
 		var v_x: float = center_x
@@ -129,9 +135,9 @@ func _draw() -> void:
 			font_size
 		)
 		node_positions["preview"] = Vector2(m_x, baseline_y)
-		_draw_preview_toggle_node(Vector2(m_x, baseline_y), preview_active, font, font_size)
+		_draw_preview_toggle_node(Vector2(m_x, baseline_y), preview_active, font, font_size, merge_anim_t)
 		_draw_div_dots(Vector2(v_x, baseline_y), div_points)
-		var tab_pos := _draw_tab_indicator(size.x, baseline_y, font, font_size)
+		var tab_pos := _draw_tab_indicator(size.x, baseline_y, font, font_size, merge_anim_t)
 		node_positions["tab"] = tab_pos
 
 	_draw_persistent_footer(font, 11)
@@ -170,7 +176,7 @@ func _draw_gated_callout_node(
 	_draw_callout_label(pos, text, col_text, font, font_size, line_len)
 
 
-func _draw_preview_toggle_node(pos: Vector2, is_active: bool, font: Font, font_size: int) -> void:
+func _draw_preview_toggle_node(pos: Vector2, is_active: bool, font: Font, font_size: int, anim_t: float = 0.0) -> void:
 	var line_len: float = 18.0
 	var col_line: Color = COL_LINE_LIT
 	var col_text: Color = COL_TEXT_LIT
@@ -182,7 +188,10 @@ func _draw_preview_toggle_node(pos: Vector2, is_active: bool, font: Font, font_s
 	else:
 		draw_circle(pos, node_r, col_line)
 	draw_line(pos + Vector2(0.0, node_r), pos + Vector2(0.0, line_len), col_line, 1.0)
-	_draw_callout_label(pos, label_text, col_text, font, font_size, line_len)
+	var text_alpha := clampf(1.0 - anim_t / 0.30, 0.0, 1.0)
+	if text_alpha > 0.01:
+		col_text.a *= text_alpha
+		_draw_callout_label(pos, label_text, col_text, font, font_size, line_len)
 
 
 func _draw_callout_node(pos: Vector2, text: String, is_lit: bool, font: Font, font_size: int) -> void:
@@ -249,7 +258,7 @@ func _draw_persistent_footer(font: Font, font_size: int) -> void:
 			text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, COL_TEXT_DIM)
 
 
-func _draw_tab_indicator(screen_w: float, y_pos: float, font: Font, font_size: int) -> Vector2:
+func _draw_tab_indicator(screen_w: float, y_pos: float, font: Font, font_size: int, anim_t: float = 0.0) -> Vector2:
 	# Direction cue: left only when DIV1 is centered, otherwise right.
 	var show_left: bool = active_branch == 1
 	var tab_x: float = screen_w * 0.22 if show_left else screen_w * 0.78
@@ -260,21 +269,33 @@ func _draw_tab_indicator(screen_w: float, y_pos: float, font: Font, font_size: i
 	var line_col: Color = COL_LINE_DIM
 	var text_col: Color = COL_TEXT_LIT
 
-	# Keep one node at mini-panel center, then extend same horizontal line toward baseline.
-	var elbow_x: float = float(PresentationModel.RIGHT_X + PresentationModel.SIDE_GRID * 0.5)
+	# Keep one node at mini-panel center; track animated panel position during merge.
+	var elbow_base: float = float(PresentationModel.RIGHT_X + PresentationModel.SIDE_GRID / 2)
 	if show_left:
-		elbow_x = float(PresentationModel.LEFT_X + PresentationModel.SIDE_GRID * 0.5)
-	var line_w: float = screen_w * 0.12
-	var baseline_left: float = screen_w * 0.5 - line_w - 40.0
-	var baseline_right: float = screen_w * 0.5 + line_w + 40.0
-	var center_target_x: float = baseline_left if show_left else baseline_right
-	var node_pos: Vector2 = Vector2(elbow_x, y_pos - 24.0)
+		elbow_base = float(PresentationModel.LEFT_X + PresentationModel.SIDE_GRID / 2)
+	var elbow_target: float = float(PresentationModel.CENTER_X + PresentationModel.SIDE_GRID / 2)
+	var elbow_x: float = lerpf(elbow_base, elbow_target, anim_t)
+	var center_target_x: float = screen_w * 0.5 - 200.0 if show_left else screen_w * 0.5 + 200.0
 
-	draw_line(Vector2(minf(elbow_x, center_target_x), y_pos), Vector2(maxf(elbow_x, center_target_x), y_pos), line_col, 1.0)
-	draw_line(Vector2(elbow_x, y_pos), node_pos, line_col, 1.0)
-	draw_arc(node_pos, 3.0, 0.0, TAU, 12, line_col, 1.0, true)
+	# Merge animation:
+	#   Phase 1 (0→0.45): text fades + elbow shortens (synchronized)
+	#   Phase 2 (0.45→1.0): panel (elbow_x) moves; horizontal collapses from elbow_base → center_target_x
+	var phase1_frac := clampf(1.0 - anim_t / 0.45, 0.0, 1.0)
+	var text_alpha  := phase1_frac
+	var elbow_h     := 24.0 * phase1_frac
+	var phase2_t    := clampf((anim_t - 0.45) / 0.55, 0.0, 1.0)
+	elbow_x = lerpf(elbow_base, elbow_target, phase2_t)
+	var h_moving    := lerpf(elbow_base, center_target_x, phase2_t)
 
-	draw_string(font, text_pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, text_col)
+	var node_pos: Vector2 = Vector2(elbow_x, y_pos - elbow_h)
+	draw_line(Vector2(minf(center_target_x, h_moving), y_pos), Vector2(maxf(center_target_x, h_moving), y_pos), line_col, 1.0)
+	if elbow_h > 0.5:
+		draw_line(Vector2(elbow_x, y_pos), node_pos, line_col, 1.0)
+		draw_arc(node_pos, 3.0, 0.0, TAU, 12, line_col, 1.0, true)
+
+	if text_alpha > 0.01:
+		draw_string(font, text_pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size,
+			Color(text_col.r, text_col.g, text_col.b, text_col.a * text_alpha))
 	_tab_text_rect = Rect2(text_pos.x - 3.0, text_pos.y - font_size - 1.0, text_w + 6.0, font_size + 4.0)
 	return node_pos
 

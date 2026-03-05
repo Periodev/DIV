@@ -221,7 +221,7 @@ static func build(
 	spec.main_branch = _make_spec(
 		controller.main_branch,
 		focus == 0,
-		"DIV 0" if has_branched else "MAIN",
+		"",
 		BORDER_FOCUSED if (focus == 0) else BORDER_UNFOCUSED,
 		ih if (focus == 0) else null,
 		face_box_hint_pos if (focus == 0) else Vector2i(-1, -1),
@@ -249,7 +249,7 @@ static func build(
 		spec.sub_branch = _make_spec(
 			controller.sub_branch,
 			focus == 1,
-			"DIV 1",
+			"",
 			BORDER_FOCUSED if (focus == 1) else BORDER_UNFOCUSED,
 			ih if (focus == 1) else null,
 			face_box_hint_pos if (focus == 1) else Vector2i(-1, -1),

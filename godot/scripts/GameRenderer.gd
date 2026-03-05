@@ -183,10 +183,11 @@ func _draw() -> void:
 	# Background
 	draw_rect(Rect2(0, 0, gpx, gpx), _col(COLOR_BG, a))
 
-	# Terrain: drop-field underlay -> connection lines -> node markers
+	# Terrain: base connections under markers, then re-draw filled-hole links on top.
 	_draw_no_carry_underlay(gs, eff, a)
 	_draw_connections(gs, eff, a)
 	_draw_nodes(gs, eff, a)
+	_draw_filled_hole_connections_on_top(gs, eff, a)
 
 	# Entities
 	_draw_entities(eff, a)
@@ -265,6 +266,45 @@ func _draw_connections(gs: int, eff: float, a: float) -> void:
 						pos_a, tt_a, c_a,
 						pos_b, tt_b, _grid_to_local_center(pos_b, eff),
 						eff, a)
+
+
+func _draw_filled_hole_connections_on_top(gs: int, eff: float, a: float) -> void:
+	for y in gs:
+		for x in gs:
+			var pos_a := Vector2i(x, y)
+			var tt_a: int = _spec.state.terrain.get(pos_a, Enums.TerrainType.FLOOR)
+			if tt_a == Enums.TerrainType.WALL:
+				continue
+			var a_filled_hole: bool = (tt_a == Enums.TerrainType.HOLE) and _is_hole_filled(pos_a)
+			if not a_filled_hole:
+				# If A is not a filled hole, only pair draw when neighbor is filled hole.
+				# Keep this pass focused so only filled-hole related links are overlaid.
+				pass
+			var c_a: Vector2 = _grid_to_local_center(pos_a, eff)
+
+			# Right neighbour
+			if x + 1 < gs:
+				var pos_b := Vector2i(x + 1, y)
+				var tt_b: int = _spec.state.terrain.get(pos_b, Enums.TerrainType.FLOOR)
+				if tt_b != Enums.TerrainType.WALL:
+					var b_filled_hole: bool = (tt_b == Enums.TerrainType.HOLE) and _is_hole_filled(pos_b)
+					if a_filled_hole or b_filled_hole:
+						_draw_connection_pair(
+							pos_a, tt_a, c_a,
+							pos_b, tt_b, _grid_to_local_center(pos_b, eff),
+							eff, a)
+
+			# Down neighbour
+			if y + 1 < gs:
+				var pos_b := Vector2i(x, y + 1)
+				var tt_b: int = _spec.state.terrain.get(pos_b, Enums.TerrainType.FLOOR)
+				if tt_b != Enums.TerrainType.WALL:
+					var b_filled_hole: bool = (tt_b == Enums.TerrainType.HOLE) and _is_hole_filled(pos_b)
+					if a_filled_hole or b_filled_hole:
+						_draw_connection_pair(
+							pos_a, tt_a, c_a,
+							pos_b, tt_b, _grid_to_local_center(pos_b, eff),
+							eff, a)
 
 
 func _draw_connection_pair(
@@ -493,8 +533,7 @@ func _draw_hole_node(pos: Vector2i, center: Vector2, eff: float, a: float) -> vo
 		# Two entities: left half (lower uid) / right half (higher uid).
 		_draw_hole_fill_half(center, uids[0], core_r, eff, a, PI * 0.5, PI * 1.5)
 		_draw_hole_fill_half(center, uids[1], core_r, eff, a, -PI * 0.5, PI * 0.5)
-	# Filled hole keeps the normal floor center marker to indicate full pass-through.
-	draw_circle(center, 3.8 * node_scale, _col(Color(1, 1, 1, 1.0), a))
+	# Filled hole should not render floor center marker (white dot).
 
 
 func _draw_hole_fill_half(
@@ -515,7 +554,7 @@ func _draw_hole_fill_half(
 				HOLE_SPLIT_GAP_RATIO
 			)
 		else:
-			var rim_w: float = maxf(3.0, _cell_scale * 4.5)
+			var rim_w: float = maxf(1.0, _cell_scale * 1.8)
 			_draw_polygon_outline(hex, Color(col.r, col.g, col.b, 0.92 * a), rim_w)
 		return
 	var mid_angle: float = 0.5 * (angle_from + angle_to)
@@ -533,7 +572,7 @@ func _draw_hole_fill_half(
 		_draw_hole_path_outline(
 			path,
 			Color(col.r, col.g, col.b, 0.92 * a),
-			maxf(3.0, _cell_scale * 4.5),
+			maxf(1.0, _cell_scale * 1.8),
 			false
 		)
 
@@ -684,7 +723,7 @@ func _draw_hole_path_outline(
 
 func _hole_split_line_width() -> float:
 	var ring_w: float = maxf(2.0, _cell_scale * 3.0)
-	return maxf(1.6, ring_w * 0.8)
+	return maxf(1.0, ring_w * 0.55)
 
 
 func _draw_switch_node(
@@ -1502,9 +1541,16 @@ func _draw_border(gpx: float, a: float) -> void:
 
 
 func _draw_title(gpx: float, a: float) -> void:
-	var col   := _col(COLOR_TITLE, a)
-	var size  := int(16.0 * _cell_scale)
-	var title_y: float = -maxf(14.0, title_margin_base * _cell_scale)
+	var col := _col(COLOR_TITLE, a)
+	if _spec.title == "View":
+		# Fixed screen position regardless of panel layout or animation.
+		var sx := float(PresentationModel.CENTER_X + PresentationModel.TARGET_PANEL / 2)
+		var sy := float(PresentationModel.CENTER_Y) - 20.0
+		var local_pos := Vector2(sx, sy) - position
+		_draw_center_text("View", local_pos, 16, col)
+		return
+	var size      := int(16.0 * _cell_scale)
+	var title_y   := -maxf(14.0, title_margin_base * _cell_scale)
 	_draw_center_text(_spec.title, Vector2(gpx * 0.5, title_y), size, col)
 
 

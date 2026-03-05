@@ -631,6 +631,13 @@ func _apply_frame_spec() -> void:
 	if hint_overlay != null:
 		hint_overlay.update_overlay(spec, controller, preview_on, animation_frame)
 
+	var callout_ui = get_node_or_null("UI/SystemCalloutUI")
+	if callout_ui != null and callout_ui.has_method("set_merge_anim_t"):
+		var merge_t := 0.0
+		if _merge_anim_active:
+			merge_t = 1.0 if _merge_anim_entity_phase else merge_preview_progress
+		callout_ui.set_merge_anim_t(merge_t)
+
 
 func _sync_interaction_hint_gates() -> void:
 	if controller == null:
