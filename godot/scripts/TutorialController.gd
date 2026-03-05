@@ -134,6 +134,7 @@ var _was_branched: bool = false
 var _branch_v_accum: int = 0
 var _sequential_mode: bool = false
 var _blocking_mode: bool = false
+var _pending_panel_spotlight: Array = []
 
 # Checklist state: array of { "label": String, "check": Check, "done": bool }
 var _items: Array = []
@@ -147,6 +148,7 @@ func start_level(tutorial_id: String, steps: Array, scene: GameScene, display_mo
 	_last_bbcode = ""
 	_was_branched = false
 	_branch_v_accum = 0
+	_pending_panel_spotlight = []
 	_blocking_mode = display_mode == "blocking"
 	_sequential_mode = display_mode == "sequential" or _blocking_mode
 	_active = tutorial_id != "" and TUTORIAL_CHECKS.has(tutorial_id)
@@ -189,6 +191,21 @@ func get_blocking_action() -> String:
 		if not item["done"]:
 			return BLOCKING_ACTION.get(item["check"], "")
 	return ""
+
+
+## Returns true if the tutorial sequence contains the given check type.
+func has_check(check_type: Check) -> bool:
+	for item in _items:
+		if item["check"] == check_type:
+			return true
+	return false
+
+
+## Returns and clears any pending panel spotlight items.
+func get_pending_panel_spotlight() -> Array:
+	var result := _pending_panel_spotlight.duplicate()
+	_pending_panel_spotlight.clear()
+	return result
 
 
 ## Returns spotlight sequence for this tutorial ID, or [] if none.
@@ -396,6 +413,12 @@ func _evaluate_checks() -> void:
 		if passed:
 			_items[i]["done"] = true
 			changed = true
+			if check == Check.HAS_BRANCHED and _tutorial_id == "diverge_guided":
+				_pending_panel_spotlight = [{
+					"domain": "panel",
+					"title": "分裂空間",
+					"lines": ["你可以分別控制兩個空間的角色", "目前控制對象會在中央大圖", "已完成部份任務，按Tab切換到另一角色"],
+				}]
 
 	_was_branched = c.has_branched
 

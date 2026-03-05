@@ -537,6 +537,9 @@ func _on_state_changed() -> void:
 	# _on_state_changed() only triggers an immediate redraw so the visual
 	# responds to input without waiting for the next _process() tick.
 	tutorial.on_state_changed()
+	var _pending := tutorial.get_pending_panel_spotlight()
+	if not _pending.is_empty():
+		_show_panel_spotlight(_pending)
 	_apply_frame_spec()
 	_update_ui()
 
@@ -751,6 +754,22 @@ func _build_spotlight_screen_items(seq: Array) -> Array:
 
 func _on_desc_dismissed() -> void:
 	_show_pending_spotlight()
+
+
+func _show_panel_spotlight(items: Array) -> void:
+	_ensure_spotlight()
+	var screen_items: Array = []
+	for item in items:
+		var d: Dictionary = item.duplicate()
+		if d.get("domain", "") == "panel":
+			d.erase("domain")
+			d["panel_rect"] = Rect2(
+				PresentationModel.CENTER_X,
+				PresentationModel.CENTER_Y,
+				PresentationModel.TARGET_PANEL,
+				PresentationModel.TARGET_PANEL)
+		screen_items.append(d)
+	_spotlight.show_sequence(screen_items)
 
 
 func _show_pending_spotlight() -> void:
