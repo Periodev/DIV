@@ -32,7 +32,7 @@ class LevelSource:
     """Raw configuration imported from map_parser"""
     grid_size: int
     terrain: Dict[Position, TerrainType]
-    entity_definitions: Dict[int, Tuple[EntityType, Position]]
+    entity_definitions: Dict[int, Tuple]  # (EntityType, Position[, direction])
     # {0: (PLAYER, (2,5)), 1: (BOX, (1,1)), ...}
     next_uid: int
 
@@ -550,13 +550,16 @@ def init_branch_from_source(source: LevelSource) -> BranchState:
     state.grid_size = source.grid_size
     # Instantiate all entity definitions
     for uid in sorted(source.entity_definitions.keys()):
-        etype, pos = source.entity_definitions[uid]
+        defn = source.entity_definitions[uid]
+        etype, pos = defn[0], defn[1]
+        direction = defn[2] if len(defn) >= 3 else (0, 1)
         state.entities.append(Entity(
             uid=uid,
             type=etype,
             pos=pos,
             collision=1,
-            weight=1
+            weight=1,
+            direction=direction
         ))
 
     state.next_uid = source.next_uid
