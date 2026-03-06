@@ -1,4 +1,5 @@
 # Void 空洞
+hints = diverge converge
 
 objective = '''
 紅色圈是[空洞]，無法通過
@@ -25,6 +26,7 @@ object_map = '''
 
 --------------------------
 # Bridge 橋
+hints = diverge converge
 
 objective = '''
 '''
@@ -50,6 +52,7 @@ object_map = '''
 
 --------------------------
 # Retain 保留
+hints = diverge converge
 
 objective = '''
 先修補空洞再合併，合併後可[保留]，呈現殘影修補狀態
@@ -70,6 +73,7 @@ object_map = '''
 
 --------------------------
 # Multifunction 多功能
+hints = diverge converge
 
 objective = '''
 '''
@@ -92,6 +96,7 @@ object_map = '''
 
 --------------------------
 # Support 支撐
+hints = diverge converge
 
 objective = '''
 '''
@@ -114,6 +119,7 @@ object_map = '''
 
 --------------------------
 # Detach 分離
+hints = diverge converge
 
 objective = '''
 若空洞內的殘影，因為還原其它位置而被消除，會回復空洞狀態
@@ -133,6 +139,7 @@ object_map = '''
 
 --------------------------
 # Give way 讓路
+hints = diverge converge
 
 objective = '''
 '''
@@ -157,6 +164,7 @@ object_map = '''
 
 --------------------------
 # Corner case 邊界案例
+hints = diverge converge
 
 objective = '''
 '''
@@ -175,6 +183,7 @@ object_map = '''
 
 --------------------------
 # Extract 抽取
+hints = diverge converge
 
 objective = '''
 若空洞內有多個殘影，可以透過還原只消除其中部份殘影
@@ -198,6 +207,7 @@ object_map = '''
 
 --------------------------
 # Relay 接力
+hints = diverge converge
 
 objective = '''
 '''
@@ -221,6 +231,7 @@ object_map = '''
 '''
 --------------------------
 # Reuse 再利用
+hints = diverge converge
 
 objective = '''
 '''

@@ -21,13 +21,14 @@ G..
 '''
 
 object_map = '''
-.@.
+.v.
 .B.
 ...
 '''
 
 --------------------------
 # Cross 錯身
+hints = diverge converge
 
 objective = '''
 '''
@@ -39,7 +40,7 @@ S..
 '''
 
 object_map = '''
-.@.
+.v.
 .B.
 ...
 '''
@@ -65,7 +66,7 @@ Sv..G
 object_map = '''
 .....
 .....
-.@B..
+.>B..
 .....
 .....
 '''
@@ -74,6 +75,7 @@ object_map = '''
 
 --------------------------
 # Handoff 換手
+hints = diverge converge
 
 objective = '''
 '''
@@ -88,12 +90,13 @@ v.#S
 object_map = '''
 ....
 .B..
-@...
+^...
 ....
 '''
 
 --------------------------
 # Charge 充能
+hints = diverge converge
 
 tutorial = charge_intro
 
@@ -113,7 +116,7 @@ vGS#
 '''
 
 object_map = '''
-.@..
+.<..
 ....
 .B..
 ....
@@ -121,6 +124,7 @@ object_map = '''
 
 --------------------------
 # Crossroad 十字路口
+hints = diverge converge
 
 objective = '''
 '''
@@ -136,11 +140,13 @@ object_map = '''
 ....
 ..B.
 ....
-..@.
+..^.
 '''
 
 --------------------------
 # Coexist 共存
+hints = diverge converge
+
 tutorial = re_restore
 
 tutorial_steps = '''
@@ -160,14 +166,15 @@ floor_map = '''
 '''
 
 object_map = '''
-...@
-..B@
+....
+..B^
 ....
 ....
 '''
 
 --------------------------
 # Triple 三重
+hints = diverge converge
 
 objective = '''
 利用空間獨立性，產生第三個位置的殘影
@@ -182,13 +189,14 @@ GSSS
 
 object_map = '''
 ....
-@...
+>...
 ..B.
 ....
 '''
 
 --------------------------
 # Edge 邊緣
+hints = diverge converge
 
 objective = '''
 分裂點外的同心圓圈數，代表額外充能次數
@@ -206,7 +214,7 @@ object_map = '''
 .....
 .....
 .B...
-@....
+>....
 .....
 '''
 --------------------------
@@ -226,7 +234,7 @@ S..#
 
 object_map = '''
 ....
-.@..
+.v..
 .BB.
 ....
 '''
@@ -250,7 +258,7 @@ object_map = '''
 ....
 ....
 .BB.
-..@.
+..^.
 '''
 
 --------------------------
@@ -276,7 +284,7 @@ object_map = '''
 ........
 ........
 ........
-..B.B..@
+..B.B..<
 .....B..
 ........
 ........
@@ -301,7 +309,7 @@ floor_map = '''
 
 object_map = '''
 ....
-..@.
+..v.
 ..BB
 ....
 '''
