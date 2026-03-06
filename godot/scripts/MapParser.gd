@@ -33,19 +33,24 @@ static func parse_dual_layer(floor_map_str: String, object_map_str: String) -> L
 			# '.' → FLOOR (default, not stored)
 
 	# Parse entities
+	# Player chars: @ = no defined direction (default down), ^ v < > = explicit facing
+	var player_dirs := {
+		"@": Vector2i(0, 1), "^": Vector2i(0, -1),
+		"v": Vector2i(0, 1), "<": Vector2i(-1, 0), ">": Vector2i(1, 0)
+	}
 	for y in object_lines.size():
 		var line: String = object_lines[y]
 		for x in line.length():
 			var ch := line[x]
 			var pos := Vector2i(x, y)
-			if ch == "@":
-				entity_defs[0] = [Enums.EntityType.PLAYER, pos]
+			if player_dirs.has(ch):
+				entity_defs[0] = [Enums.EntityType.PLAYER, pos, player_dirs[ch]]
 			elif ch == "B":
 				next_uid += 1
 				entity_defs[next_uid] = [Enums.EntityType.BOX, pos]
 
 	if not entity_defs.has(0):
-		push_error("MapParser: player start position (@) not found")
+		push_error("MapParser: player start position (@/^/v/</>) not found")
 		return null
 
 	var has_goal := false

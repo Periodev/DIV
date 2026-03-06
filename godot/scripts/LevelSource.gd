@@ -5,7 +5,7 @@ class_name LevelSource
 var grid_size: int           = 0
 var terrain: Dictionary      = {}  # Vector2i -> Enums.TerrainType (int)
 var entity_definitions: Dictionary = {}
-	# int uid -> Array [Enums.EntityType, Vector2i pos]
+	# int uid -> Array [Enums.EntityType, Vector2i pos, Vector2i direction (optional)]
 var next_uid: int            = 0
 
 
@@ -25,6 +25,8 @@ func init_branch() -> BranchState:
 		var etype: int  = def[0]
 		var epos: Vector2i = def[1]
 		var e := Entity.new(p_uid, etype, epos)
+		if def.size() >= 3:
+			e.direction = def[2]
 		state.entities.append(e)
 
 	return state
