@@ -10,6 +10,9 @@ var played_ids: Dictionary = {}  # id -> true
 
 
 func _ready() -> void:
+	var font := load("res://fonts/NotoSansTC_subset.ttf")
+	if font is Font:
+		ThemeDB.fallback_font = font
 	load_progress()
 
 
