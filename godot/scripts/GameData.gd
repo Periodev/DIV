@@ -13,12 +13,12 @@ func _ready() -> void:
 	var font := load("res://fonts/NotoSansTC_subset.ttf") as Font
 	if font != null:
 		ThemeDB.fallback_font = font
-		# Apply as root theme so all Label/RichTextLabel nodes inherit it.
-		# (ThemeDB.fallback_font alone is skipped when Godot's built-in font
-		# is already found earlier in the theme lookup chain on web.)
-		var root_theme := Theme.new()
-		root_theme.default_font = font
-		get_tree().get_root().theme = root_theme
+		# Inject font directly into every Label/RichTextLabel as it enters the
+		# tree. Theme cascade alone is unreliable on web because Godot's
+		# built-in Control font is found before fallback_font or root themes.
+		get_tree().node_added.connect(func(node: Node) -> void:
+			if node is Label or node is RichTextLabel:
+				(node as Control).add_theme_font_override("font", font))
 	load_progress()
 
 
