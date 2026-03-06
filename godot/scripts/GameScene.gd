@@ -96,18 +96,7 @@ func _ready() -> void:
 		return
 
 	if gd.all_levels.is_empty():
-		var dir := DirAccess.open("res://Level")
-		if dir:
-			var zone_files: Array[String] = []
-			dir.list_dir_begin()
-			var fname := dir.get_next()
-			while fname != "":
-				if fname.match("Level[0-9]*.txt"):
-					zone_files.append("res://Level/" + fname)
-				fname = dir.get_next()
-			zone_files.sort()
-			for p in zone_files:
-				gd.all_levels.append_array(MapParser.parse_level_resource(p))
+		gd.all_levels.append_array(Levels.ALL)
 
 	all_levels = gd.all_levels
 	_start_level(gd.selected_level_idx)

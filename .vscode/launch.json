@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "DIV (codegen + run)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/run.py",
+            "noDebug": true,
+            "console": "integratedTerminal"
+        }
+    ]
+}
