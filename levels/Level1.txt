@@ -140,7 +140,7 @@ object_map = '''
 '''
 
 --------------------------
-# Re-Restore 再還原
+# Coexist 共存
 tutorial = re_restore
 
 tutorial_steps = '''
