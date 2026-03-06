@@ -103,6 +103,7 @@ def _parse_section(text: str, world_num: int, section_idx: int) -> dict | None:
 
     return {
         "id":               level_id,
+        "zone":             world_num,
         "name":             name,
         "floor_map":        floor_m.group(1),
         "object_map":       obj_m.group(1),
@@ -143,7 +144,7 @@ def _gd_value(v) -> str:
 # Main
 # ---------------------------------------------------------------------------
 
-KEYS = ["id", "name", "floor_map", "object_map", "hints", "objective",
+KEYS = ["id", "zone", "name", "floor_map", "object_map", "hints", "objective",
         "tutorial", "tutorial_steps", "tutorial_display", "auto_desc"]
 
 

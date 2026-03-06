@@ -190,34 +190,8 @@ func _load_levels_if_needed() -> void:
         levels = []
         return
 
-    var needs_rebuild: bool = gd.all_levels.is_empty()
-    if not needs_rebuild:
-        var first_raw = gd.all_levels[0]
-        if typeof(first_raw) != TYPE_DICTIONARY:
-            needs_rebuild = true
-        else:
-            var first: Dictionary = first_raw as Dictionary
-            needs_rebuild = not first.has("id") or not first.has("zone")
-
-    if needs_rebuild:
-        var built_levels: Array = []
-        var zone_files: Array[String] = [
-            "res://Level/Level0.txt",
-            "res://Level/Level1.txt",
-            "res://Level/Level2.txt",
-            "res://Level/Level3.txt",
-            "res://Level/Level4.txt",
-        ]
-
-        for world in zone_files.size():
-            var parsed: Array = MapParser.parse_level_resource(zone_files[world])
-            for i in parsed.size():
-                var lv: Dictionary = (parsed[i] as Dictionary).duplicate(true)
-                lv["id"] = "%d-%d" % [world, i + 1]
-                lv["zone"] = world
-                built_levels.append(lv)
-
-        gd.all_levels = built_levels
+    if gd.all_levels.is_empty():
+        gd.all_levels.append_array(Levels.ALL)
 
     levels = gd.all_levels
 

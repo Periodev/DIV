@@ -5,6 +5,7 @@ class_name Levels
 const ALL: Array = [
 	{
 		"id": "0-0",
+		"zone": 0,
 		"name": "Init 初始",
 		"floor_map": "\n.....\n##.##\n##.##\n##.##\n....G\n",
 		"object_map": "\n@....\n.....\n.....\n.....\n.....\n",
@@ -17,6 +18,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "0-1",
+		"zone": 0,
 		"name": "Push 推動",
 		"floor_map": "\n#G...##\n#.##..#\n#.#...#\n#....##\n#.#####\n#.#####\n#.#####\n",
 		"object_map": "\n.......\n.B.....\n....B..\n..B....\n.......\n.B.....\n.@.....\n",
@@ -29,6 +31,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "0-2",
+		"zone": 0,
 		"name": "Target 目標",
 		"floor_map": "\nS.G.S\n##.##\n##.##\n##.##\n##S##\n",
 		"object_map": "\n.B.B.\n.....\n..@..\n..B..\n.....\n",
@@ -41,6 +44,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "0-3",
+		"zone": 0,
 		"name": "Revert 還原",
 		"floor_map": "\n######\n######\nG.S...\n######\n######\n######\n",
 		"object_map": "\n......\n......\n@B....\n......\n......\n......\n",
@@ -53,6 +57,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "0-4",
+		"zone": 0,
 		"name": "Dilemma 困境",
 		"floor_map": "\n######\n######\n..vSG.\n######\n######\n######\n",
 		"object_map": "\n......\n......\n@.B...\n......\n......\n......\n",
@@ -65,6 +70,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "0-5",
+		"zone": 0,
 		"name": "Process 流程",
 		"floor_map": "\nGS##\nS...\n#...\n#..v\n",
 		"object_map": "\n....\n.BB.\n....\n...@\n",
@@ -77,6 +83,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "0-6",
+		"zone": 0,
 		"name": "Mutex 互斥",
 		"floor_map": "\n#..#\n.G.S\n....\n#Sv#\n",
 		"object_map": "\n....\n..B.\n.B..\n..@.\n",
@@ -89,6 +96,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "0-7",
+		"zone": 0,
 		"name": "Merge 合併",
 		"floor_map": "\nv.#\nG.S\n#S#\n",
 		"object_map": "\n@..\n.B.\n...\n",
@@ -101,6 +109,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "0-8",
+		"zone": 0,
 		"name": "Branch 分叉",
 		"floor_map": "\n#####\nS.G.S\n.#.#.\n..v..\n#####\n",
 		"object_map": "\n.....\n.....\n..B..\n..@..\n.....\n",
@@ -113,6 +122,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "0-9",
+		"zone": 0,
 		"name": "Trace 殘影",
 		"floor_map": "\nv.#\n..S\n#SG\n",
 		"object_map": "\n@..\n.B.\n...\n",
@@ -125,6 +135,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "0-10",
+		"zone": 0,
 		"name": "Multiplex 多工",
 		"floor_map": "\n.S..\nSG..\n##vS\n####\n",
 		"object_map": "\n..B.\n..B.\n..@.\n....\n",
@@ -137,6 +148,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "0-11",
+		"zone": 0,
 		"name": "Diverge 分裂",
 		"floor_map": "\n#G..\n#S..\n...#\nSvS#\n",
 		"object_map": "\n....\n..B.\n.B..\n.@..\n",
@@ -149,6 +161,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "1-0",
+		"zone": 1,
 		"name": "Conservation 守恆",
 		"floor_map": "\n#v#\n#S.\nG..\n",
 		"object_map": "\n.@.\n.B.\n...\n",
@@ -161,6 +174,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "1-1",
+		"zone": 1,
 		"name": "Cross 錯身",
 		"floor_map": "\n#v#\nS..\n#G#\n",
 		"object_map": "\n.@.\n.B.\n...\n",
@@ -173,6 +187,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "1-2",
+		"zone": 1,
 		"name": "Gap 夾縫",
 		"floor_map": "\n#####\n#####\nSv..G\n#####\n#####\n",
 		"object_map": "\n.....\n.....\n.@B..\n.....\n.....\n",
@@ -185,6 +200,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "1-3",
+		"zone": 1,
 		"name": "Handoff 換手",
 		"floor_map": "\n..#.\n...G\nv.#S\n####\n",
 		"object_map": "\n....\n.B..\n@...\n....\n",
@@ -197,6 +213,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "1-4",
+		"zone": 1,
 		"name": "Charge 充能",
 		"floor_map": "\nvGS#\n#.##\n...#\n#.v#\n",
 		"object_map": "\n.@..\n....\n.B..\n....\n",
@@ -209,6 +226,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "1-5",
+		"zone": 1,
 		"name": "Crossroad 十字路口",
 		"floor_map": "\n##.#\nv..G\n##S#\n##v#\n",
 		"object_map": "\n....\n..B.\n....\n..@.\n",
@@ -221,7 +239,8 @@ const ALL: Array = [
 	},
 	{
 		"id": "1-6",
-		"name": "Re-Restore 再還原",
+		"zone": 1,
+		"name": "Coexist 共存",
 		"floor_map": "\n###v\n.v.G\n###S\n####\n",
 		"object_map": "\n...@\n..B@\n....\n....\n",
 		"hints": {"diverge": true, "pickup": true, "converge": false, "fetch": false},
@@ -233,6 +252,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "1-7",
+		"zone": 1,
 		"name": "Triple 三重",
 		"floor_map": "\n####\nv...\nv...\nGSSS\n",
 		"object_map": "\n....\n@...\n..B.\n....\n",
@@ -245,6 +265,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "1-8",
+		"zone": 1,
 		"name": "Edge 邊緣",
 		"floor_map": "\n#.S.#\n....#\nV.G.#\n....#\n#SS.#\n",
 		"object_map": "\n.....\n.....\n.B...\n@....\n.....\n",
@@ -257,6 +278,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "1-9",
+		"zone": 1,
 		"name": "Redundant 冗餘",
 		"floor_map": "\n#G##\n#V.#\nS.S.\nS..#\n",
 		"object_map": "\n....\n.@..\n.BB.\n....\n",
@@ -269,6 +291,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "1-10",
+		"zone": 1,
 		"name": "Selection 選擇",
 		"floor_map": "\n#G##\n#v.#\nS.S#\nS.v#\n",
 		"object_map": "\n....\n....\n.BB.\n..@.\n",
@@ -281,6 +304,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "1-11",
+		"zone": 1,
 		"name": "Corridor 走廊",
 		"floor_map": "\n########\n########\n########\nG.SS.vS.\n..#vS...\n########\n########\n########\n",
 		"object_map": "\n........\n........\n........\n..B.B..@\n.....B..\n........\n........\n........\n",
@@ -293,6 +317,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "1-12",
+		"zone": 1,
 		"name": "Resolve 解析",
 		"floor_map": "\n##G#\n##v.\n#S.S\n#S.V\n",
 		"object_map": "\n....\n..@.\n..BB\n....\n",
@@ -305,6 +330,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "2-0",
+		"zone": 2,
 		"name": "Void 空洞",
 		"floor_map": "\n##G###\n##H###\n##.#S#\n##.#.#\n#..H.#\n#.H###\n",
 		"object_map": "\n......\n......\n..B...\n....B.\n..B...\n.@....\n",
@@ -317,6 +343,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "2-1",
+		"zone": 2,
 		"name": "Bridge 橋",
 		"floor_map": "\n##G###\n##H###\n##H###\n##H..#\n##...#\n##...#\n",
 		"object_map": "\n......\n......\n......\n...B..\n..BB..\n....@.\n",
@@ -329,6 +356,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "2-2",
+		"zone": 2,
 		"name": "Retain 保留",
 		"floor_map": "\nGH#\nS..\n#.v\n",
 		"object_map": "\n...\n.B.\n..@\n",
@@ -341,6 +369,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "2-3",
+		"zone": 2,
 		"name": "Multifunction 多功能",
 		"floor_map": "\n##S##\n##HG#\n...HS\n...##\nv..##\n",
 		"object_map": "\n.....\n.....\n..B..\n.B...\n@....\n",
@@ -353,6 +382,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "2-4",
+		"zone": 2,
 		"name": "Support 支撐",
 		"floor_map": "\n##G##\n##H##\n..H..\n..H..\nv.###\n",
 		"object_map": "\n.....\n.....\n...B.\n.B...\n@....\n",
@@ -365,6 +395,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "2-5",
+		"zone": 2,
 		"name": "Detach 分離",
 		"floor_map": "\n#H#\nS.G\n#v#\n",
 		"object_map": "\n...\n.B.\n.@.\n",
@@ -377,6 +408,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "2-6",
+		"zone": 2,
 		"name": "Give way 讓路",
 		"floor_map": "\n###G##\n###H##\n###H##\n##H..#\n##H.v#\n##...#\n",
 		"object_map": "\n......\n......\n......\n...B..\n...B@.\n......\n",
@@ -389,6 +421,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "2-7",
+		"zone": 2,
 		"name": "Corner case 邊界案例",
 		"floor_map": "\nS.H\n.G.\nv.S\n",
 		"object_map": "\n.B.\n..B\n@..\n",
@@ -401,6 +434,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "2-8",
+		"zone": 2,
 		"name": "Extract 抽取",
 		"floor_map": "\n#####\nvSHHG\n...##\nv.S##\n#####\n",
 		"object_map": "\n.....\n.B...\n..B..\n@....\n.....\n",
@@ -413,6 +447,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "2-9",
+		"zone": 2,
 		"name": "Relay 接力",
 		"floor_map": "\n##G###\n##H###\n##H###\n##H..#\n##...#\n##..v#\n",
 		"object_map": "\n......\n......\n......\n...B..\n..B...\n....@.\n",
@@ -425,6 +460,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "2-10",
+		"zone": 2,
 		"name": "Reuse 再利用",
 		"floor_map": "\n##.S.##\n##.G.##\n###H###\n###H###\n#..S..#\n#.v.v.#\n#######\n",
 		"object_map": "\n.......\n.......\n.......\n.......\n..B.B..\n...@...\n.......\n",
@@ -437,6 +473,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "3-0",
+		"zone": 3,
 		"name": "Pick 撿取",
 		"floor_map": "\n###S##\n....##\n#S#S##\n###.##\n##...G\n##S###\n",
 		"object_map": "\n......\n@.BB..\n......\n...B..\n....B.\n......\n",
@@ -449,6 +486,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "3-1",
+		"zone": 3,
 		"name": "Spin 旋轉",
 		"floor_map": "\n####\nG#H.\nHH.#\n#.v#\n",
 		"object_map": "\n....\n...B\n..B.\n..@.\n",
@@ -461,6 +499,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "3-2",
+		"zone": 3,
 		"name": "Swap 替換",
 		"floor_map": "\n#####\n##GH#\n###H#\nv.H.#\n###.#\n",
 		"object_map": "\n.....\n.....\n.....\n@B...\n...B.\n",
@@ -473,6 +512,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "3-3",
+		"zone": 3,
 		"name": "Checkerboard 棋盤",
 		"floor_map": "\n..#G\nvH#H\nHvH.\n.H.H\n",
 		"object_map": "\nBB..\n@...\n....\n....\n",
@@ -485,6 +525,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "3-4",
+		"zone": 3,
 		"name": "Cycle 循環",
 		"floor_map": "\n####\nHHH.\nG#.#\n#SV#\n",
 		"object_map": "\n....\n...B\n..B.\n.@..\n",
@@ -497,6 +538,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "3-5",
+		"zone": 3,
 		"name": "Unload zone 放下區",
 		"floor_map": "\n#GS\nccc\n..#\n",
 		"object_map": "\n...\n@..\nB..\n",
@@ -509,6 +551,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "3-6",
+		"zone": 3,
 		"name": "Hand over 交接",
 		"floor_map": "\n###S\nGSc.\n###c\n#VSv\n",
 		"object_map": "\n....\n..@.\n...B\n....\n",
@@ -521,6 +564,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "3-7",
+		"zone": 3,
 		"name": "Zip 拉鏈",
 		"floor_map": "\n##G###\n##H###\n##H###\n##H###\n##H###\n#.x..#\n",
 		"object_map": "\n......\n......\n......\n......\n......\n.B@.B.\n",
@@ -533,6 +577,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "3-8",
+		"zone": 3,
 		"name": "Spiral 螺旋",
 		"floor_map": "\nG####\nS.H##\n##H..\n##.#.\n#.V##\n",
 		"object_map": "\n.....\n.....\n.....\n..B.B\n.@...\n",
@@ -545,6 +590,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "3-9",
+		"zone": 3,
 		"name": "Clover 三葉草",
 		"floor_map": "\n######\nG.##..\nSHHHV.\n##H.##\n##.v##\n######\n",
 		"object_map": "\n......\n.....B\n......\n...B..\n..@...\n......\n",
@@ -557,6 +603,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "4-0",
+		"zone": 4,
 		"name": "Fetch 抓取",
 		"floor_map": "\nvcG\nccc\n#cS\n",
 		"object_map": "\n@B.\n...\n...\n",
@@ -569,6 +616,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "4-1",
+		"zone": 4,
 		"name": "Transport 運輸",
 		"floor_map": "\n###G\nv.cc\n###S\n####\n",
 		"object_map": "\n....\n.B@.\n....\n....\n",
@@ -581,6 +629,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "4-2",
+		"zone": 4,
 		"name": "Reuse 重複使用",
 		"floor_map": "\nSG.\nHHH\n.v.\n",
 		"object_map": "\n...\n...\n@.B\n",
@@ -593,6 +642,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "4-3",
+		"zone": 4,
 		"name": "Broken Bridge 斷橋",
 		"floor_map": "\n##G###\n##H###\n##H###\n##H..#\n##.v.#\n##...#\n",
 		"object_map": "\n......\n......\n......\n...B..\n..B@..\n......\n",
@@ -605,6 +655,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "4-4",
+		"zone": 4,
 		"name": "Jump 跳躍",
 		"floor_map": "\n.####\nvcS##\n##c##\n##vcS\n####G\n",
 		"object_map": "\nB....\n@....\n.....\n.....\n.....\n",
@@ -617,6 +668,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "4-5",
+		"zone": 4,
 		"name": "Bridge and Fetch 橋與抓取",
 		"floor_map": "\n##.S.##\n##.G.##\n###H###\n###H###\n##.S.##\n##.v.##\n#######\n",
 		"object_map": "\n.......\n.......\n.......\n.......\n.......\n..B@B..\n.......\n",
@@ -629,6 +681,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "4-6",
+		"zone": 4,
 		"name": "Pass 傳遞",
 		"floor_map": "\n##S##\nScvcS\n#c#c#\n..#.v\nG.#..\n",
 		"object_map": "\n.....\n.....\n.....\n.B.B.\n....@\n",
@@ -641,6 +694,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "4-7",
+		"zone": 4,
 		"name": "Clover 三葉草",
 		"floor_map": "\n######\nG.##..\nSHHHv.\n##H.##\n##.V##\n######\n",
 		"object_map": "\n......\n.....B\n......\n...B..\n..@...\n......\n",
@@ -653,6 +707,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "4-8",
+		"zone": 4,
 		"name": "Entrance 入口",
 		"floor_map": "\n#GH##\n##HS#\n##c##\n##c##\n#vv##\n",
 		"object_map": "\n.....\n.....\n..B..\n.....\n.B@..\n",
@@ -665,6 +720,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "4-9",
+		"zone": 4,
 		"name": "Carry or Drop 取捨",
 		"floor_map": "\n###S##\n###c##\n.VcH.#\n##HcH#\n##G###\n######\n",
 		"object_map": "\n......\n......\nB@B...\n......\n......\n......\n",
@@ -677,6 +733,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "4-10",
+		"zone": 4,
 		"name": "Test",
 		"floor_map": "\n##GH##\n###H##\n###H##\n###H##\n...H##\nXX.H##\n",
 		"object_map": "\n......\n......\n......\n......\nB.B...\n..@...\n",
@@ -689,6 +746,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "5-0",
+		"zone": 5,
 		"name": "Gen-01 [seed=0]",
 		"floor_map": "\n##..\n#S.S\nv..#\n#G##\n",
 		"object_map": "\n....\n..@.\n..B.\n....\n",
@@ -701,6 +759,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "5-1",
+		"zone": 5,
 		"name": "Gen-02 [seed=1]",
 		"floor_map": "\n##.S\n##..\n#v..\n##SG\n",
 		"object_map": "\n....\n..@.\n...B\n....\n",
@@ -713,6 +772,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "5-2",
+		"zone": 5,
 		"name": "Gen-03 [seed=2]",
 		"floor_map": "\n####\n#vSG\n#.S.\n#...\n",
 		"object_map": "\n....\n....\n.B..\n..@.\n",
@@ -725,6 +785,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "5-3",
+		"zone": 5,
 		"name": "Gen-04 [seed=3]",
 		"floor_map": "\n..G#\nS#S#\n...#\nv###\n",
 		"object_map": "\n.B..\n....\n@...\n....\n",
@@ -737,6 +798,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "5-4",
+		"zone": 5,
 		"name": "Gen-05 [seed=4]",
 		"floor_map": "\n###S\n#Sv.\n#..#\nG..#\n",
 		"object_map": "\n....\n...@\n.B..\n....\n",
@@ -749,6 +811,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "5-5",
+		"zone": 5,
 		"name": "Gen-06 [seed=5]",
 		"floor_map": "\n#Gv#\n#..S\n##S.\n##..\n",
 		"object_map": "\n....\n....\n...@\n..B.\n",
@@ -761,6 +824,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "5-6",
+		"zone": 5,
 		"name": "Gen-07 [seed=6]",
 		"floor_map": "\n####\n#v..\n#..S\n#.SG\n",
 		"object_map": "\n....\n..@B\n....\n....\n",
@@ -773,6 +837,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "5-7",
+		"zone": 5,
 		"name": "Gen-08 [seed=7]",
 		"floor_map": "\n###G\n##..\n#.v.\n#.SS\n",
 		"object_map": "\n....\n..B.\n.@..\n....\n",
@@ -785,6 +850,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "5-8",
+		"zone": 5,
 		"name": "Gen-09 [seed=8]",
 		"floor_map": "\n..G#\n.S##\n.S.#\n#v##\n",
 		"object_map": "\n....\nB...\n..@.\n....\n",
@@ -797,6 +863,7 @@ const ALL: Array = [
 	},
 	{
 		"id": "5-9",
+		"zone": 5,
 		"name": "Gen-10 [seed=9]",
 		"floor_map": "\n##S#\n##v#\n#...\nG.S.\n",
 		"object_map": "\n....\n....\n..@.\n.B..\n",
