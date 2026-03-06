@@ -10,9 +10,15 @@ var played_ids: Dictionary = {}  # id -> true
 
 
 func _ready() -> void:
-	var font := load("res://fonts/NotoSansTC_subset.ttf")
-	if font is Font:
+	var font := load("res://fonts/NotoSansTC_subset.ttf") as Font
+	if font != null:
 		ThemeDB.fallback_font = font
+		# Apply as root theme so all Label/RichTextLabel nodes inherit it.
+		# (ThemeDB.fallback_font alone is skipped when Godot's built-in font
+		# is already found earlier in the theme lookup chain on web.)
+		var root_theme := Theme.new()
+		root_theme.default_font = font
+		get_tree().get_root().theme = root_theme
 	load_progress()
 
 
