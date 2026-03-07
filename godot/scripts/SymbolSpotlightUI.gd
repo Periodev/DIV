@@ -205,7 +205,7 @@ func _draw() -> void:
 			str(lines[i]), HORIZONTAL_ALIGNMENT_LEFT, -1.0, text_fs, COL_TEXT)
 
 	# Prompt below box
-	var prompt    := Localization.t("spotlight_last") if is_last else Localization.t("spotlight_next")
+	var prompt    := Loc.t("spotlight_last") if is_last else Loc.t("spotlight_next")
 	var prompt_fs := 11
 	var blink     := 0.38 + 0.50 * sin(_time * 3.5)
 	var prompt_w  := font.get_string_size(prompt, HORIZONTAL_ALIGNMENT_LEFT, -1.0, prompt_fs).x

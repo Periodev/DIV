@@ -240,12 +240,12 @@ func get_spotlight_sequence() -> Array:
 	for raw in SPOTLIGHT_SEQUENCES[_tutorial_id]:
 		var d: Dictionary = raw.duplicate()
 		if d.has("title_key"):
-			d["title"] = Localization.t(str(d["title_key"]))
+			d["title"] = Loc.t(str(d["title_key"]))
 			d.erase("title_key")
 		if d.has("lines_keys"):
 			var lines: Array = []
 			for k in d["lines_keys"]:
-				lines.append(Localization.t(str(k)))
+				lines.append(Loc.t(str(k)))
 			d["lines"] = lines
 			d.erase("lines_keys")
 		result.append(d)
@@ -275,7 +275,7 @@ func get_highlight() -> Dictionary:
 		if not ann_keys.is_empty():
 			var annotations: Array = []
 			for k in ann_keys:
-				annotations.append(Localization.t(str(k)))
+				annotations.append(Loc.t(str(k)))
 			result["annotations"] = annotations
 			result.erase("annotation_keys")
 		return result
@@ -295,8 +295,8 @@ func on_state_changed() -> void:
 				_pending_panel_spotlight = [{
 					"domain": "pos",
 					"pos": pos,
-					"title": Localization.t("spot_shadow_title"),
-					"lines": [Localization.t("spot_shadow_l1"), Localization.t("spot_shadow_l2")],
+					"title": Loc.t("spot_shadow_title"),
+					"lines": [Loc.t("spot_shadow_l1"), Loc.t("spot_shadow_l2")],
 				}]
 	if not _active:
 		if _scene.controller != null:
@@ -310,8 +310,8 @@ func on_state_changed() -> void:
 			_pending_panel_spotlight = [{
 				"domain": "pos",
 				"pos": pos,
-				"title": Localization.t("spot_turn_title"),
-				"lines": [Localization.t("spot_turn_l1"), Localization.t("spot_turn_l2")],
+				"title": Loc.t("spot_turn_title"),
+				"lines": [Loc.t("spot_turn_l1"), Loc.t("spot_turn_l2")],
 			}]
 
 
@@ -331,8 +331,8 @@ func on_physics_update() -> void:
 		_pending_panel_spotlight = [{
 			"domain": "pos",
 			"pos": fp,
-			"title": Localization.t("spot_filled_title"),
-			"lines": [Localization.t("spot_filled_l1"), Localization.t("spot_filled_l2")],
+			"title": Loc.t("spot_filled_title"),
+			"lines": [Loc.t("spot_filled_l1"), Loc.t("spot_filled_l2")],
 		}]
 	_snapshot_filled_holes(branch)
 
@@ -413,7 +413,7 @@ func _refresh_toast() -> void:
 	if bbcode == _last_bbcode:
 		return
 	_last_bbcode = bbcode
-	_scene.show_instruction(Localization.t("task_title"), bbcode)
+	_scene.show_instruction(Loc.t("task_title"), bbcode)
 
 
 func _complete_item(index: int) -> void:
@@ -424,11 +424,11 @@ func _complete_item(index: int) -> void:
 			_pending_panel_spotlight = [{
 				"domain": "panel",
 				"corner": true,
-				"title": Localization.t("spot_preview_title"),
+				"title": Loc.t("spot_preview_title"),
 				"lines": [
-					Localization.t("spot_preview_l1"),
-					Localization.t("spot_preview_l2"),
-					Localization.t("spot_preview_l3"),
+					Loc.t("spot_preview_l1"),
+					Loc.t("spot_preview_l2"),
+					Loc.t("spot_preview_l3"),
 				],
 			}]
 	_refresh_toast()
@@ -524,11 +524,11 @@ func _evaluate_checks() -> void:
 			if check == Check.HAS_BRANCHED and _tutorial_id == "diverge_guided":
 				_pending_panel_spotlight = [{
 					"domain": "panel",
-					"title": Localization.t("spot_diverge_title"),
+					"title": Loc.t("spot_diverge_title"),
 					"lines": [
-						Localization.t("spot_diverge_l1"),
-						Localization.t("spot_diverge_l2"),
-						Localization.t("spot_diverge_l3"),
+						Loc.t("spot_diverge_l1"),
+						Loc.t("spot_diverge_l2"),
+						Loc.t("spot_diverge_l3"),
 					],
 				}]
 

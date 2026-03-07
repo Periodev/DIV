@@ -1,4 +1,4 @@
-class_name Localization
+class_name Loc
 extends Node
 
 const STRINGS := {

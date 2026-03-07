@@ -91,7 +91,7 @@ func _draw() -> void:
 		node_positions["diverge"] = diverge_pos
 		_draw_gated_callout_node(
 			diverge_pos,
-			Localization.t("diverge_btn"),
+			Loc.t("diverge_btn"),
 			unlock_diverge,
 			unlock_diverge and div_points > 0,
 			COL_DIVERGE_DEEP,
@@ -115,7 +115,7 @@ func _draw() -> void:
 		node_positions["fetch"] = Vector2(f_x, baseline_y)
 		_draw_gated_callout_node(
 			Vector2(f_x, baseline_y),
-			Localization.t("fetch_btn"),
+			Loc.t("fetch_btn"),
 			unlock_fetch,
 			unlock_fetch and can_f_fetch,
 			COL_READY_FETCH,
@@ -126,7 +126,7 @@ func _draw() -> void:
 		node_positions["merge"] = Vector2(v_x, baseline_y)
 		_draw_gated_callout_node(
 			Vector2(v_x, baseline_y),
-			Localization.t("merge_btn"),
+			Loc.t("merge_btn"),
 			unlock_merge,
 			unlock_merge and can_v_merge,
 			COL_READY_MERGE,
@@ -181,7 +181,7 @@ func _draw_preview_toggle_node(pos: Vector2, is_active: bool, font: Font, font_s
 	var col_line: Color = COL_LINE_LIT
 	var col_text: Color = COL_TEXT_LIT
 	var node_r: float = 5.0 if not is_active else 4.0
-	var label_text: String = Localization.t("preview_on") if is_active else Localization.t("preview_off")
+	var label_text: String = Loc.t("preview_on") if is_active else Loc.t("preview_off")
 
 	if is_active:
 		draw_arc(pos, node_r, 0.0, TAU, 16, col_line, 1.5, true)
@@ -241,10 +241,10 @@ func _draw_div_dots(anchor_pos: Vector2, points: int) -> void:
 
 func _draw_persistent_footer(font: Font, font_size: int) -> void:
 	var entries: Array[String] = [
-		Localization.t("footer_esc"),
-		Localization.t("footer_f1"),
-		Localization.t("footer_r"),
-		Localization.t("footer_z"),
+		Loc.t("footer_esc"),
+		Loc.t("footer_f1"),
+		Loc.t("footer_r"),
+		Loc.t("footer_z"),
 	]
 	var x_fracs: Array[float] = [0.15, 0.38, 0.62, 0.85]
 	var r := 2.5
@@ -267,7 +267,7 @@ func _draw_tab_indicator(screen_w: float, y_pos: float, font: Font, font_size: i
 	# Direction cue: left only when DIV1 is centered, otherwise right.
 	var show_left: bool = active_branch == 1
 	var tab_x: float = screen_w * 0.22 if show_left else screen_w * 0.78
-	var text: String = Localization.t("tab_left") if show_left else Localization.t("tab_right")
+	var text: String = Loc.t("tab_left") if show_left else Loc.t("tab_right")
 	var pos: Vector2 = Vector2(tab_x, y_pos)
 	var text_w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
 	var text_pos: Vector2 = pos + Vector2(12.0, 34.0) if show_left else pos + Vector2(-text_w - 12.0, 34.0)

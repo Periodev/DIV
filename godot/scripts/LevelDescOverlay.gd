@@ -30,7 +30,7 @@ func show_desc(level_name: String, objective: String) -> void:
 	($Center/Panel/VBox/Title as Label).text = level_name
 	var body_text := objective.strip_edges()
 	($Center/Panel/VBox/Body as Label).text = body_text
-	($Center/Panel/VBox/Footer as Label).text = Localization.t("desc_close")
+	($Center/Panel/VBox/Footer as Label).text = Loc.t("desc_close")
 	visible = true
 
 
@@ -113,5 +113,5 @@ func _build_ui() -> void:
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	footer.add_theme_font_size_override("font_size", FOOTER_SIZE)
 	footer.add_theme_color_override("font_color", COLOR_FOOTER)
-	footer.text = Localization.t("desc_close")
+	footer.text = Loc.t("desc_close")
 	vbox.add_child(footer)

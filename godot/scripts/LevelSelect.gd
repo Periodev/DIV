@@ -96,12 +96,12 @@ func _draw() -> void:
 
 func _draw_panel() -> void:
 	if levels.is_empty() or sorted_worlds.is_empty():
-		_draw_text_td(Localization.t("ls_no_levels"), LEFT_W * 0.5, LIST_TOP, Color8(255, 120, 120), 21, HORIZONTAL_ALIGNMENT_CENTER)
+		_draw_text_td(Loc.t("ls_no_levels"), LEFT_W * 0.5, LIST_TOP, Color8(255, 120, 120), 21, HORIZONTAL_ALIGNMENT_CENTER)
 		return
 	var gd = _get_game_data()
 
 	var world: int = sorted_worlds[current_zone]
-	var world_text: String = Localization.t("ls_zone") % world
+	var world_text: String = Loc.t("ls_zone") % world
 	var prefix: String = "< " if current_zone > 0 else "  "
 	var suffix: String = " >" if current_zone < sorted_worlds.size() - 1 else "  "
 	_draw_text_td(prefix + world_text + suffix, LEFT_W * 0.5, ZONE_HDR_CY, ZONE_C, 20, HORIZONTAL_ALIGNMENT_CENTER, true)
@@ -122,7 +122,7 @@ func _draw_panel() -> void:
 		var level_id: String = str(level.get("id", ""))
 		var x: float = LPAD
 		if gd != null and gd.is_level_played(level_id):
-			_draw_text_td(Localization.t("ls_done"), x, item_cy, DONE_C, 15, HORIZONTAL_ALIGNMENT_LEFT, true)
+			_draw_text_td(Loc.t("ls_done"), x, item_cy, DONE_C, 15, HORIZONTAL_ALIGNMENT_LEFT, true)
 			x += 57.0
 
 		var name_text: String = gd.level_text(level, "name") if gd != null else str(level.get("name", "Level %d" % idx))
@@ -161,8 +161,8 @@ func _draw_footer(cx: float, cy: float) -> void:
 	if font == null:
 		return
 	var r := 4.5
-	var seg1: String = Localization.t("ls_footer1")
-	var seg2: String = Localization.t("ls_footer2")
+	var seg1: String = Loc.t("ls_footer1")
+	var seg2: String = Loc.t("ls_footer2")
 	var w1 := font.get_string_size(seg1, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
 	var w2 := font.get_string_size(seg2, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
 	var pair_vw := r * 2.8   # ↑↓ pair width

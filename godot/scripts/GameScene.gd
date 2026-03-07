@@ -712,7 +712,7 @@ func _on_victory() -> void:
 	if gd != null:
 		gd.mark_level_played(level_id)
 	# Toast instead of full-screen overlay
-	toast_sub.text = Localization.t("victory_sub") % [level_id, controller.input_log.size()]
+	toast_sub.text = Loc.t("victory_sub") % [level_id, controller.input_log.size()]
 	toast_dot.color = Color(0.29, 0.54, 0.29)
 	win_toast.modulate.a = 0.0
 	win_toast.visible = true
@@ -726,7 +726,7 @@ func _on_victory() -> void:
 
 func _on_collapse() -> void:
 	overlay_backdrop.visible = true
-	overlay_label.text    = Localization.t("fall_msg")
+	overlay_label.text    = Loc.t("fall_msg")
 	overlay_label.visible = true
 	_publish_web_observe()
 
@@ -878,7 +878,7 @@ func _update_ui() -> void:
 		if level_name_lc.contains("mutex"):
 			hl = {
 				"node": "merge",
-				"annotations": [Localization.t("mutex_ann1"), Localization.t("mutex_ann2")]
+				"annotations": [Loc.t("mutex_ann1"), Loc.t("mutex_ann2")]
 			}
 	callout_ui.set_highlight(hl.get("node", ""), hl.get("annotations", []))
 	var world_ann: Dictionary = hl if hl.has("world_domain") else {}
