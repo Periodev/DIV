@@ -48,7 +48,7 @@ const LABELS := {
 	},
 }
 
-var selected_lang: String = "zh"
+var selected_lang: String = "en"
 
 
 func _ready() -> void:

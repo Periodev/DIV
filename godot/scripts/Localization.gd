@@ -163,7 +163,7 @@ const STRINGS := {
 
 ## Look up a localized string. Safe to call from any context including _draw().
 static func t(key: String) -> String:
-	var lang := "zh"
+	var lang := "en"
 	var ml := Engine.get_main_loop()
 	if ml is SceneTree:
 		var gd = (ml as SceneTree).root.get_node_or_null("GameData")
@@ -171,5 +171,5 @@ static func t(key: String) -> String:
 			var l = gd.get("language")
 			if l != null:
 				lang = str(l)
-	var table: Dictionary = STRINGS.get(lang, STRINGS["zh"]) as Dictionary
-	return str(table.get(key, STRINGS["zh"].get(key, key)))
+	var table: Dictionary = STRINGS.get(lang, STRINGS["en"]) as Dictionary
+	return str(table.get(key, STRINGS["en"].get(key, key)))

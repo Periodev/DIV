@@ -125,7 +125,7 @@ func _draw_panel() -> void:
 			_draw_text_td(Loc.t("ls_done"), x, item_cy, DONE_C, 15, HORIZONTAL_ALIGNMENT_LEFT, true)
 			x += 57.0
 
-		var name_text: String = gd.level_text(level, "name") if gd != null else str(level.get("name", "Level %d" % idx))
+		var name_text: String = gd.level_name(level) if gd != null else str(level.get("name", "Level %d" % idx))
 		var name_color: Color = SEL_TEXT_C if selected else TEXT_C
 		var name_size: int = 20 if selected else 18
 		_draw_text_td(name_text, x, item_cy, name_color, name_size, HORIZONTAL_ALIGNMENT_LEFT, true)
@@ -138,7 +138,7 @@ func _draw_preview_label() -> void:
 	var level: Dictionary = levels[current_index] as Dictionary
 	var level_id: String = str(level.get("id", ""))
 	var gd_preview = _get_game_data()
-	var name_text: String = gd_preview.level_text(level, "name") if gd_preview != null else str(level.get("name", ""))
+	var name_text: String = gd_preview.level_name(level) if gd_preview != null else str(level.get("name", ""))
 	var grid_px: int = preview.get_grid_px()
 	if grid_px <= 0:
 		grid_px = PREVIEW_GRID_PX

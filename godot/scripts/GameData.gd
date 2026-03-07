@@ -8,7 +8,7 @@ const PROGRESS_PATH := "user://progress.json"
 const SETTINGS_PATH := "user://settings.json"
 
 var played_ids: Dictionary = {}  # id -> true
-var language: String = "zh"     # "zh" | "en"
+var language: String = "en"     # "zh" | "en"
 
 
 func _ready() -> void:
@@ -40,7 +40,7 @@ func load_settings() -> void:
 	var parsed = JSON.parse_string(text)
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return
-	var lang: String = str((parsed as Dictionary).get("language", "zh"))
+	var lang: String = str((parsed as Dictionary).get("language", "en"))
 	if lang == "zh" or lang == "en":
 		language = lang
 
@@ -99,6 +99,21 @@ func level_text_array(level: Dictionary, key: String) -> Array:
 		if level.has(k_en):
 			return level[k_en] as Array
 	return level.get(key, []) as Array
+
+
+func level_name(level: Dictionary) -> String:
+	if language == "en":
+		if level.has("name_en"):
+			return str(level["name_en"])
+	return _extract_cjk_name(str(level.get("name", "")))
+
+
+func _extract_cjk_name(raw_name: String) -> String:
+	for i in raw_name.length():
+		var ch := raw_name.unicode_at(i)
+		if (ch >= 0x4E00 and ch <= 0x9FFF) or (ch >= 0x3400 and ch <= 0x4DBF):
+			return raw_name.substr(i).strip_edges()
+	return raw_name
 
 
 func mark_level_played(level_id: String) -> void:
