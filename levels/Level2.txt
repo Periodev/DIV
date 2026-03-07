@@ -8,6 +8,11 @@ objective = '''
 推動核心到[空洞]內，可暫時修復為道路，並消耗掉核心
 '''
 
+objective_en = '''
+Red circles are [holes] — impassable
+Push a core into a [hole] to temporarily repair it into a path, consuming the core
+'''
+
 floor_map = '''
 ##G###
 ##H###
@@ -58,6 +63,10 @@ hints = diverge converge
 
 objective = '''
 先修復空洞再合併，合併後可[保留]，呈現殘影修復狀態
+'''
+
+objective_en = '''
+Repair the hole before merging; after merging the repaired state is kept as a shadow fill
 '''
 
 floor_map = '''
@@ -127,6 +136,10 @@ objective = '''
 若空洞內的殘影，因為還原其它位置而被消除，會回復空洞狀態
 '''
 
+objective_en = '''
+If the shadow inside a hole is removed by restoring another position, the hole returns to its unfilled state
+'''
+
 floor_map = '''
 #H#
 S.G
@@ -189,6 +202,10 @@ hints = diverge converge
 
 objective = '''
 若空洞內有多個殘影，可以透過還原消除其中部份殘影
+'''
+
+objective_en = '''
+If a hole contains multiple shadows, you can remove some of them by restoring
 '''
 
 floor_map = '''

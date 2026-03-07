@@ -63,6 +63,18 @@ def _parse_section(text: str, world_num: int, section_idx: int) -> dict | None:
     name_m = re.search(r"^#\s*(.+)", text, re.MULTILINE)
     name   = name_m.group(1).strip() if name_m else ""
 
+    # name_en: extract English prefix before first CJK character
+    name_en = ""
+    if name_m:
+        raw_name = name
+        cjk_idx = next(
+            (i for i, ch in enumerate(raw_name)
+             if '\u4e00' <= ch <= '\u9fff' or '\u3400' <= ch <= '\u4dbf'),
+            None
+        )
+        if cjk_idx is not None:
+            name_en = raw_name[:cjk_idx].strip()
+
     # hints
     hints_m      = re.search(r"(?m)^\s*hints\s*=\s*(.+?)\s*$", text)
     parsed_hints = None
@@ -75,6 +87,10 @@ def _parse_section(text: str, world_num: int, section_idx: int) -> dict | None:
     # objective
     obj_text_m = re.search(r"objective\s*=\s*'''([\s\S]*?)'''", text)
     objective  = obj_text_m.group(1) if obj_text_m else ""
+
+    # objective_en
+    obj_en_m   = re.search(r"objective_en\s*=\s*'''([\s\S]*?)'''", text)
+    objective_en = obj_en_m.group(1) if obj_en_m else ""
 
     # tutorial
     tut_m      = re.search(r"(?m)^\s*tutorial\s*=\s*(\S+)\s*$", text)
@@ -89,6 +105,15 @@ def _parse_section(text: str, world_num: int, section_idx: int) -> dict | None:
             if s:
                 tutorial_steps.append(s)
 
+    # tutorial_steps_en
+    steps_en_m        = re.search(r"tutorial_steps_en\s*=\s*'''([\s\S]*?)'''", text)
+    tutorial_steps_en = []
+    if steps_en_m:
+        for line in steps_en_m.group(1).splitlines():
+            s = line.strip()
+            if s:
+                tutorial_steps_en.append(s)
+
     # tutorial_display
     td_m             = re.search(r"(?m)^\s*tutorial_display\s*=\s*(\S+)\s*$", text)
     tutorial_display = td_m.group(1).strip() if td_m else ""
@@ -101,7 +126,7 @@ def _parse_section(text: str, world_num: int, section_idx: int) -> dict | None:
 
     level_id = f"{world_num}-{section_idx}" if world_num >= 0 else f"x-{section_idx}"
 
-    return {
+    result = {
         "id":               level_id,
         "zone":             world_num,
         "name":             name,
@@ -114,6 +139,13 @@ def _parse_section(text: str, world_num: int, section_idx: int) -> dict | None:
         "tutorial_display": tutorial_display,
         "auto_desc":        auto_desc,
     }
+    if name_en:
+        result["name_en"] = name_en
+    if objective_en.strip():
+        result["objective_en"] = objective_en
+    if tutorial_steps_en:
+        result["tutorial_steps_en"] = tutorial_steps_en
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -144,8 +176,9 @@ def _gd_value(v) -> str:
 # Main
 # ---------------------------------------------------------------------------
 
-KEYS = ["id", "zone", "name", "floor_map", "object_map", "hints", "objective",
-        "tutorial", "tutorial_steps", "tutorial_display", "auto_desc"]
+KEYS = ["id", "zone", "name", "name_en", "floor_map", "object_map", "hints",
+        "objective", "objective_en", "tutorial", "tutorial_steps", "tutorial_steps_en",
+        "tutorial_display", "auto_desc"]
 
 
 def main() -> None:
@@ -170,9 +203,10 @@ def main() -> None:
     last = len(all_levels) - 1
     for i, level in enumerate(all_levels):
         lines.append("\t{")
-        for ki, key in enumerate(KEYS):
-            comma = "," if ki < len(KEYS) - 1 else ""
-            lines.append(f'\t\t"{key}": {_gd_value(level.get(key))}{comma}')
+        level_keys = [k for k in KEYS if k in level]
+        for ki, key in enumerate(level_keys):
+            comma = "," if ki < len(level_keys) - 1 else ""
+            lines.append(f'\t\t"{key}": {_gd_value(level[key])}{comma}')
         lines.append("\t}," if i < last else "\t}")
     lines.append("]")
     lines.append("")
