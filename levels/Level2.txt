@@ -4,12 +4,12 @@ hints = diverge converge
 tutorial = void_intro
 
 objective = '''
-紅色圈是[空洞]，無法通過
+紅色的[空洞]格無法通過
 推動核心到[空洞]內，可暫時修復為道路，並消耗掉核心
 '''
 
 objective_en = '''
-Red circles are [Voids] — impassable
+Red Void tiles cannot be crossed
 Push a Core into a [Void] to repair it into a path, consuming the Core
 '''
 
