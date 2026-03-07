@@ -85,6 +85,22 @@ func save_progress() -> void:
 	f.close()
 
 
+func level_text(level: Dictionary, key: String) -> String:
+	if language == "en":
+		var k_en := key + "_en"
+		if level.has(k_en):
+			return str(level[k_en])
+	return str(level.get(key, ""))
+
+
+func level_text_array(level: Dictionary, key: String) -> Array:
+	if language == "en":
+		var k_en := key + "_en"
+		if level.has(k_en):
+			return level[k_en] as Array
+	return level.get(key, []) as Array
+
+
 func mark_level_played(level_id: String) -> void:
 	if level_id == "":
 		return

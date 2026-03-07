@@ -22,6 +22,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 GameData="*res://scripts/GameData.gd"
+Localization="*res://scripts/Localization.gd"
 
 [display]
 

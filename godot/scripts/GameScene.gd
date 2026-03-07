@@ -244,7 +244,9 @@ func _start_level(idx: int) -> void:
 	hide_instruction()
 
 	var tutorial_id: String = level_dict.get("tutorial", "")
-	var tutorial_steps: Array = level_dict.get("tutorial_steps", [])
+	var gd_steps = _get_game_data()
+	var tutorial_steps: Array = gd_steps.level_text_array(level_dict, "tutorial_steps") \
+		if gd_steps != null else level_dict.get("tutorial_steps", [])
 	var tutorial_display: String = level_dict.get("tutorial_display", "")
 	tutorial.start_level(tutorial_id, tutorial_steps, self, tutorial_display)
 	hint_overlay.clear_overlay()
@@ -710,7 +712,7 @@ func _on_victory() -> void:
 	if gd != null:
 		gd.mark_level_played(level_id)
 	# Toast instead of full-screen overlay
-	toast_sub.text = "Level %s  ·  %d steps" % [level_id, controller.input_log.size()]
+	toast_sub.text = Localization.t("victory_sub") % [level_id, controller.input_log.size()]
 	toast_dot.color = Color(0.29, 0.54, 0.29)
 	win_toast.modulate.a = 0.0
 	win_toast.visible = true
@@ -724,7 +726,7 @@ func _on_victory() -> void:
 
 func _on_collapse() -> void:
 	overlay_backdrop.visible = true
-	overlay_label.text    = "FALL DOWN!\nR: restart   Z: undo   ESC: level select"
+	overlay_label.text    = Localization.t("fall_msg")
 	overlay_label.visible = true
 	_publish_web_observe()
 
@@ -876,7 +878,7 @@ func _update_ui() -> void:
 		if level_name_lc.contains("mutex"):
 			hl = {
 				"node": "merge",
-				"annotations": ["藍色 = 可合併", "灰色 = 無法合併"]
+				"annotations": [Localization.t("mutex_ann1"), Localization.t("mutex_ann2")]
 			}
 	callout_ui.set_highlight(hl.get("node", ""), hl.get("annotations", []))
 	var world_ann: Dictionary = hl if hl.has("world_domain") else {}
@@ -978,9 +980,10 @@ func _show_level_desc() -> void:
 	if _desc_overlay == null or all_levels.is_empty():
 		return
 	var level_dict: Dictionary = all_levels[current_level_idx]
+	var gd_desc = _get_game_data()
 	_desc_overlay.show_desc(
-		str(level_dict.get("name", "")),
-		str(level_dict.get("objective", ""))
+		gd_desc.level_text(level_dict, "name") if gd_desc != null else str(level_dict.get("name", "")),
+		gd_desc.level_text(level_dict, "objective") if gd_desc != null else str(level_dict.get("objective", ""))
 	)
 	# Prevent the same key event that opened/entered level from instantly dismissing.
 	_desc_close_unlock_ms = Time.get_ticks_msec() + 120

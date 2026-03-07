@@ -80,7 +80,7 @@ const BLOCKING_ACTION := {
 const CHECK_HIGHLIGHTS := {
 	Check.BRANCH_TWICE: {
 		"node": "diverge",
-		"annotations": ["綠色 = 可分裂", "灰色 = 無法分裂"],
+		"annotation_keys": ["spot_hl_div_ann1", "spot_hl_div_ann2"],
 		"include": ["charge_intro"],
 	},
 }
@@ -92,52 +92,52 @@ const SPOTLIGHT_SEQUENCES := {
 		{
 			"domain": "entity",
 			"type": Enums.EntityType.PLAYER,
-			"title": "角色",
-			"lines": ["藍色圓圈是你控制的角色", "白色箭頭代表角色面向方向", "使用 W/A/S/D 或方向鍵移動"]
+			"title_key": "spot_player_title",
+			"lines_keys": ["spot_player_l1", "spot_player_l2", "spot_player_l3"],
 		},
 		{
 			"domain": "terrain",
 			"type": Enums.TerrainType.GOAL,
-			"title": "終點",
-			"lines": ["黃色圓圈是終點", "走到閃爍的終點即可過關"]
+			"title_key": "spot_goal_title",
+			"lines_keys": ["spot_goal_l1", "spot_goal_l2"],
 		},
 	],
 	"core_intro": [
 		{
 			"domain": "pos",
 			"pos": Vector2i(1, 1),
-			"title": "核心",
-			"lines": ["菱形色塊，可被推動"]
+			"title_key": "spot_core1_title",
+			"lines_keys": ["spot_core1_l1"],
 		},
 		{
 			"domain": "pos",
 			"pos": Vector2i(1, 5),
-			"title": "核心",
-			"lines": ["面對核心移動可推動一格", "一次只能推動一個核心"]
+			"title_key": "spot_core2_title",
+			"lines_keys": ["spot_core2_l1", "spot_core2_l2"],
 		},
 	],
 	"switch_and_goal": [
 		{
 			"domain": "terrain",
 			"type": Enums.TerrainType.SWITCH,
-			"title": "目標",
-			"lines": ["灰色菱形框，啟動點", "將核心推進目標格可啟動", "所有目標啟動後，終點將開啟"]
+			"title_key": "spot_switch_title",
+			"lines_keys": ["spot_switch_l1", "spot_switch_l2", "spot_switch_l3"],
 		}
 	],
 	"charge_intro": [
 		{
 			"domain": "terrain",
 			"type": Enums.TerrainType.BRANCH1,
-			"title": "分裂點",
-			"lines": ["綠色圓點是分裂點", "取得分裂點增加可分裂次數", "合併狀態才能取得分裂點"]
+			"title_key": "spot_divpt_title",
+			"lines_keys": ["spot_divpt_l1", "spot_divpt_l2", "spot_divpt_l3"],
 		}
 	],
 	"void_intro": [
 		{
 			"domain": "terrain",
 			"type": Enums.TerrainType.HOLE,
-			"title": "空洞",
-			"lines": ["紅色點圈，無法通過", "推動核心進空洞可修復為路線"]
+			"title_key": "spot_hole_title",
+			"lines_keys": ["spot_hole_l1", "spot_hole_l2"],
 		}
 	],
 }
@@ -232,10 +232,24 @@ func get_pending_panel_spotlight() -> Array:
 
 
 ## Returns spotlight sequence for this tutorial ID, or [] if none.
+## Items are localized: title_key/lines_keys are resolved to title/lines via Localization.
 func get_spotlight_sequence() -> Array:
-	if SPOTLIGHT_SEQUENCES.has(_tutorial_id):
-		return SPOTLIGHT_SEQUENCES[_tutorial_id]
-	return []
+	if not SPOTLIGHT_SEQUENCES.has(_tutorial_id):
+		return []
+	var result: Array = []
+	for raw in SPOTLIGHT_SEQUENCES[_tutorial_id]:
+		var d: Dictionary = raw.duplicate()
+		if d.has("title_key"):
+			d["title"] = Localization.t(str(d["title_key"]))
+			d.erase("title_key")
+		if d.has("lines_keys"):
+			var lines: Array = []
+			for k in d["lines_keys"]:
+				lines.append(Localization.t(str(k)))
+			d["lines"] = lines
+			d.erase("lines_keys")
+		result.append(d)
+	return result
 
 
 ## Returns highlight info for SystemCalloutUI, or empty dict if none.
@@ -256,7 +270,15 @@ func get_highlight() -> Dictionary:
 		var include: Array = hl.get("include", [])
 		if not include.is_empty() and not include.has(_tutorial_id):
 			continue
-		return hl
+		var result := hl.duplicate()
+		var ann_keys: Array = result.get("annotation_keys", [])
+		if not ann_keys.is_empty():
+			var annotations: Array = []
+			for k in ann_keys:
+				annotations.append(Localization.t(str(k)))
+			result["annotations"] = annotations
+			result.erase("annotation_keys")
+		return result
 	return {}
 
 
@@ -273,8 +295,8 @@ func on_state_changed() -> void:
 				_pending_panel_spotlight = [{
 					"domain": "pos",
 					"pos": pos,
-					"title": "殘影",
-					"lines": ["虛線菱形","不可推動也不可穿透"]
+					"title": Localization.t("spot_shadow_title"),
+					"lines": [Localization.t("spot_shadow_l1"), Localization.t("spot_shadow_l2")],
 				}]
 	if not _active:
 		if _scene.controller != null:
@@ -288,8 +310,8 @@ func on_state_changed() -> void:
 			_pending_panel_spotlight = [{
 				"domain": "pos",
 				"pos": pos,
-				"title": "轉向",
-				"lines": ["若核心在側面，朝核心按方向鍵", "會原地轉向正對核心"]
+				"title": Localization.t("spot_turn_title"),
+				"lines": [Localization.t("spot_turn_l1"), Localization.t("spot_turn_l2")],
 			}]
 
 
@@ -309,8 +331,8 @@ func on_physics_update() -> void:
 		_pending_panel_spotlight = [{
 			"domain": "pos",
 			"pos": fp,
-			"title": "修復",
-			"lines": ["消耗核心修復空洞", "修復的空洞會環繞核心顏色"]
+			"title": Localization.t("spot_filled_title"),
+			"lines": [Localization.t("spot_filled_l1"), Localization.t("spot_filled_l2")],
 		}]
 	_snapshot_filled_holes(branch)
 
@@ -391,7 +413,7 @@ func _refresh_toast() -> void:
 	if bbcode == _last_bbcode:
 		return
 	_last_bbcode = bbcode
-	_scene.show_instruction("任務", bbcode)
+	_scene.show_instruction(Localization.t("task_title"), bbcode)
 
 
 func _complete_item(index: int) -> void:
@@ -402,11 +424,11 @@ func _complete_item(index: int) -> void:
 			_pending_panel_spotlight = [{
 				"domain": "panel",
 				"corner": true,
-				"title": "預覽模式",
+				"title": Localization.t("spot_preview_title"),
 				"lines": [
-					"兩空間疊合，另一空間的角色變灰，核心呈現縮小半透明",
-					"可以繼續操作，按 [Tab] 可即時切換角色",
-					"再按 [V] 合併或 [M] 退出預覽"
+					Localization.t("spot_preview_l1"),
+					Localization.t("spot_preview_l2"),
+					Localization.t("spot_preview_l3"),
 				],
 			}]
 	_refresh_toast()
@@ -502,9 +524,12 @@ func _evaluate_checks() -> void:
 			if check == Check.HAS_BRANCHED and _tutorial_id == "diverge_guided":
 				_pending_panel_spotlight = [{
 					"domain": "panel",
-					"title": "分裂空間",
-					"lines": ["當前狀態複製成兩個空間",
-					"一次可控制一個空間的角色", "目前控制對象會在中央大圖"],
+					"title": Localization.t("spot_diverge_title"),
+					"lines": [
+						Localization.t("spot_diverge_l1"),
+						Localization.t("spot_diverge_l2"),
+						Localization.t("spot_diverge_l3"),
+					],
 				}]
 
 	_was_branched = c.has_branched
