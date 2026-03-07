@@ -258,8 +258,8 @@ tutorial_steps = '''
 '''
 
 objective = '''
-合併狀態，終點才會完全開啟
 可在終點以外的位置合併
+合併狀態，終點才會完全開啟
 '''
 
 floor_map = '''
@@ -280,7 +280,7 @@ object_map = '''
 
 --------------------------
 # Trace 殘影
-tutorial = switches_cross
+tutorial = trace_intro
 hints = diverge
 
 tutorial_steps = '''
@@ -288,8 +288,9 @@ tutorial_steps = '''
 '''
 
 objective = '''
-若核心在兩個空間位置不同
-合併後將化成不可推動的[殘影]
+合併會結算核心在兩個空間的狀態差異
+如果位置不同，將化成不可動的[殘影]
+如果位置一致，可保持核心狀態
 '''
 
 floor_map = '''

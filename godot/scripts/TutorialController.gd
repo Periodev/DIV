@@ -60,6 +60,7 @@ const TUTORIAL_CHECKS := {
 
 	"branch_only":    [Check.HAS_BRANCHED],
 	"switches_cross": [Check.SWITCH_ALL_CROSS],
+	"trace_intro":    [Check.SWITCH_ALL_CROSS],
 	"re_restore":     [Check.RESTORE_COUNT],
 }
 
@@ -142,6 +143,7 @@ var _sequential_mode: bool = false
 var _blocking_mode: bool = false
 var _pending_panel_spotlight: Array = []
 var _core_turn_hint_shown: bool = false
+var _shadow_hint_shown: bool = false
 
 # Checklist state: array of { "label": String, "check": Check, "done": bool }
 var _items: Array = []
@@ -157,6 +159,7 @@ func start_level(tutorial_id: String, steps: Array, scene: GameScene, display_mo
 	_branch_v_accum = 0
 	_pending_panel_spotlight = []
 	_core_turn_hint_shown = false
+	_shadow_hint_shown = false
 	_blocking_mode = display_mode == "blocking"
 	_sequential_mode = display_mode == "sequential" or _blocking_mode
 	_active = tutorial_id != "" and TUTORIAL_CHECKS.has(tutorial_id)
@@ -246,7 +249,24 @@ func get_highlight() -> Dictionary:
 
 
 func on_state_changed() -> void:
+	# Shadow hint: checked before _active guard because the tutorial step
+	# (SWITCH_ALL_CROSS) completes while still branched, setting _active=false
+	# before the player merges and the shadow appears.
+	if _tutorial_id == "trace_intro" and not _shadow_hint_shown:
+		var c2 := _scene.controller
+		if c2 != null and _was_branched and not c2.has_branched:
+			var pos: Vector2i = _get_shadow_entity_pos()
+			if pos != Vector2i(-1, -1):
+				_shadow_hint_shown = true
+				_pending_panel_spotlight = [{
+					"domain": "pos",
+					"pos": pos,
+					"title": "殘影",
+					"lines": ["虛線菱形","不可推動也不可穿透"]
+				}]
 	if not _active:
+		if _scene.controller != null:
+			_was_branched = _scene.controller.has_branched
 		return
 	_evaluate_checks()
 	if _tutorial_id == "core_intro" and not _core_turn_hint_shown:
@@ -350,8 +370,8 @@ func _complete_item(index: int) -> void:
 				"corner": true,
 				"title": "預覽模式",
 				"lines": [
-					"兩空間疊合，另一空間的角色變灰、核心呈現縮小半透明",
-					"可以繼續操作角色，按 [Tab] 即時切換",
+					"兩空間疊合，另一空間的角色變灰，核心呈現縮小半透明",
+					"可以繼續操作，按 [Tab] 可即時切換角色",
 					"再按 [V] 合併或 [M] 退出預覽"
 				],
 			}]
@@ -503,6 +523,22 @@ func _get_unfaced_adjacent_box_pos() -> Vector2i:
 		var diff: Vector2i = ent.pos - player.pos
 		if abs(diff.x) + abs(diff.y) == 1 and diff != player.direction:
 			return ent.pos
+	return Vector2i(-1, -1)
+
+
+func _get_shadow_entity_pos() -> Vector2i:
+	var c := _scene.controller
+	if c == null:
+		return Vector2i(-1, -1)
+	var branch := c.get_active_branch()
+	if branch == null:
+		return Vector2i(-1, -1)
+	for ent in branch.entities:
+		var e := ent as Entity
+		if e.uid == 0 or e.type != Enums.EntityType.BOX:
+			continue
+		if branch.is_shadow(e.uid):
+			return e.pos
 	return Vector2i(-1, -1)
 
 
