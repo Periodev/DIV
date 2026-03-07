@@ -15,7 +15,9 @@ class_name GameScene
 @onready var instr_title: Label = $UI/InstructionToast/InstrVBox/InstrTitle
 @onready var instr_body: RichTextLabel = $UI/InstructionToast/InstrVBox/InstrBody
 @onready var win_toast: PanelContainer = $UI/WinToast
+@onready var toast_title: Label = $UI/WinToast/ToastVBox/ToastHeader/ToastTitle
 @onready var toast_sub: Label = $UI/WinToast/ToastVBox/ToastSub
+@onready var toast_hint: Label = $UI/WinToast/ToastVBox/ToastHint
 @onready var toast_dot: ColorRect = $UI/WinToast/ToastVBox/ToastHeader/ToastDot
 var hint_overlay: HintOverlay = null
 var _desc_overlay: LevelDescOverlay = null
@@ -712,7 +714,9 @@ func _on_victory() -> void:
 	if gd != null:
 		gd.mark_level_played(level_id)
 	# Toast instead of full-screen overlay
+	toast_title.text = Loc.t("victory_title")
 	toast_sub.text = Loc.t("victory_sub") % [level_id, controller.input_log.size()]
+	toast_hint.text = Loc.t("victory_hint")
 	toast_dot.color = Color(0.29, 0.54, 0.29)
 	win_toast.modulate.a = 0.0
 	win_toast.visible = true
