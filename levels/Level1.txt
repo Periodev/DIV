@@ -179,7 +179,7 @@ object_map = '''
 hints = diverge converge
 
 objective = '''
-利用還原，產生第三個位置的殘影
+保留並產生第三個位置的殘影
 '''
 
 floor_map = '''
@@ -201,14 +201,13 @@ object_map = '''
 hints = diverge converge
 
 objective = '''
-分裂點外的同心圓圈數，代表額外充能次數
 '''
 
 floor_map = '''
 #.S.#
 ....#
-V.G.#
-....#
+v.G.#
+v...#
 #SS.#
 '''
 
@@ -303,15 +302,15 @@ objective = '''
 '''
 
 floor_map = '''
-##G#
-##v.
-#S.S
-#S.V
+#G##
+#v.#
+S.S#
+S.V#
 '''
 
 object_map = '''
 ....
-..v.
-..BB
+.v..
+.BB.
 ....
 '''

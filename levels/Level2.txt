@@ -1,16 +1,18 @@
 # Void 空洞
 hints = diverge converge
 
+tutorial = void_intro
+
 objective = '''
 紅色圈是[空洞]，無法通過
-推動核心到[空洞]內，可暫時修補為道路，並消耗掉核心
+推動核心到[空洞]內，可暫時修復為道路，並消耗掉核心
 '''
 
 floor_map = '''
 ##G###
 ##H###
-##.#S#
-##.#.#
+#H.#S#
+#H.#.#
 #..H.#
 #.H###
 '''
@@ -55,7 +57,7 @@ object_map = '''
 hints = diverge converge
 
 objective = '''
-先修補空洞再合併，合併後可[保留]，呈現殘影修補狀態
+先修復空洞再合併，合併後可[保留]，呈現殘影修復狀態
 '''
 
 floor_map = '''
@@ -186,7 +188,7 @@ object_map = '''
 hints = diverge converge
 
 objective = '''
-若空洞內有多個殘影，可以透過還原只消除其中部份殘影
+若空洞內有多個殘影，可以透過還原消除其中部份殘影
 '''
 
 floor_map = '''
