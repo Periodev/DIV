@@ -39,7 +39,6 @@ const TUTORIAL_CHECKS := {
 	],
 	"diverge_guided": [
 		Check.SWITCH_ACTIVATED,
-		Check.INPUT_F1_DISMISS,
 		Check.HAS_BRANCHED,
 		Check.INPUT_TAB,
 		Check.PLAYER_ON_GOAL,

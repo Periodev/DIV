@@ -64,7 +64,7 @@ const ALL: Array = [
 		"hints": {"diverge": true, "pickup": false, "converge": false, "fetch": false},
 		"objective": "\n核心所在位置，可能會阻擋終點\n按[V] 產生分裂空間，平行處理任務\n",
 		"tutorial": "diverge_guided",
-		"tutorial_steps": ["啟動目標", "發現無法通過，按 [F1] 說明", "按 [V] 分裂", "按 [Tab] 切換空間，完成剩餘任務", "控制當前角色走到終點", "按 [V] 合併兩空間狀態"],
+		"tutorial_steps": ["啟動目標", "按 [V] 分裂", "按 [Tab] 切換空間，完成剩餘任務", "控制當前角色走到終點", "按 [V] 合併兩空間狀態"],
 		"tutorial_display": "blocking",
 		"auto_desc": false
 	},
