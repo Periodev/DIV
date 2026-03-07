@@ -81,17 +81,17 @@ objective = '''
 '''
 
 floor_map = '''
-..#.
-...G
-v.#S
-####
+.GS#
+#.##
+...#
+..v#
 '''
 
 object_map = '''
 ....
-.B..
-^...
 ....
+.B..
+..^.
 '''
 
 --------------------------
@@ -112,7 +112,7 @@ floor_map = '''
 vGS#
 #.##
 ...#
-#.v#
+..v#
 '''
 
 object_map = '''
@@ -147,29 +147,31 @@ object_map = '''
 # Coexist 共存
 hints = diverge converge
 
-tutorial = re_restore
+tutorial = coexist
 
 tutorial_steps = '''
-還原三次
+保留殘影的狀態下分裂
 '''
 
 objective = '''
-殘影可以不還原，下次分裂可保留殘影到兩空間
+不主動還原殘影，下次分裂可保留殘影到兩空間
 兩空間的殘影互相獨立，直到合併才會結算
 '''
 
 floor_map = '''
-###v
-.v.G
-###S
-####
+#####
+..##v
+..v.G
+#..#S
+#####
 '''
 
 object_map = '''
-....
-..B^
-....
-....
+.....
+....v
+...B.
+.....
+.....
 '''
 
 --------------------------
@@ -177,7 +179,7 @@ object_map = '''
 hints = diverge converge
 
 objective = '''
-利用空間獨立性，產生第三個位置的殘影
+利用還原，產生第三個位置的殘影
 '''
 
 floor_map = '''

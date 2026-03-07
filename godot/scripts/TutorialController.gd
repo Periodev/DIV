@@ -4,7 +4,7 @@
 class_name TutorialController
 
 # Check type constants — each tutorial ID maps to a fixed sequence of these.
-enum Check { PLAYER_ON_GOAL, GOAL_ACTIVE, GOAL_ACTIVE_CROSS, HAS_BRANCHED, SWITCH_ACTIVATED, SWITCH_PROGRESS, SWITCH_ALL_CROSS, INPUT_TAB, INPUT_M, MERGED, MERGE_SUCCESS, SPACE_RESTORE, GAIN_DIV_POINT, BRANCH_TWICE, INSTANT, INPUT_F1_DISMISS, INPUT_Z, SWITCH_ACTIVATED_BRANCHED, RESTORE_COUNT }
+enum Check { PLAYER_ON_GOAL, GOAL_ACTIVE, GOAL_ACTIVE_CROSS, HAS_BRANCHED, SWITCH_ACTIVATED, SWITCH_PROGRESS, SWITCH_ALL_CROSS, INPUT_TAB, INPUT_M, MERGED, MERGE_SUCCESS, SPACE_RESTORE, GAIN_DIV_POINT, BRANCH_TWICE, INSTANT, INPUT_F1_DISMISS, INPUT_Z, SWITCH_ACTIVATED_BRANCHED, RESTORE_COUNT, BRANCH_WITH_SHADOW }
 
 # Tutorial ID → array of check types (defines the check sequence).
 # Level files provide matching labels via tutorial_steps.
@@ -62,6 +62,7 @@ const TUTORIAL_CHECKS := {
 	"switches_cross": [Check.SWITCH_ALL_CROSS],
 	"trace_intro":    [Check.SWITCH_ALL_CROSS],
 	"re_restore":     [Check.RESTORE_COUNT],
+	"coexist":        [Check.BRANCH_WITH_SHADOW],
 }
 
 ## Blocking tutorial: check → required action string.
@@ -459,6 +460,8 @@ func _evaluate_checks() -> void:
 					_items[i]["label"] = new_label_r
 					changed = true
 				passed = restore_count >= 3
+			Check.BRANCH_WITH_SHADOW:
+				passed = c.has_branched and _any_shadow_in_active_branch()
 			# INPUT_TAB is handled in on_input()
 		if passed:
 			_items[i]["done"] = true
@@ -524,6 +527,20 @@ func _get_unfaced_adjacent_box_pos() -> Vector2i:
 		if abs(diff.x) + abs(diff.y) == 1 and diff != player.direction:
 			return ent.pos
 	return Vector2i(-1, -1)
+
+
+func _any_shadow_in_active_branch() -> bool:
+	var c := _scene.controller
+	if c == null:
+		return false
+	var branch := c.get_active_branch()
+	if branch == null:
+		return false
+	for ent in branch.entities:
+		var e := ent as Entity
+		if e.uid != 0 and e.type == Enums.EntityType.BOX and branch.is_shadow(e.uid):
+			return true
+	return false
 
 
 func _get_shadow_entity_pos() -> Vector2i:
