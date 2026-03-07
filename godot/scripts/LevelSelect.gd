@@ -35,7 +35,6 @@ var world_indices: Dictionary = {}   # world(int) -> Array[int]
 
 var current_zone: int = 0
 var current_index: int = 0
-var _sys_font: Font = null
 
 
 func _ready() -> void:
@@ -89,8 +88,7 @@ func _draw() -> void:
 	_draw_text_td("DIV", w * 0.5, TITLE_CY, TITLE_C, 27, HORIZONTAL_ALIGNMENT_CENTER, true)
 	_draw_panel()
 
-	var footer: String = "↑↓ W/S: select level   ← → A/D: zone   Enter/Space: start"
-	_draw_text_td(footer, w * 0.5, FOOTER_CY, MUTED_C, 17, HORIZONTAL_ALIGNMENT_CENTER, true, _get_sys_font())
+	_draw_footer(w * 0.5, FOOTER_CY)
 	_draw_preview_label()
 
 
@@ -154,12 +152,52 @@ func _draw_preview_label() -> void:
 	)
 
 
-func _get_sys_font() -> Font:
-	if _sys_font == null:
-		var sf := SystemFont.new()
-		sf.font_names = PackedStringArray(["Segoe UI", "Arial", "Helvetica", "DejaVu Sans"])
-		_sys_font = sf
-	return _sys_font
+func _draw_footer(cx: float, cy: float) -> void:
+	var fs := 17
+	var font: Font = ThemeDB.fallback_font
+	if font == null:
+		return
+	var r := 4.5
+	var seg1 := "  W/S: select level    "
+	var seg2 := "  A/D: zone   Enter/Space: start"
+	var w1 := font.get_string_size(seg1, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
+	var w2 := font.get_string_size(seg2, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
+	var pair_vw := r * 2.8   # ↑↓ pair width
+	var pair_hw := r * 5.0   # ← → pair width
+	var total_w := pair_vw + w1 + pair_hw + w2
+	var x := cx - total_w * 0.5
+	var baseline := cy + fs * 0.35
+	# ↑↓
+	_draw_tri_v(x + r * 1.4, cy - r - 1.0, r, true, MUTED_C)
+	_draw_tri_v(x + r * 1.4, cy + r + 1.0, r, false, MUTED_C)
+	x += pair_vw
+	draw_string(font, Vector2(x, baseline), seg1, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, MUTED_C)
+	x += w1
+	# ← →
+	_draw_tri_h(x + r * 1.4, cy, r, true, MUTED_C)
+	_draw_tri_h(x + r * 1.4 + r * 3.2, cy, r, false, MUTED_C)
+	x += pair_hw
+	draw_string(font, Vector2(x, baseline), seg2, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, MUTED_C)
+
+
+func _draw_tri_v(px: float, py: float, r: float, up: bool, color: Color) -> void:
+	var s := r * 1.2
+	var pts: PackedVector2Array
+	if up:
+		pts = PackedVector2Array([Vector2(px, py - r), Vector2(px + s, py + r), Vector2(px - s, py + r)])
+	else:
+		pts = PackedVector2Array([Vector2(px, py + r), Vector2(px + s, py - r), Vector2(px - s, py - r)])
+	draw_polygon(pts, PackedColorArray([color, color, color]))
+
+
+func _draw_tri_h(px: float, py: float, r: float, left: bool, color: Color) -> void:
+	var s := r * 1.2
+	var pts: PackedVector2Array
+	if left:
+		pts = PackedVector2Array([Vector2(px - r, py), Vector2(px + r, py - s), Vector2(px + r, py + s)])
+	else:
+		pts = PackedVector2Array([Vector2(px + r, py), Vector2(px - r, py - s), Vector2(px - r, py + s)])
+	draw_polygon(pts, PackedColorArray([color, color, color]))
 
 
 func _draw_text_td(
@@ -169,13 +207,11 @@ func _draw_text_td(
 	color: Color,
 	font_size: int,
 	align: int = HORIZONTAL_ALIGNMENT_LEFT,
-	center_y: bool = false,
-	font: Font = null
+	center_y: bool = false
 ) -> void:
 	if text == "":
 		return
-	if font == null:
-		font = ThemeDB.fallback_font
+	var font: Font = ThemeDB.fallback_font
 	if font == null:
 		return
 	var text_w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
