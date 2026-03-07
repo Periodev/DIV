@@ -10,7 +10,7 @@ const TITLE_CY := 30.0
 const ZONE_HDR_CY := 56.0
 const HDIVIDE_Y := 72.0
 const LIST_TOP := 80.0
-const ITEM_H := 28.0
+const ITEM_H := 42.0
 const FOOTER_CY := 706.0
 
 const PREVIEW_X := 400.0
@@ -89,17 +89,17 @@ func _draw() -> void:
 	draw_rect(Rect2(0, 0, w, h), BG_C)
 	draw_line(Vector2(LEFT_W, 0), Vector2(LEFT_W, h), DIV_C, 1.0)
 
-	_draw_text_td("DIV", w * 0.5, TITLE_CY, TITLE_C, 18, HORIZONTAL_ALIGNMENT_CENTER, true)
+	_draw_text_td("DIV", w * 0.5, TITLE_CY, TITLE_C, 27, HORIZONTAL_ALIGNMENT_CENTER, true)
 	_draw_panel()
 
 	var footer: String = "Arrows/WASD: select   Tab: zone   Enter/Space: start   Esc: exit"
-	_draw_text_td(footer, w * 0.5, FOOTER_CY, MUTED_C, 11, HORIZONTAL_ALIGNMENT_CENTER, true)
+	_draw_text_td(footer, w * 0.5, FOOTER_CY, MUTED_C, 17, HORIZONTAL_ALIGNMENT_CENTER, true)
 	_draw_preview_label()
 
 
 func _draw_panel() -> void:
 	if levels.is_empty() or sorted_worlds.is_empty():
-		_draw_text_td("No levels found", LEFT_W * 0.5, LIST_TOP, Color8(255, 120, 120), 14, HORIZONTAL_ALIGNMENT_CENTER)
+		_draw_text_td("No levels found", LEFT_W * 0.5, LIST_TOP, Color8(255, 120, 120), 21, HORIZONTAL_ALIGNMENT_CENTER)
 		return
 	var gd = _get_game_data()
 
@@ -107,7 +107,7 @@ func _draw_panel() -> void:
 	var world_text: String = "Zone %d" % world
 	var prefix: String = "< " if current_zone > 0 else "  "
 	var suffix: String = " >" if current_zone < sorted_worlds.size() - 1 else "  "
-	_draw_text_td(prefix + world_text + suffix, LEFT_W * 0.5, ZONE_HDR_CY, ZONE_C, 13, HORIZONTAL_ALIGNMENT_CENTER, true)
+	_draw_text_td(prefix + world_text + suffix, LEFT_W * 0.5, ZONE_HDR_CY, ZONE_C, 20, HORIZONTAL_ALIGNMENT_CENTER, true)
 
 	draw_line(Vector2(0, HDIVIDE_Y), Vector2(LEFT_W, HDIVIDE_Y), DIV_C, 1.0)
 
@@ -125,12 +125,12 @@ func _draw_panel() -> void:
 		var level_id: String = str(level.get("id", ""))
 		var x: float = LPAD
 		if gd != null and gd.is_level_played(level_id):
-			_draw_text_td("Done", x, item_cy, DONE_C, 10, HORIZONTAL_ALIGNMENT_LEFT, true)
-			x += 38.0
+			_draw_text_td("Done", x, item_cy, DONE_C, 15, HORIZONTAL_ALIGNMENT_LEFT, true)
+			x += 57.0
 
 		var name_text: String = str(level.get("name", "Level %d" % idx))
 		var name_color: Color = SEL_TEXT_C if selected else TEXT_C
-		var name_size: int = 13 if selected else 12
+		var name_size: int = 20 if selected else 18
 		_draw_text_td(name_text, x, item_cy, name_color, name_size, HORIZONTAL_ALIGNMENT_LEFT, true)
 
 
@@ -151,7 +151,7 @@ func _draw_preview_label() -> void:
 		PREVIEW_X + grid_px * 0.5,
 		label_y,
 		TEXT_C,
-		14,
+		21,
 		HORIZONTAL_ALIGNMENT_CENTER,
 		true
 	)
