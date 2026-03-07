@@ -10,15 +10,19 @@ var played_ids: Dictionary = {}  # id -> true
 
 
 func _ready() -> void:
-	var font := load("res://fonts/NotoSansTC_subset.ttf") as Font
-	if font != null:
-		ThemeDB.fallback_font = font
-		# Inject font directly into every Label/RichTextLabel as it enters the
-		# tree. Theme cascade alone is unreliable on web because Godot's
-		# built-in Control font is found before fallback_font or root themes.
+	var cjk := load("res://fonts/NotoSansTC_subset.ttf") as Font
+	if cjk != null:
+		# Embolden slightly to match original built-in font weight.
+		var fv := FontVariation.new()
+		fv.base_font = cjk
+		fv.variation_embolden = 0.8
+		ThemeDB.fallback_font = fv
+		# Inject into Labels so web doesn't skip to built-in Control font first.
 		get_tree().node_added.connect(func(node: Node) -> void:
-			if node is Label or node is RichTextLabel:
-				(node as Control).add_theme_font_override("font", font))
+			if node is Label:
+				(node as Label).add_theme_font_override("font", fv)
+			elif node is RichTextLabel:
+				(node as RichTextLabel).add_theme_font_override("normal_font", fv))
 	load_progress()
 
 
