@@ -106,7 +106,7 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 visible = false
 offset_left = 16.0
 offset_top = 40.0
-offset_right = 300.0
+offset_right = 350.0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("toast_bg")
 
