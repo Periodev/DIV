@@ -11,7 +11,7 @@ tutorial_steps = '''
 tutorial_steps_en = '''
 Diverge
 Merge in the open area on the right
-Face the Trace near the Target, press [SPACE] to Restore
+Face the Trace near the Target and press [SPACE] to Restore
 '''
 
 objective = '''
@@ -22,8 +22,8 @@ objective = '''
 
 objective_en = '''
 Once a Core becomes a Trace, it cannot be moved
-[Restore] the Trace back into a Core to push it again
-[Restore] removes all other [Traces] of the same origin, leaving one Core
+[Restore] turns the Trace back into a Core
+[Restore] removes all other Traces of the same origin, leaving one Core
 '''
 
 floor_map = '''
@@ -68,7 +68,7 @@ objective = '''
 '''
 
 objective_en = '''
-Merging keeps only the currently active player
+Merging keeps only the active player
 Use [M] to preview and track the player's position
 '''
 
@@ -124,7 +124,7 @@ tutorial_steps = '''
 
 tutorial_steps_en = '''
 Collect a Diverge Point
-Diverge 2 times
+Diverge twice
 '''
 
 objective = '''
@@ -172,7 +172,7 @@ hints = diverge converge
 tutorial = coexist
 
 tutorial_steps = '''
-保留殘影的狀態下分裂
+保留殘影後分裂
 '''
 
 tutorial_steps_en = '''
@@ -185,8 +185,8 @@ objective = '''
 '''
 
 objective_en = '''
-If you don't Restore the Trace, it carries into both spaces on the next Diverge
-[Traces] in each space are independent until you Merge
+If you do not Restore the Trace, it remains in both spaces after the next Diverge
+Traces in each space are independent until you Merge
 '''
 
 floor_map = '''
@@ -214,7 +214,7 @@ objective = '''
 '''
 
 objective_en = '''
-Preserve [Traces] and create a third position
+Preserve Traces and create a third Trace position
 '''
 
 floor_map = '''
@@ -337,7 +337,7 @@ objective = '''
 '''
 
 objective_en = '''
-Prevent the diverge point from being locked
+Prevent the Diverge Point from being locked
 '''
 
 floor_map = '''
