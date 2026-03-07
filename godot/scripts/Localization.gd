@@ -117,7 +117,7 @@ const STRINGS := {
 		"spot_divpt_l3":     "You can only collect them while merged",
 		"spot_hole_title":   "Void",
 		"spot_hole_l1":      "Red Void tiles cannot be crossed",
-		"spot_hole_l2":      "Push a Core into a Void to repair it as a path",
+		"spot_hole_l2":      "Push a Core into a Void to repair it into a path",
 		"spot_diverge_title": "Diverged Space",
 		"spot_diverge_l1":    "The current state is copied into two spaces",
 		"spot_diverge_l2":    "You control one space's player at a time",
