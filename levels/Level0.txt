@@ -313,45 +313,6 @@ object_map = '''
 '''
 
 --------------------------
-# Branch 分叉
-tutorial = switches_cross
-hints = diverge
-
-tutorial_steps = '''
-啟動兩個目標
-'''
-
-tutorial_steps_en = '''
-Activate both Targets
-'''
-
-objective = '''
-可在終點以外的位置合併
-合併狀態，終點才會完全開啟
-'''
-
-objective_en = '''
-You can Merge away from the Goal
-The Goal fully opens only after Merging
-'''
-
-floor_map = '''
-#####
-S.G.S
-.#.#.
-..v..
-#####
-'''
-
-object_map = '''
-.....
-.....
-..B..
-..^..
-.....
-'''
-
---------------------------
 # Trace 殘影
 tutorial = trace_intro
 hints = diverge
@@ -382,6 +343,43 @@ object_map = '''
 >..
 .B.
 ...
+'''
+
+--------------------------
+# Branch 分叉
+tutorial = switches_cross
+hints = diverge
+
+tutorial_steps = '''
+啟動兩個目標
+'''
+
+tutorial_steps_en = '''
+Activate both Targets
+'''
+
+objective = '''
+可在終點以外的位置合併
+'''
+
+objective_en = '''
+You can Merge at positions other than the Goal
+'''
+
+floor_map = '''
+#####
+S.G.S
+.#.#.
+..v..
+#####
+'''
+
+object_map = '''
+.....
+.....
+..B..
+..^..
+.....
 '''
 
 --------------------------
