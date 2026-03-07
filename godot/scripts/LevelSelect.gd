@@ -35,6 +35,7 @@ var world_indices: Dictionary = {}   # world(int) -> Array[int]
 
 var current_zone: int = 0
 var current_index: int = 0
+var _sys_font: Font = null
 
 
 func _ready() -> void:
@@ -88,8 +89,8 @@ func _draw() -> void:
 	_draw_text_td("DIV", w * 0.5, TITLE_CY, TITLE_C, 27, HORIZONTAL_ALIGNMENT_CENTER, true)
 	_draw_panel()
 
-	var footer: String = "W/S: select level   A/D: zone   Enter/Space: start"
-	_draw_text_td(footer, w * 0.5, FOOTER_CY, MUTED_C, 17, HORIZONTAL_ALIGNMENT_CENTER, true)
+	var footer: String = "↑↓ W/S: select level   ← → A/D: zone   Enter/Space: start"
+	_draw_text_td(footer, w * 0.5, FOOTER_CY, MUTED_C, 17, HORIZONTAL_ALIGNMENT_CENTER, true, _get_sys_font())
 	_draw_preview_label()
 
 
@@ -153,6 +154,14 @@ func _draw_preview_label() -> void:
 	)
 
 
+func _get_sys_font() -> Font:
+	if _sys_font == null:
+		var sf := SystemFont.new()
+		sf.font_names = PackedStringArray(["Segoe UI", "Arial", "Helvetica", "DejaVu Sans"])
+		_sys_font = sf
+	return _sys_font
+
+
 func _draw_text_td(
 	text: String,
 	x: float,
@@ -160,11 +169,13 @@ func _draw_text_td(
 	color: Color,
 	font_size: int,
 	align: int = HORIZONTAL_ALIGNMENT_LEFT,
-	center_y: bool = false
+	center_y: bool = false,
+	font: Font = null
 ) -> void:
 	if text == "":
 		return
-	var font: Font = ThemeDB.fallback_font
+	if font == null:
+		font = ThemeDB.fallback_font
 	if font == null:
 		return
 	var text_w: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size).x
