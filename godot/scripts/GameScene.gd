@@ -465,6 +465,12 @@ func _input(event: InputEvent) -> void:
 							if gd != null:
 								gd.selected_level_idx = next_zone_first
 							get_tree().change_scene_to_file("res://scenes/level_select.tscn")
+						elif current_level_idx + 1 >= all_levels.size():
+							# Last level overall — return to menu, stay at last level
+							var gd = _get_game_data()
+							if gd != null:
+								gd.selected_level_idx = current_level_idx
+							get_tree().change_scene_to_file("res://scenes/level_select.tscn")
 						else:
 							_start_level(current_level_idx + 1)
 						return
