@@ -6,6 +6,10 @@ tutorial_steps = '''
 使用方向鍵控制角色走到終點
 '''
 
+tutorial_steps_en = '''
+Use arrow keys to reach the Goal
+'''
+
 objective = '''
 '''
 
@@ -32,6 +36,10 @@ hints = none
 
 tutorial_steps = '''
 推開核心，走到終點
+'''
+
+tutorial_steps_en = '''
+Push the Core aside and reach the Goal
 '''
 
 objective = '''
@@ -67,6 +75,11 @@ tutorial_steps = '''
 走到終點
 '''
 
+tutorial_steps_en = '''
+Push the Core onto the Target
+Reach the Goal
+'''
+
 objective = '''
 '''
 
@@ -96,9 +109,19 @@ tutorial_steps = '''
 走到終點
 '''
 
+tutorial_steps_en = '''
+Push the Core onto the Target
+Reach the Goal
+'''
+
 objective = '''
 按 [Z] 可退回上一步
 按 [R] 可重置關卡
+'''
+
+objective_en = '''
+Press [Z] to undo
+Press [R] to restart the level
 '''
 
 floor_map = '''
@@ -130,9 +153,22 @@ tutorial_steps = '''
 按 [V] 合併兩空間狀態
 '''
 
+tutorial_steps_en = '''
+Activate the Target
+The Goal is blocked. Press [V] to Diverge
+Press [Tab] to switch spaces and finish the remaining task
+Move the current player to the Goal
+Press [V] to Merge both spaces
+'''
+
 objective = '''
 核心所在位置，可能會阻擋終點
 產生分裂空間，平行處理任務
+'''
+
+objective_en = '''
+The Core may block the Goal
+Diverge to handle tasks in parallel
 '''
 
 floor_map = '''
@@ -166,8 +202,20 @@ tutorial_steps = '''
 按 [V] 合併
 '''
 
+tutorial_steps_en = '''
+Press [V] to Diverge
+Activate both Targets
+Press [Tab] to switch spaces
+Reach the Goal
+Press [V] to Merge
+'''
+
 objective = '''
 合併只會保留目前控制的角色
+'''
+
+objective_en = '''
+Merging keeps only the currently active player
 '''
 
 floor_map = '''
@@ -196,9 +244,20 @@ tutorial_steps = '''
 
 '''
 
+tutorial_steps_en = '''
+Press [V] to Diverge
+Activate both Targets
+Press [V] to Merge
+'''
+
 objective = '''
 若角色和另一空間核心位置重疊，會導致衝突無法合併
 分裂後，可觀察下方控制區狀態
+'''
+
+objective_en = '''
+If the player overlaps a Core in the other space, the Merge will fail
+After Diverging, check the status display at the bottom
 '''
 
 floor_map = '''
@@ -225,9 +284,20 @@ tutorial_steps = '''
 啟動另一個目標
 '''
 
+tutorial_steps_en = '''
+Activate a Target after Diverging
+Press [Tab] to switch spaces
+Activate the other Target
+'''
+
 objective = '''
 核心可在兩個空間分別啟動不同目標
 合併後可同時保留啟動狀態
+'''
+
+objective_en = '''
+A Core can activate different Targets in each space
+Both states are preserved after Merging
 '''
 
 floor_map = '''
@@ -251,9 +321,18 @@ tutorial_steps = '''
 啟動兩個目標
 '''
 
+tutorial_steps_en = '''
+Activate both Targets
+'''
+
 objective = '''
 可在終點以外的位置合併
 合併狀態，終點才會完全開啟
+'''
+
+objective_en = '''
+You can Merge away from the Goal
+The Goal fully opens only after Merging
 '''
 
 floor_map = '''
@@ -281,10 +360,20 @@ tutorial_steps = '''
 啟動兩個目標
 '''
 
+tutorial_steps_en = '''
+Activate both Targets
+'''
+
 objective = '''
 合併會結算核心在兩個空間的狀態差異
 如果位置不同，將化成不可動的[殘影]
 如果位置一致，可保持核心狀態
+'''
+
+objective_en = '''
+Merging resolves differences in Core positions between spaces
+If the positions differ, they become immovable [Shadows]
+If the positions match, the Core state is preserved
 '''
 
 floor_map = '''
@@ -309,8 +398,17 @@ tutorial_steps = '''
 按 [M] 預覽合併結果
 '''
 
+tutorial_steps_en = '''
+Press [V] to Diverge
+Press [M] to preview the Merge result
+'''
+
 objective = '''
 分裂後，可使用 [M] 預覽合併
+'''
+
+objective_en = '''
+After Diverging, press [M] to preview the Merge
 '''
 
 floor_map = '''
