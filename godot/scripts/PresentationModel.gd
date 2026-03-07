@@ -37,7 +37,7 @@ class BranchViewSpec:
 	var pos_x:                  int         = 0
 	var pos_y:                  int         = 0
 	var alpha:                  float       = 1.0
-	var cell_size:              int         = 80
+	var cell_size:              float       = 80.0
 	# Rendering state (not in Python BranchViewSpec, added for renderer convenience)
 	var goal_glow:              int         = 0  # 0=off 1=weak(branched+preview ok) 2=strong(merged+ok)
 	var animation_frame:        int         = 0
@@ -156,7 +156,7 @@ static func build(
 
 	# Cell size (focused panel always TARGET_PANEL pixels wide)
 	var gs: int      = controller.main_branch.grid_size
-	var cell_sz: int = TARGET_PANEL / gs
+	var cell_sz: float = float(TARGET_PANEL) / gs
 
 	# Panel positions and scales
 	var main_x := CENTER_X; var main_y := CENTER_Y; var main_s := FOCUS_SCALE
@@ -298,7 +298,7 @@ static func _make_spec(
 		p_timeline:   String,
 		p_branched:   bool,
 		p_preview:    bool,
-		p_cell:       int,
+		p_cell:       float,
 		p_scale:      float,
 		p_x:          int,
 		p_y:          int,

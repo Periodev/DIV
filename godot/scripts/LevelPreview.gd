@@ -11,7 +11,7 @@ func set_state(state: BranchState) -> void:
 	if state == null or state.grid_size <= 0:
 		draw_frame(null)
 		return
-	var cell_size: int = max(1, int(float(map_pixel_size) / float(state.grid_size)))
+	var cell_size: float = max(1.0, float(map_pixel_size) / float(state.grid_size))
 	var spec := PresentationModel.BranchViewSpec.new()
 	spec.state      = state
 	spec.cell_size  = cell_size
