@@ -161,8 +161,8 @@ func _draw_footer(cx: float, cy: float) -> void:
 	if font == null:
 		return
 	var r := 4.5
-	var seg1 := Localization.t("ls_footer1")
-	var seg2 := Localization.t("ls_footer2")
+	var seg1: String = Localization.t("ls_footer1")
+	var seg2: String = Localization.t("ls_footer2")
 	var w1 := font.get_string_size(seg1, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
 	var w2 := font.get_string_size(seg2, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
 	var pair_vw := r * 2.8   # ↑↓ pair width

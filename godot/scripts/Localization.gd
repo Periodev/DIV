@@ -1,3 +1,4 @@
+class_name Localization
 extends Node
 
 const STRINGS := {
@@ -140,8 +141,15 @@ const STRINGS := {
 }
 
 
-func t(key: String) -> String:
-	var gd = get_node_or_null("/root/GameData")
-	var lang: String = gd.language if gd != null else "zh"
+## Look up a localized string. Safe to call from any context including _draw().
+static func t(key: String) -> String:
+	var lang := "zh"
+	var ml := Engine.get_main_loop()
+	if ml is SceneTree:
+		var gd = (ml as SceneTree).root.get_node_or_null("GameData")
+		if gd != null:
+			var l = gd.get("language")
+			if l != null:
+				lang = str(l)
 	var table: Dictionary = STRINGS.get(lang, STRINGS["zh"]) as Dictionary
-	return table.get(key, STRINGS["zh"].get(key, key))
+	return str(table.get(key, STRINGS["zh"].get(key, key)))
