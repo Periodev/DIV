@@ -1584,7 +1584,7 @@ func _draw_interaction_hint(eff: float, a: float) -> void:
 	var ascent:  float = font.get_ascent(font_size)
 	var descent: float = font.get_descent(font_size)
 
-	if ih.text == "放下":
+	if ih.is_inset:
 		var drop_center: Vector2 = _grid_to_local_center(ih.target_pos, eff)
 		var drop_size: float = NR * 0.90
 		var frame_col: Color = COLOR_INTERACT_GRAY
@@ -1596,7 +1596,7 @@ func _draw_interaction_hint(eff: float, a: float) -> void:
 				maxf(1.2, 1.8 * cell_scale),
 				maxf(3.0, 4.0 * cell_scale),
 				0.0)
-	# Text floats above the target entity (all actions, including 放下).
+	# Text floats above the target entity (all actions, including drop).
 	var anchor: Vector2 = _grid_to_local_center(ih.target_pos, eff)
 	var clearance: float = NR + 9.0 * cell_scale + 2.0
 	var text_center: Vector2 = anchor - Vector2(0.0, clearance)

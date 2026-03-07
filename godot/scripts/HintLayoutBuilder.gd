@@ -50,7 +50,7 @@ static func build(
 
 	if not spec.has_branched:
 		if spec.timeline_hint != "":
-			boxes.append(_build_timeline_box(spec.branch_hint_active, viewport_size))
+			boxes.append(_build_timeline_box(spec.timeline_hint, spec.branch_hint_active, viewport_size))
 		return boxes
 
 	boxes.append_array(_build_tab_boxes(spec))
@@ -86,7 +86,7 @@ static func _build_tab_boxes(spec: PresentationModel.BranchViewSpec) -> Array[Hi
 static func _build_tab_box(rect: Rect2, active: bool, is_left: bool) -> HintBoxSpec:
 	var box := HintBoxSpec.new()
 	box.id = "tab_left" if is_left else "tab_right"
-	box.text = "< [Tab]" if is_left else "[Tab] >"
+	box.text = Loc.t("tab_left") if is_left else Loc.t("tab_right")
 	box.rect = rect
 	box.font_size = 14
 	box.bg_color = TAB_ACTIVE_BG if active else TAB_INACTIVE_BG
@@ -97,7 +97,7 @@ static func _build_tab_box(rect: Rect2, active: bool, is_left: bool) -> HintBoxS
 	return box
 
 
-static func _build_timeline_box(is_active: bool, viewport_size: Vector2) -> HintBoxSpec:
+static func _build_timeline_box(text: String, is_active: bool, viewport_size: Vector2) -> HintBoxSpec:
 	var box_w: float = 150.0
 	var box_h: float = 40.0
 	var center_x: float = (viewport_size.x - box_w) * 0.5
@@ -106,7 +106,7 @@ static func _build_timeline_box(is_active: bool, viewport_size: Vector2) -> Hint
 
 	var box := HintBoxSpec.new()
 	box.id = "diverge"
-	box.text = "[V] 分裂"
+	box.text = text
 	box.rect = rect
 	box.text_center = rect.get_center()
 	box.font_size = 16
@@ -127,7 +127,7 @@ static func _build_merge_preview_box(is_active: bool, viewport_size: Vector2) ->
 
 	var box := HintBoxSpec.new()
 	box.id = "preview"
-	box.text = "[M] Cancel Preview" if is_active else "[M] Preview Merge"
+	box.text = Loc.t("preview_on") if is_active else Loc.t("preview_off")
 	box.rect = rect
 	box.text_center = rect.get_center()
 	box.font_size = 14
@@ -146,7 +146,7 @@ static func _build_merge_box(enabled: bool, viewport_size: Vector2) -> HintBoxSp
 
 	var box := HintBoxSpec.new()
 	box.id = "merge"
-	box.text = "[V] 合併"
+	box.text = Loc.t("merge_btn")
 	box.rect = rect
 	box.text_center = rect.get_center()
 	box.font_size = 16
@@ -165,7 +165,7 @@ static func _build_fetch_box(enabled: bool, viewport_size: Vector2) -> HintBoxSp
 
 	var box := HintBoxSpec.new()
 	box.id = "fetch"
-	box.text = "[F] Fetch Merge"
+	box.text = Loc.t("fetch_btn")
 	box.rect = rect
 	box.text_center = rect.get_center()
 	box.font_size = 14

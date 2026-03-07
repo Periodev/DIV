@@ -17,7 +17,7 @@ const LABELS := {
 		"hint": "←/→ 切換語言　Enter/Esc 返回",
 		"keys": [
 			["移動", "←↑↓→ / WASD"],
-			["撿取 / 放下", "X / Space"],
+			["互動", "X / Space"],
 			["分裂", "V"],
 			["合併", "V（已分裂時）"],
 			["切換視角", "Tab"],
@@ -35,7 +35,7 @@ const LABELS := {
 		"hint": "←/→ language   Enter/Esc back",
 		"keys": [
 			["Move", "←↑↓→ / WASD"],
-			["Pickup / Drop", "X / Space"],
+			["Interact", "X / Space"],
 			["Diverge", "V"],
 			["Merge", "V (when diverged)"],
 			["Switch View", "Tab"],

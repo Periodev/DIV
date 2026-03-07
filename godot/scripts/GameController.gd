@@ -574,7 +574,7 @@ func get_interaction_hint() -> Dictionary:
 	if not active.get_held_items().is_empty():
 		var can_drop := Physics.collision_at(front_pos, active) <= 0
 		if can_drop:
-			return {text="放下", color=Color(0.2,0.78,0.2), target_pos=front_pos, is_drop=true}
+			return {text=Loc.t("interact_drop"), color=Color(0.2,0.78,0.2), target_pos=front_pos, is_drop=true}
 		return {text="", color=Color.BLACK, target_pos=Vector2i(-1,-1), is_drop=false}
 
 	var target := active.find_box_at(front_pos)
@@ -590,7 +590,7 @@ func get_interaction_hint() -> Dictionary:
 	if uids_at_front.size() >= 2 or active.is_shadow(target.uid):
 		if not hint_allow_converge:
 			return {text="", color=Color.BLACK, target_pos=Vector2i(-1,-1), is_drop=false}
-		return {text="還原", color=Color(0,0.86,0.86), target_pos=front_pos, is_drop=false}
+		return {text=Loc.t("interact_restore"), color=Color(0,0.86,0.86), target_pos=front_pos, is_drop=false}
 
 	if not hint_allow_pickup:
 		return {text="", color=Color.BLACK, target_pos=Vector2i(-1,-1), is_drop=false}
@@ -598,13 +598,13 @@ func get_interaction_hint() -> Dictionary:
 	if Physics.effective_capacity(active, player.pos) == 0:
 		return {text="", color=Color.BLACK, target_pos=Vector2i(-1,-1), is_drop=false}
 
-	return {text="撿取", color=Color(0.2,0.78,0.2), target_pos=front_pos, is_drop=false}
+	return {text=Loc.t("interact_pickup"), color=Color(0.2,0.78,0.2), target_pos=front_pos, is_drop=false}
 
 
 func get_timeline_hint() -> String:
 	if not has_branched:
 		if div_points > 0:
-			return "V 分裂"
+			return Loc.t("timeline_diverge")
 		return ""
 
 	var focused    := get_active_branch()
@@ -621,14 +621,14 @@ func get_timeline_hint() -> String:
 					different = true
 					break
 		if different:
-			return "F 抓取合併"
+			return Loc.t("timeline_fetch_merge")
 
 	if f_held.is_empty() and not o_held.is_empty():
 		if focused.terrain.get(focused.get_player().pos, Enums.TerrainType.FLOOR) == Enums.TerrainType.NO_CARRY:
-			return "V 合併  [抓取禁止]"
-		return "V 合併  F 抓取"
+			return Loc.t("timeline_merge_fetch_blocked")
+		return Loc.t("timeline_merge_fetch")
 
-	return "V 合併"
+	return Loc.t("timeline_merge")
 
 
 # ---------------------------------------------------------------------------
