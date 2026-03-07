@@ -133,6 +133,14 @@ const SPOTLIGHT_SEQUENCES := {
 			"lines": ["綠色圓點是分裂點", "取得分裂點增加可分裂次數", "合併狀態才能取得分裂點"]
 		}
 	],
+	"void_intro": [
+		{
+			"domain": "terrain",
+			"type": Enums.TerrainType.HOLE,
+			"title": "空洞",
+			"lines": ["紅色點圈，無法通過", "推動核心進空洞可修復為路線"]
+		}
+	],
 }
 
 var _scene: GameScene
@@ -145,6 +153,8 @@ var _blocking_mode: bool = false
 var _pending_panel_spotlight: Array = []
 var _core_turn_hint_shown: bool = false
 var _shadow_hint_shown: bool = false
+var _hole_fill_hint_shown: bool = false
+var _prev_filled_holes: Dictionary = {}  # Vector2i → bool
 
 # Checklist state: array of { "label": String, "check": Check, "done": bool }
 var _items: Array = []
@@ -161,6 +171,8 @@ func start_level(tutorial_id: String, steps: Array, scene: GameScene, display_mo
 	_pending_panel_spotlight = []
 	_core_turn_hint_shown = false
 	_shadow_hint_shown = false
+	_hole_fill_hint_shown = false
+	_prev_filled_holes = {}
 	_blocking_mode = display_mode == "blocking"
 	_sequential_mode = display_mode == "sequential" or _blocking_mode
 	_active = tutorial_id != "" and TUTORIAL_CHECKS.has(tutorial_id)
@@ -280,6 +292,28 @@ func on_state_changed() -> void:
 				"title": "轉向",
 				"lines": ["若核心在側面，朝核心按方向鍵", "會原地轉向正對核心"]
 			}]
+
+
+## Called every frame after update_physics() — detects newly filled holes.
+func on_physics_update() -> void:
+	if _tutorial_id != "void_intro" or _hole_fill_hint_shown:
+		return
+	var c := _scene.controller
+	if c == null:
+		return
+	var branch := c.get_active_branch()
+	if branch == null:
+		return
+	var fp := _check_newly_filled_hole(branch)
+	if fp != Vector2i(-1, -1):
+		_hole_fill_hint_shown = true
+		_pending_panel_spotlight = [{
+			"domain": "pos",
+			"pos": fp,
+			"title": "修復",
+			"lines": ["消耗核心修復空洞", "修復的空洞會環繞核心顏色"]
+		}]
+	_snapshot_filled_holes(branch)
 
 
 func on_f1_dismissed() -> void:
@@ -508,6 +542,20 @@ func _get_all_branches() -> Array:
 	if c.sub_branch != null:
 		result.append(c.sub_branch)
 	return result
+
+
+func _check_newly_filled_hole(branch: BranchState) -> Vector2i:
+	for pos in branch.terrain:
+		if branch.terrain[pos] == Enums.TerrainType.HOLE:
+			if branch.is_hole_filled(pos) and not _prev_filled_holes.get(pos, false):
+				return pos
+	return Vector2i(-1, -1)
+
+
+func _snapshot_filled_holes(branch: BranchState) -> void:
+	for pos in branch.terrain:
+		if branch.terrain[pos] == Enums.TerrainType.HOLE:
+			_prev_filled_holes[pos] = branch.is_hole_filled(pos)
 
 
 func _get_unfaced_adjacent_box_pos() -> Vector2i:

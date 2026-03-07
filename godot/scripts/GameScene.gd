@@ -411,6 +411,10 @@ func _process(delta: float) -> void:
 	if controller != null and not controller.collapsed and not controller.victory \
 			and not _merge_anim_active and not _branch_anim_active:
 		controller.update_physics()
+		tutorial.on_physics_update()
+		var _phys_pending := tutorial.get_pending_panel_spotlight()
+		if not _phys_pending.is_empty():
+			_show_panel_spotlight(_phys_pending)
 		needs_redraw = true
 
 	# Victory check every frame — mirrors Python game_window.py on_update (line 120).
