@@ -76,6 +76,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			_move_cursor(1)
 		KEY_ENTER, KEY_KP_ENTER, KEY_SPACE:
 			_start_level()
+		KEY_ESCAPE:
+			get_tree().change_scene_to_file("res://scenes/settings.tscn")
 
 
 func _draw() -> void:
@@ -159,7 +161,7 @@ func _draw_footer(cx: float, cy: float) -> void:
 		return
 	var r := 4.5
 	var seg1 := "  W/S: select level    "
-	var seg2 := "  A/D: zone   Enter/Space: start"
+	var seg2 := "  A/D: zone   Enter/Space: start   Esc: settings"
 	var w1 := font.get_string_size(seg1, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
 	var w2 := font.get_string_size(seg2, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs).x
 	var pair_vw := r * 2.8   # ↑↓ pair width

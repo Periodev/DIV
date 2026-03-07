@@ -5,8 +5,10 @@ var selected_level_idx: int = 0
 var all_levels: Array = []   # loaded once, shared between scenes
 
 const PROGRESS_PATH := "user://progress.json"
+const SETTINGS_PATH := "user://settings.json"
 
 var played_ids: Dictionary = {}  # id -> true
+var language: String = "zh"     # "zh" | "en"
 
 
 func _ready() -> void:
@@ -23,7 +25,32 @@ func _ready() -> void:
 				(node as Label).add_theme_font_override("font", fv)
 			elif node is RichTextLabel:
 				(node as RichTextLabel).add_theme_font_override("normal_font", fv))
+	load_settings()
 	load_progress()
+
+
+func load_settings() -> void:
+	if not FileAccess.file_exists(SETTINGS_PATH):
+		return
+	var f := FileAccess.open(SETTINGS_PATH, FileAccess.READ)
+	if f == null:
+		return
+	var text := f.get_as_text()
+	f.close()
+	var parsed = JSON.parse_string(text)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return
+	var lang: String = str((parsed as Dictionary).get("language", "zh"))
+	if lang == "zh" or lang == "en":
+		language = lang
+
+
+func save_settings() -> void:
+	var f := FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
+	if f == null:
+		return
+	f.store_string(JSON.stringify({"language": language}, "\t"))
+	f.close()
 
 
 func load_progress() -> void:
