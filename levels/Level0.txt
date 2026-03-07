@@ -256,7 +256,7 @@ objective = '''
 '''
 
 objective_en = '''
-If the player overlaps a Core in the other space, the Merge will fail
+If player overlaps a Core in the other space, Merge will fail
 After Diverging, check the status display at the bottom
 '''
 
@@ -365,15 +365,11 @@ Activate both Targets
 '''
 
 objective = '''
-合併會結算核心在兩個空間的狀態差異
-如果位置不同，將化成不可動的[殘影]
-如果位置一致，可保持核心狀態
+合併時，每顆核心若在兩個空間的落點不同，將化為不可動的[殘影]
 '''
 
 objective_en = '''
-Merging resolves differences in Core positions between spaces
-If the positions differ, they become immovable [Shadows]
-If the positions match, the Core state is preserved
+On merge, each Core becomes an immovable [Trace] if its position differs between the two spaces
 '''
 
 floor_map = '''
