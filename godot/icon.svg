@@ -1,7 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128">
-  <rect width="128" height="128" fill="#1a1a2e"/>
-  <circle cx="64" cy="64" r="40" fill="none" stroke="#4488ff" stroke-width="6"/>
-  <line x1="64" y1="24" x2="64" y2="104" stroke="#ff8800" stroke-width="3"/>
-  <line x1="24" y1="64" x2="104" y2="64" stroke="#ff8800" stroke-width="3"/>
-  <text x="64" y="70" text-anchor="middle" font-size="28" font-family="monospace" fill="white">DIV</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#000000"/>
+
+  <!-- Shared styles -->
+  <g stroke="white" stroke-width="4" fill="white">
+
+    <!-- D: 3 nodes - top-left, bot-left, right-mid -->
+    <line x1="50" y1="136" x2="50" y2="376"/>
+    <line x1="50" y1="136" x2="170" y2="256"/>
+    <line x1="50" y1="376" x2="170" y2="256"/>
+    <circle cx="50"  cy="136" r="10"/>
+    <circle cx="50"  cy="376" r="10"/>
+    <circle cx="170" cy="256" r="10"/>
+
+    <!-- I: 2 nodes -->
+    <line x1="256" y1="136" x2="256" y2="376"/>
+    <circle cx="256" cy="136" r="10"/>
+    <circle cx="256" cy="376" r="10"/>
+
+    <!-- V: 3 nodes - top-left, top-right, bot-mid -->
+    <line x1="342" y1="136" x2="402" y2="376"/>
+    <line x1="462" y1="136" x2="402" y2="376"/>
+    <circle cx="342" cy="136" r="10"/>
+    <circle cx="462" cy="136" r="10"/>
+    <circle cx="402" cy="376" r="10"/>
+
+  </g>
 </svg>
