@@ -102,34 +102,29 @@ objective = '''
 '''
 
 floor_map = '''
-######
-######
-G.S...
-######
-######
-######
+#G.S
+#...
+...#
+..S#
 '''
 
 object_map = '''
-......
-......
->B....
-......
-......
-......
+....
+..B.
+.B..
+.^..
 '''
 
 
 --------------------------
 # Dilemma 困境
-auto_desc = false
 tutorial_display = blocking
 tutorial = diverge_guided
 hints = diverge
 
 tutorial_steps = '''
 啟動目標
-按 [V] 分裂
+終點被擋住了，按 [V] 分裂
 按 [Tab] 切換空間，完成剩餘任務
 控制當前角色走到終點
 按 [V] 合併兩空間狀態
@@ -137,7 +132,7 @@ tutorial_steps = '''
 
 objective = '''
 核心所在位置，可能會阻擋終點
-按[V] 產生分裂空間，平行處理任務
+產生分裂空間，平行處理任務
 '''
 
 floor_map = '''
@@ -152,7 +147,7 @@ floor_map = '''
 object_map = '''
 ......
 ......
-<.B...
+>.B...
 ......
 ......
 ......
