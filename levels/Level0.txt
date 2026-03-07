@@ -360,10 +360,12 @@ Activate both Targets
 
 objective = '''
 可在終點以外的位置合併
+目標全部啟動後，終點會亮起提示；合併後才會真正開啟
 '''
 
 objective_en = '''
 You can Merge at positions other than the Goal
+After all Targets are activated, the Goal lights up, but it only truly opens after Merging
 '''
 
 floor_map = '''
