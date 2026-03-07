@@ -157,6 +157,6 @@ theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.55, 0.55, 0.55, 1)
 
 [node name="ToastHint" type="Label" parent="UI/WinToast/ToastVBox"]
-text = "[ SPACE ]  next level"
+text = "[ SPACE ]  下一關"
 theme_override_font_sizes/font_size = 11
 theme_override_colors/font_color = Color(0.3, 0.6, 0.3, 1)

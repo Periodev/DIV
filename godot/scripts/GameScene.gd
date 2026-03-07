@@ -76,11 +76,123 @@ var _spotlight: Control = null
 var _pending_spotlight: Array = []
 var _desc_close_unlock_ms: int = 0
 const DEBUG_VICTORY := true
+var _observe_seq: int = 0
 
 
 func _vlog(msg: String) -> void:
 	if DEBUG_VICTORY:
 		print("[VictoryDebug] %s" % msg)
+
+
+func _ser_branch(branch: BranchState) -> Dictionary:
+	if branch == null:
+		return {}
+
+	var keys: Array = branch.terrain.keys()
+	keys.sort_custom(func(a: Variant, b: Variant) -> bool:
+		var va := a as Vector2i
+		var vb := b as Vector2i
+		if va.x != vb.x:
+			return va.x < vb.x
+		return va.y < vb.y)
+
+	var terrain: Dictionary = {}
+	var switches: Array = []
+	for k in keys:
+		var v := k as Vector2i
+		var tt: int = branch.terrain[k] as int
+		var key := "%d,%d" % [v.x, v.y]
+		terrain[key] = tt
+		if tt == Enums.TerrainType.SWITCH:
+			switches.append({
+				"pos": [v.x, v.y],
+				"active": branch.switch_activated(v),
+			})
+
+	var ents: Array = branch.entities.duplicate()
+	ents.sort_custom(func(a: Variant, b: Variant) -> bool:
+		return (a as Entity).uid < (b as Entity).uid)
+
+	var ents_out: Array = []
+	for raw in ents:
+		var e := raw as Entity
+		var fused: Array = e.fused_from.duplicate()
+		fused.sort()
+		ents_out.append({
+			"uid": e.uid,
+			"type": e.type,
+			"pos": [e.pos.x, e.pos.y],
+			"direction": [e.direction.x, e.direction.y],
+			"z": e.z,
+			"holder": e.holder,
+			"collision": e.collision,
+			"weight": e.weight,
+			"fused_from": fused,
+		})
+
+	var player := branch.get_player()
+	return {
+		"grid_size": branch.grid_size,
+		"terrain": terrain,
+		"entities": ents_out,
+		"player_pos": [player.pos.x, player.pos.y],
+		"player_dir": [player.direction.x, player.direction.y],
+		"held_items": branch.get_held_items(),
+		"switches": switches,
+		"all_switches_active": branch.all_switches_activated(),
+	}
+
+
+func _build_observe_state() -> Dictionary:
+	var level_dict: Dictionary = all_levels[current_level_idx] \
+		if current_level_idx >= 0 and current_level_idx < all_levels.size() else {}
+	var active := controller.get_active_branch() if controller != null else null
+	var active_player_pos := [-1, -1]
+	var active_player_dir := [0, 0]
+	var active_held: Array = []
+	if active != null:
+		var p := active.get_player()
+		active_player_pos = [p.pos.x, p.pos.y]
+		active_player_dir = [p.direction.x, p.direction.y]
+		active_held = active.get_held_items()
+
+	return {
+		"seq": _observe_seq,
+		"time_ms": Time.get_ticks_msec(),
+		"level_index": current_level_idx,
+		"level_id": str(level_dict.get("id", "")),
+		"level_name": str(level_dict.get("name", "")),
+		"hints": _current_hints,
+		"has_branched": controller.has_branched if controller != null else false,
+		"current_focus": controller.current_focus if controller != null else 0,
+		"div_points": controller.div_points if controller != null else 0,
+		"can_merge": controller.can_normal_merge() if controller != null and controller.has_method("can_normal_merge") else false,
+		"can_fetch": controller.can_show_fetch_hint() if controller != null else false,
+		"collapsed": controller.collapsed if controller != null else false,
+		"victory": controller.victory if controller != null else false,
+		"merge_preview_active": merge_preview_active,
+		"overlay_visible": overlay_label.visible or win_toast.visible,
+		"desc_visible": _desc_overlay != null and _desc_overlay.visible,
+		"active_player_pos": active_player_pos,
+		"active_player_dir": active_player_dir,
+		"active_held_items": active_held,
+		"facing_box_pos": [
+			controller.get_facing_box_hint_target_pos().x,
+			controller.get_facing_box_hint_target_pos().y,
+		] if controller != null else [-1, -1],
+		"main_branch": _ser_branch(controller.main_branch) if controller != null else {},
+		"sub_branch": _ser_branch(controller.sub_branch) if controller != null and controller.sub_branch != null else null,
+	}
+
+
+func _publish_web_observe() -> void:
+	if controller == null:
+		return
+	if not OS.has_feature("web"):
+		return
+	_observe_seq += 1
+	var payload := JSON.stringify(_build_observe_state())
+	JavaScriptBridge.eval("window.__div_observe = %s;" % payload, true)
 
 
 # ---------------------------------------------------------------------------
@@ -160,6 +272,7 @@ func _start_level(idx: int) -> void:
 
 	_apply_frame_spec()
 	_update_ui()
+	_publish_web_observe()
 
 	# Spotlight — built after _apply_frame_spec() so renderer positions are ready.
 	# If desc overlay is visible, defer until it's dismissed; otherwise show immediately.
@@ -567,6 +680,7 @@ func _on_state_changed() -> void:
 		_show_panel_spotlight(_pending)
 	_apply_frame_spec()
 	_update_ui()
+	_publish_web_observe()
 
 
 func _on_victory() -> void:
@@ -595,12 +709,14 @@ func _on_victory() -> void:
 	_win_tween = create_tween()
 	_win_tween.tween_property(win_toast, "modulate:a", 1.0, 0.35) \
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_publish_web_observe()
 
 
 func _on_collapse() -> void:
 	overlay_backdrop.visible = true
 	overlay_label.text    = "FALL DOWN!\nR: restart   Z: undo   ESC: level select"
 	overlay_label.visible = true
+	_publish_web_observe()
 
 
 func _clear_fall_tweens() -> void:
@@ -621,6 +737,7 @@ func _full_refresh() -> void:
 		_vlog("_full_refresh called in end-state; keep overlay visible")
 	_apply_frame_spec()
 	_update_ui()
+	_publish_web_observe()
 
 
 # ---------------------------------------------------------------------------
@@ -785,6 +902,8 @@ func _build_spotlight_screen_items(seq: Array) -> Array:
 			grid_pos = renderer0.find_entity_pos(type_val)
 		elif domain == "terrain":
 			grid_pos = renderer0.find_terrain_pos(type_val)
+		elif domain == "pos":
+			grid_pos = item.get("pos", Vector2i(-1, -1))
 		if grid_pos == Vector2i(-1, -1):
 			continue
 		result.append({
@@ -805,10 +924,18 @@ func _show_panel_spotlight(items: Array) -> void:
 	var screen_items: Array = []
 	for item in items:
 		var d: Dictionary = item.duplicate()
+		var domain: String = d.get("domain", "")
 		d.erase("domain")
 		if d.get("corner", false):
 			d.erase("corner")
 			_spotlight.show_corner_hint(d)
+		elif domain == "pos":
+			var grid_pos: Vector2i = d.get("pos", Vector2i(-1, -1))
+			d.erase("pos")
+			if grid_pos != Vector2i(-1, -1):
+				d["screen_center"] = renderer0.get_cell_screen_center(grid_pos)
+				d["cell_size"]     = renderer0.get_cell_screen_size()
+				screen_items.append(d)
 		else:
 			d["panel_rect"] = Rect2(
 				PresentationModel.CENTER_X,

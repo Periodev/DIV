@@ -103,18 +103,24 @@ const SPOTLIGHT_SEQUENCES := {
 	],
 	"core_intro": [
 		{
-			"domain": "entity",
-			"type": Enums.EntityType.BOX,
+			"domain": "pos",
+			"pos": Vector2i(1, 1),
 			"title": "核心",
-			"lines": ["菱形色塊，可被推動", "面對核心移動即可推動一格", "一次只能推動一個核心"]
-		}
+			"lines": ["菱形色塊，可被推動"]
+		},
+		{
+			"domain": "pos",
+			"pos": Vector2i(1, 5),
+			"title": "核心",
+			"lines": ["面對核心移動可推動一格", "一次只能推動一個核心"]
+		},
 	],
 	"switch_and_goal": [
 		{
 			"domain": "terrain",
 			"type": Enums.TerrainType.SWITCH,
 			"title": "目標",
-			"lines": ["灰色菱形框，啟動點", "將核心推進目標格可啟動", "所有目標啟動後，終點開啟"]
+			"lines": ["灰色菱形框，啟動點", "將核心推進目標格可啟動", "所有目標啟動後，終點將開啟"]
 		}
 	],
 	"charge_intro": [
@@ -135,6 +141,7 @@ var _branch_v_accum: int = 0
 var _sequential_mode: bool = false
 var _blocking_mode: bool = false
 var _pending_panel_spotlight: Array = []
+var _core_turn_hint_shown: bool = false
 
 # Checklist state: array of { "label": String, "check": Check, "done": bool }
 var _items: Array = []
@@ -149,6 +156,7 @@ func start_level(tutorial_id: String, steps: Array, scene: GameScene, display_mo
 	_was_branched = false
 	_branch_v_accum = 0
 	_pending_panel_spotlight = []
+	_core_turn_hint_shown = false
 	_blocking_mode = display_mode == "blocking"
 	_sequential_mode = display_mode == "sequential" or _blocking_mode
 	_active = tutorial_id != "" and TUTORIAL_CHECKS.has(tutorial_id)
@@ -241,6 +249,16 @@ func on_state_changed() -> void:
 	if not _active:
 		return
 	_evaluate_checks()
+	if _tutorial_id == "core_intro" and not _core_turn_hint_shown:
+		var pos := _get_unfaced_adjacent_box_pos()
+		if pos != Vector2i(-1, -1):
+			_core_turn_hint_shown = true
+			_pending_panel_spotlight = [{
+				"domain": "pos",
+				"pos": pos,
+				"title": "轉向",
+				"lines": ["若核心在側面，朝核心按方向鍵", "會原地轉向正對核心"]
+			}]
 
 
 func on_f1_dismissed() -> void:
@@ -429,8 +447,8 @@ func _evaluate_checks() -> void:
 				_pending_panel_spotlight = [{
 					"domain": "panel",
 					"title": "分裂空間",
-					"lines": ["複製當前狀態，產生兩個分裂空間",
-					"一次可控制一個空間的角色", "目前控制對象會在中央大圖", "按 [Tab] 切換空間，轉移控制權"],
+					"lines": ["當前狀態複製成兩個空間",
+					"一次可控制一個空間的角色", "目前控制對象會在中央大圖"],
 				}]
 
 	_was_branched = c.has_branched
@@ -467,6 +485,25 @@ func _get_all_branches() -> Array:
 	if c.sub_branch != null:
 		result.append(c.sub_branch)
 	return result
+
+
+func _get_unfaced_adjacent_box_pos() -> Vector2i:
+	var c := _scene.controller
+	if c == null:
+		return Vector2i(-1, -1)
+	var branch := c.get_active_branch()
+	if branch == null:
+		return Vector2i(-1, -1)
+	var player := branch.get_player()
+	if player == null:
+		return Vector2i(-1, -1)
+	for ent in branch.entities:
+		if ent.uid == 0 or ent.type != Enums.EntityType.BOX:
+			continue
+		var diff: Vector2i = ent.pos - player.pos
+		if abs(diff.x) + abs(diff.y) == 1 and diff != player.direction:
+			return ent.pos
+	return Vector2i(-1, -1)
 
 
 func _player_on_goal() -> bool:
