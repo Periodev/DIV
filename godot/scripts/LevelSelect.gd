@@ -68,8 +68,6 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	match ke.keycode:
 		KEY_ESCAPE:
 			get_tree().quit()
-		KEY_TAB:
-			_switch_zone(-1 if ke.shift_pressed else 1)
 		KEY_LEFT, KEY_A:
 			_switch_zone(-1)
 		KEY_RIGHT, KEY_D:
