@@ -90,7 +90,7 @@ func _draw() -> void:
 	_draw_text_td("DIV", w * 0.5, TITLE_CY, TITLE_C, 27, HORIZONTAL_ALIGNMENT_CENTER, true)
 	_draw_panel()
 
-	var footer: String = "↑↓: select level   ←→: zone   Enter/Space: start   Esc: exit"
+	var footer: String = "W/S: select level   A/D: zone   Enter/Space: start   Esc: exit"
 	_draw_text_td(footer, w * 0.5, FOOTER_CY, MUTED_C, 17, HORIZONTAL_ALIGNMENT_CENTER, true)
 	_draw_preview_label()
 
