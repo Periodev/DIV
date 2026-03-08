@@ -1,0 +1,236 @@
+# Store 儲存
+
+objective = '''
+按 [SPACE] 撿取核心，進入[儲存]模式
+[儲存]時：你可以原地轉向，且只能朝面向方向前進
+再按 [SPACE] 放下核心
+'''
+
+objective_en = '''
+Press [SPACE] to pick up a Core and enter [Store] mode
+
+In [Store] mode, you can turn in place, but can only move forward
+
+Press [SPACE] again to put the Core down
+'''
+
+
+floor_map = '''
+G.S
+#.#
+#..
+'''
+
+object_map = '''
+...
+...
+.B<
+'''
+
+--------------------------
+# Spin 旋轉
+
+floor_map = '''
+###S##
+....##
+#S#S##
+###.##
+##...G
+##S###
+'''
+
+object_map = '''
+......
+>.BB..
+......
+...B..
+....B.
+......
+'''
+
+--------------------------
+# Converge 收束
+
+objective = '''
+在儲存模式時合併，會自動執行還原
+只保留當前玩家儲存的核心
+'''
+
+objective_en = '''
+Merging while carrying a Core automatically Restores it
+Press [M] to preview the Restore path
+'''
+
+floor_map = '''
+####
+G#H.
+HH.#
+#.v#
+'''
+
+object_map = '''
+....
+...B
+..B.
+..^.
+'''
+
+--------------------------
+# Sacrifice 犧牲
+
+floor_map = '''
+#S..#
+##H##
+SHGHS
+##v##
+#.vS#
+'''
+
+object_map = '''
+...B.
+.....
+..B..
+.....
+.B^..
+'''
+
+--------------------------
+# Complement 互補
+
+objective = '''
+'''
+
+floor_map = '''
+..#G
+vH#H
+HvH.
+####
+'''
+
+object_map = '''
+BB..
+>...
+....
+....
+'''
+
+--------------------------
+# Interleave 交錯
+
+objective = '''
+'''
+
+floor_map = '''
+#####
+vH.##
+#vH##
+#SHH#
+#S#G#
+'''
+
+object_map = '''
+.....
+..B..
+.@...
+.....
+.B...
+'''
+
+--------------------------
+# Swap 替換
+
+objective = '''
+若核心或殘影與空洞重疊，會填入空洞
+'''
+
+objective_en = '''
+If a Core or Trace overlaps with a Void, it fills the Void
+'''
+
+floor_map = '''
+###G#
+###H#
+###H#
+v.H.#
+###.#
+'''
+
+object_map = '''
+.....
+.....
+.....
+>B...
+...B.
+'''
+
+--------------------------
+# Spiral 螺旋
+
+objective = '''
+'''
+
+floor_map = '''
+S####
+G.H##
+##H..
+##.#.
+#vv##
+'''
+
+object_map = '''
+.....
+.....
+.....
+..B.B
+.>...
+'''
+
+--------------------------
+# Zip 拉鏈
+
+objective = '''
+'''
+
+floor_map = '''
+##G###
+##H###
+##H###
+##H###
+##H###
+#.x.##
+'''
+
+object_map = '''
+......
+......
+......
+......
+......
+.B^B..
+'''
+
+
+
+--------------------------
+# Clover 三葉草
+
+objective = '''
+'''
+
+floor_map = '''
+######
+G.##..
+SHHHv.
+##H.##
+##vv##
+######
+'''
+
+object_map = '''
+......
+.....B
+......
+...B..
+..>...
+......
+'''

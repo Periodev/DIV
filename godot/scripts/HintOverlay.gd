@@ -10,18 +10,24 @@ const DASH_SCROLL_SPEED := 28.0
 var _frame_spec: PresentationModel.FrameViewSpec = null
 var _controller: GameController = null
 var _merge_preview_active: bool = false
+var _merge_preview_progress: float = 0.0
 var _animation_frame: int = 0
+var _box_colors: Array[Color] = []
 
 
 func update_overlay(
 		frame_spec: PresentationModel.FrameViewSpec,
 		controller: GameController,
 		merge_preview_active: bool,
-		animation_frame: int) -> void:
+		animation_frame: int,
+		box_colors: Array[Color] = [],
+		merge_preview_progress: float = 0.0) -> void:
 	_frame_spec = frame_spec
 	_controller = controller
 	_merge_preview_active = merge_preview_active
+	_merge_preview_progress = merge_preview_progress
 	_animation_frame = animation_frame
+	_box_colors = box_colors
 	queue_redraw()
 
 
@@ -29,7 +35,9 @@ func clear_overlay() -> void:
 	_frame_spec = null
 	_controller = null
 	_merge_preview_active = false
+	_merge_preview_progress = 0.0
 	_animation_frame = 0
+	_box_colors = []
 	queue_redraw()
 
 
@@ -54,9 +62,9 @@ func _draw() -> void:
 	var focused_state: BranchState = _controller.get_active_branch()
 	var other_state: BranchState = _controller.sub_branch if focus == 0 else _controller.main_branch
 
-	if _merge_preview_active:
+	if _merge_preview_active and _merge_preview_progress >= 1.0:
 		_draw_fetch_and_converge_lines(focused_state, other_state, focused_spec, other_spec)
-	else:
+	elif not _merge_preview_active:
 		_draw_converge_lines(focused_state, other_state, focused_spec, other_spec)
 
 
@@ -92,12 +100,28 @@ func _draw_fetch_and_converge_lines(
 		other_spec: PresentationModel.BranchViewSpec) -> void:
 	var focused_held: Array[int] = focused_state.get_held_items()
 	var other_held: Array[int] = other_state.get_held_items()
-	if not focused_held.is_empty() or other_held.is_empty():
+	var offset: float = _dash_offset()
+
+	# Carry / Converge case: focused branch is carrying → shadow copies converge to player.
+	if not focused_held.is_empty():
+		var focused_player_center: Vector2 = _grid_to_screen(focused_spec, focused_state.get_player().pos)
+		for uid in focused_held:
+			var base: Color = _box_colors[(uid - 1) % _box_colors.size()] \
+				if _box_colors.size() > 0 else COLOR_CONVERGE
+			var line_col := Color(base.r, base.g, base.b, 0.72)
+			for raw in other_state.get_non_held_instances(uid):
+				var ent: Entity = raw as Entity
+				if ent == null:
+					continue
+				_draw_dashed_line(_grid_to_screen(other_spec, ent.pos), focused_player_center, line_col, 2.8, 12.0, offset)
+		return
+
+	# Fetch case: other branch is carrying, focused is not.
+	if other_held.is_empty():
 		return
 
 	var focused_player_center: Vector2 = _grid_to_screen(focused_spec, focused_state.get_player().pos)
 	var other_player_center: Vector2 = _grid_to_screen(other_spec, other_state.get_player().pos)
-	var offset: float = _dash_offset()
 	var pulse: float = 0.65 + 0.35 * (0.5 + 0.5 * sin(Time.get_ticks_msec() / 1000.0 * 4.0))
 	var fetch_col := COLOR_FETCH
 	fetch_col.a = pulse

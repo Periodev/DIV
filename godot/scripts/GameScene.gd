@@ -802,7 +802,7 @@ func _apply_frame_spec() -> void:
 		renderer1.visible = false
 
 	if hint_overlay != null:
-		hint_overlay.update_overlay(spec, controller, preview_on, animation_frame)
+		hint_overlay.update_overlay(spec, controller, preview_on, animation_frame, renderer0.box_colors, merge_preview_progress)
 
 	var callout_ui = get_node_or_null("UI/SystemCalloutUI")
 	if callout_ui != null and callout_ui.has_method("set_merge_anim_t"):

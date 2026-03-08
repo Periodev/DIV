@@ -292,6 +292,7 @@ func _merge_branches(mode: String) -> bool:
 
 	var focused := get_active_branch()
 	var other   := sub_branch if current_focus == 0 else main_branch
+	var had_held: bool = not focused.get_held_items().is_empty()
 
 	var merged: BranchState
 	var log_char: String
@@ -330,6 +331,11 @@ func _merge_branches(mode: String) -> bool:
 	sub_branch    = null
 	has_branched  = false
 	current_focus = 0
+
+	if had_held:
+		restore_flash_pos  = main_branch.get_player().pos
+		restore_flash_time = Time.get_unix_time_from_system()
+		restore_performed.emit()
 
 	_check_charge_pickup(main_branch)  # 合併後站在充能格也能收集
 
