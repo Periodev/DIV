@@ -98,7 +98,7 @@ func _draw() -> void:
 	var cy := 75.0
 
 	# ── Language ──
-	var lang_hdr := "LANGUAGE  /  " + str(lang.get("language", "Language"))
+	var lang_hdr := str(lang.get("language", "Language"))
 	_draw_td(lang_hdr, cx, cy, MUTED_C, 15, HORIZONTAL_ALIGNMENT_CENTER, true)
 	cy += 34.0
 
@@ -118,7 +118,7 @@ func _draw() -> void:
 	cy += 22.0
 
 	# ── Controls ──
-	var ctrl_hdr := "CONTROLS  /  " + str(lang.get("controls", "Controls"))
+	var ctrl_hdr := str(lang.get("controls", "Controls"))
 	_draw_td(ctrl_hdr, cx, cy, MUTED_C, 15, HORIZONTAL_ALIGNMENT_CENTER, true)
 	cy += 28.0
 
