@@ -119,7 +119,7 @@ static func merge(main: BranchState, sub: BranchState) -> BranchState:
 			var has_dup := false
 			for re in result.entities:
 				var re_ent := re as Entity
-				if re_ent.uid == copied.uid and re_ent.pos == copied.pos:
+				if re_ent.uid == copied.uid and re_ent.pos == copied.pos and re_ent.z == 0:
 					has_dup = true
 					break
 			if has_dup:
@@ -138,13 +138,15 @@ static func merge(main: BranchState, sub: BranchState) -> BranchState:
 		for fusion in fusions:
 			var f := fusion as Entity
 			for fuid in f.fused_from:
-				var key := "%d|%d|%d" % [fuid, f.pos.x, f.pos.y]
+				# Include z so only same-layer source instances are removed.
+				# A z=0 surface entity must not be swept away by a z=-1 fusion repair trace.
+				var key := "%d|%d|%d|%d" % [fuid, f.pos.x, f.pos.y, f.z]
 				co_located[key] = true
 
 		var filtered: Array = []
 		for e in result.entities:
 			var ent := e as Entity
-			var key := "%d|%d|%d" % [ent.uid, ent.pos.x, ent.pos.y]
+			var key := "%d|%d|%d|%d" % [ent.uid, ent.pos.x, ent.pos.y, ent.z]
 			if not co_located.has(key):
 				filtered.append(e)
 		result.entities = filtered
