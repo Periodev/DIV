@@ -54,11 +54,13 @@ object_map = '''
 objective = '''
 在儲存模式時合併，會自動執行還原
 只保留當前玩家儲存的核心
+按 [M] 預覽，可看到虛線連結將被消除的殘影
 '''
 
 objective_en = '''
-Merging while carrying a Core automatically Restores it
-Press [M] to preview the Restore path
+Merging in [Store] mode automatically Restores the Core
+Only the current player's stored Core is kept
+Press [M] to preview; dashed lines link the Traces that will be removed
 '''
 
 floor_map = '''
