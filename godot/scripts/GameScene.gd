@@ -227,7 +227,7 @@ func _ready() -> void:
 	sfx_fail.stream = load("res://audio/Fail.wav")
 	sfx_fail.volume_db = 0.0
 	sfx_target.stream = load("res://audio/Target.ogg")
-	sfx_target.volume_db = -6.0
+	sfx_target.volume_db = -8.0
 	sfx_void.stream = load("res://audio/Void.wav")
 	sfx_void.volume_db = 0.0
 	_ensure_hint_overlay()
