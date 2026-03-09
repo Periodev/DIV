@@ -6,6 +6,11 @@ class_name GameScene
 # ---------------------------------------------------------------------------
 # Scene references
 # ---------------------------------------------------------------------------
+@onready var sfx_move:    AudioStreamPlayer = $SfxMove
+@onready var sfx_solved:  AudioStreamPlayer = $SfxSolved
+@onready var sfx_diverge: AudioStreamPlayer = $SfxDiverge
+@onready var sfx_merge:   AudioStreamPlayer = $SfxMerge
+@onready var sfx_restore: AudioStreamPlayer = $SfxRestore
 @onready var renderer0: GameRenderer = $Renderer0  # DIV 0 / MAIN
 @onready var renderer1: GameRenderer = $Renderer1  # DIV 1
 @onready var hint_label: Label        = $UI/HintLabel
@@ -202,6 +207,16 @@ func _publish_web_observe() -> void:
 # ---------------------------------------------------------------------------
 
 func _ready() -> void:
+	sfx_move.stream = load("res://audio/click_005.ogg")
+	sfx_move.volume_db = -6.0
+	sfx_solved.stream = load("res://audio/Solved.wav")
+	sfx_solved.volume_db = 0.0
+	sfx_diverge.stream = load("res://audio/Diverge.wav")
+	sfx_diverge.volume_db = 0.0
+	sfx_merge.stream = load("res://audio/Merge.wav")
+	sfx_merge.volume_db = 0.0
+	sfx_restore.stream = load("res://audio/Restore.wav")
+	sfx_restore.volume_db = 0.0
 	_ensure_hint_overlay()
 	_ensure_desc_overlay()
 	var gd = _get_game_data()
@@ -238,6 +253,7 @@ func _start_level(idx: int) -> void:
 	controller.victory_achieved.connect(_on_victory)
 	controller.collapse_occurred.connect(_on_collapse)
 	controller.restore_performed.connect(tutorial.on_restore)
+	controller.restore_performed.connect(_on_restore)
 	_sync_interaction_hint_gates()
 
 	overlay_backdrop.visible = false
@@ -405,7 +421,9 @@ func _process(delta: float) -> void:
 		else:
 			var dir_changed: bool = dir != _last_held_dir
 			if dir_changed or _move_cooldown <= 0.0:
-				controller.handle_move(dir)
+				var moved := controller.handle_move(dir)
+				if moved:
+					sfx_move.play()
 				_move_cooldown = MOVE_REPEAT_DELAY
 			_last_held_dir = dir
 
@@ -539,6 +557,7 @@ func _input(event: InputEvent) -> void:
 					_start_merge_anim()
 				else:
 					controller.try_merge()
+					sfx_merge.play()
 					_full_refresh()
 			elif _current_hints.get("diverge", true):
 				if controller.try_branch():
@@ -548,6 +567,7 @@ func _input(event: InputEvent) -> void:
 		KEY_F:
 			if _current_hints.get("fetch", false):
 				if controller.try_fetch_merge():
+					sfx_merge.play()
 					_full_refresh()
 
 		KEY_X, KEY_SPACE:
@@ -595,6 +615,7 @@ func _input(event: InputEvent) -> void:
 # ---------------------------------------------------------------------------
 
 func _start_merge_anim() -> void:
+	sfx_merge.play()
 	_merge_anim_active = true
 	_merge_hide_overlay_player = true  # hide non-focused player immediately
 	var from_preview := merge_preview_active and merge_preview_progress > 0.9
@@ -621,6 +642,7 @@ func _finish_merge_anim() -> void:
 
 
 func _start_branch_anim() -> void:
+	sfx_diverge.play()
 	_branch_anim_active = true
 	_branch_anim_progress = 0.0
 	_branch_reveal_progress = 0.0
@@ -697,7 +719,12 @@ func _on_state_changed() -> void:
 	_publish_web_observe()
 
 
+func _on_restore() -> void:
+	sfx_restore.play()
+
+
 func _on_victory() -> void:
+	sfx_solved.play()
 	_vlog("_on_victory fired")
 	var solution_chars := PackedStringArray()
 	for ch in controller.input_log:
