@@ -14,6 +14,10 @@ signal restore_performed
 signal action_failed
 ## Emitted when a box drops into a hole (fills void).
 signal hole_filled
+## Emitted when the player steps on a charge tile and gains diverge points.
+signal charge_gained
+## Emitted when player picks up or drops a box.
+signal pick_drop_performed
 
 
 # ---------------------------------------------------------------------------
@@ -279,6 +283,7 @@ func _check_charge_pickup(branch: BranchState) -> void:
 	if terrain in Enums.BRANCH_TERRAINS:
 		div_points += Enums.BRANCH_CHARGE[terrain]
 		branch.terrain[pos] = Enums.TerrainType.FLOOR
+		charge_gained.emit()
 
 
 func try_merge() -> bool:
@@ -462,6 +467,7 @@ func handle_pickup(allow_pickup: bool = true) -> bool:
 		_log_input("K")
 		_save_snapshot()
 		state_changed.emit()
+		pick_drop_performed.emit()
 	else:
 		if on_no_carry and active.get_held_items().is_empty():
 			var front_pos := player_pos + active.get_player().direction
@@ -479,6 +485,7 @@ func handle_drop() -> bool:
 		_log_input("P")
 		_save_snapshot()
 		state_changed.emit()
+		pick_drop_performed.emit()
 	else:
 		if held_count > 0 and Physics.collision_at(front_pos, active) > 0:
 			_trigger_player_fail_flash(active)

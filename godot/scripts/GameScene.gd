@@ -11,10 +11,12 @@ class_name GameScene
 @onready var sfx_diverge: AudioStreamPlayer = $SfxDiverge
 @onready var sfx_merge:   AudioStreamPlayer = $SfxMerge
 @onready var sfx_restore: AudioStreamPlayer = $SfxRestore
-@onready var sfx_switch:  AudioStreamPlayer = $SfxSwitch
+@onready var sfx_tab:  AudioStreamPlayer = $SfxTab
 @onready var sfx_fail:    AudioStreamPlayer = $SfxFail
 @onready var sfx_target:  AudioStreamPlayer = $SfxTarget
-@onready var sfx_void:    AudioStreamPlayer = $SfxVoid
+@onready var sfx_void:     AudioStreamPlayer = $SfxVoid
+@onready var sfx_pick_drop: AudioStreamPlayer = $SfxPickDrop
+@onready var sfx_charge:    AudioStreamPlayer = $SfxCharge
 @onready var renderer0: GameRenderer = $Renderer0  # DIV 0 / MAIN
 @onready var renderer1: GameRenderer = $Renderer1  # DIV 1
 @onready var hint_label: Label        = $UI/HintLabel
@@ -215,21 +217,25 @@ func _ready() -> void:
 	sfx_move.stream = load("res://audio/Move.ogg")
 	sfx_move.volume_db = -8.0
 	sfx_solved.stream = load("res://audio/Solved.wav")
-	sfx_solved.volume_db = 0.0
+	sfx_solved.volume_db = 2.0
 	sfx_diverge.stream = load("res://audio/Diverge.wav")
 	sfx_diverge.volume_db = 3.0
 	sfx_merge.stream = load("res://audio/Merge.wav")
 	sfx_merge.volume_db = 0.0
 	sfx_restore.stream = load("res://audio/Restore.wav")
 	sfx_restore.volume_db = -6.0
-	sfx_switch.stream = load("res://audio/Switch.wav")
-	sfx_switch.volume_db = 0.0
+	sfx_tab.stream = load("res://audio/Tab.wav")
+	sfx_tab.volume_db = 0.0
 	sfx_fail.stream = load("res://audio/Fail.wav")
 	sfx_fail.volume_db = 0.0
 	sfx_target.stream = load("res://audio/Target.ogg")
-	sfx_target.volume_db = -8.0
+	sfx_target.volume_db = -9.0
 	sfx_void.stream = load("res://audio/Void.wav")
 	sfx_void.volume_db = 0.0
+	sfx_pick_drop.stream = load("res://audio/Pick_drop.ogg")
+	sfx_pick_drop.volume_db = -7.0
+	sfx_charge.stream = load("res://audio/Charge.wav")
+	sfx_charge.volume_db = 0.0
 	_ensure_hint_overlay()
 	_ensure_desc_overlay()
 	var gd = _get_game_data()
@@ -270,6 +276,8 @@ func _start_level(idx: int) -> void:
 	controller.restore_performed.connect(_on_restore)
 	controller.action_failed.connect(_on_action_failed)
 	controller.hole_filled.connect(_on_hole_filled)
+	controller.pick_drop_performed.connect(_on_pick_drop)
+	controller.charge_gained.connect(_on_charge_gained)
 	_sync_interaction_hint_gates()
 
 	overlay_backdrop.visible = false
@@ -593,7 +601,7 @@ func _input(event: InputEvent) -> void:
 
 		KEY_TAB:
 			if controller.switch_focus():
-				sfx_switch.play()
+				sfx_tab.play()
 				_start_slide()
 
 		KEY_Z:
@@ -767,6 +775,14 @@ func _on_action_failed() -> void:
 
 func _on_hole_filled() -> void:
 	sfx_void.play()
+
+
+func _on_pick_drop() -> void:
+	sfx_pick_drop.play()
+
+
+func _on_charge_gained() -> void:
+	sfx_charge.play()
 
 
 func _on_victory() -> void:
