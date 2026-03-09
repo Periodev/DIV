@@ -9,6 +9,7 @@ const SETTINGS_PATH := "user://settings.json"
 
 var played_ids: Dictionary = {}  # id -> true
 var language: String = "en"     # "zh" | "en"
+var sfx_volume: float = 1.0     # 0.0–1.0
 
 
 func _ready() -> void:
@@ -43,13 +44,16 @@ func load_settings() -> void:
 	var lang: String = str((parsed as Dictionary).get("language", "en"))
 	if lang == "zh" or lang == "en":
 		language = lang
+	var vol = (parsed as Dictionary).get("sfx_volume", 1.0)
+	sfx_volume = clampf(float(vol), 0.0, 1.0)
+	AudioServer.set_bus_volume_db(0, linear_to_db(sfx_volume))
 
 
 func save_settings() -> void:
 	var f := FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
 	if f == null:
 		return
-	f.store_string(JSON.stringify({"language": language}, "\t"))
+	f.store_string(JSON.stringify({"language": language, "sfx_volume": sfx_volume}, "\t"))
 	f.close()
 
 

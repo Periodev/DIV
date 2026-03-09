@@ -12,9 +12,10 @@ const DIV_C    := Color8(50, 55, 65)
 const LABELS := {
 	"zh": {
 		"language": "語言",
+		"volume": "音量",
 		"controls": "按鍵說明",
 		"back": "← 返回",
-		"hint": "←/→ 切換語言　Enter/Esc 返回",
+		"hint": "↑/↓ 選列　←/→ 調整　Enter/Esc 返回",
 		"keys": [
 			["移動", "←↑↓→ / WASD"],
 			["互動", "X / Space"],
@@ -30,9 +31,10 @@ const LABELS := {
 	},
 	"en": {
 		"language": "Language",
+		"volume": "Volume",
 		"controls": "Controls",
 		"back": "← Back",
-		"hint": "←/→ language   Enter/Esc back",
+		"hint": "↑/↓ select   ←/→ adjust   Enter/Esc back",
 		"keys": [
 			["Move", "←↑↓→ / WASD"],
 			["Interact", "X / Space"],
@@ -49,6 +51,8 @@ const LABELS := {
 }
 
 var selected_lang: String = "en"
+var _selected_row: int = 0   # 0 = Volume, 1 = Language
+var _sfx_volume: int = 10    # 0–10 steps
 
 
 func _ready() -> void:
@@ -56,6 +60,7 @@ func _ready() -> void:
 	var gd = _get_game_data()
 	if gd != null:
 		selected_lang = gd.language
+		_sfx_volume = roundi(gd.sfx_volume * 10)
 	queue_redraw()
 
 
@@ -66,11 +71,31 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if not ke.pressed or ke.echo:
 		return
 	match ke.keycode:
+		KEY_UP, KEY_W:
+			_selected_row = 0
+			queue_redraw()
+		KEY_DOWN, KEY_S:
+			_selected_row = 1
+			queue_redraw()
 		KEY_LEFT, KEY_A:
-			selected_lang = "zh"
+			if _selected_row == 1:
+				selected_lang = "zh"
+			else:
+				_sfx_volume = clampi(_sfx_volume - 1, 0, 10)
+				var gd = _get_game_data()
+				if gd != null:
+					gd.sfx_volume = _sfx_volume / 10.0
+					AudioServer.set_bus_volume_db(0, linear_to_db(gd.sfx_volume))
 			queue_redraw()
 		KEY_RIGHT, KEY_D:
-			selected_lang = "en"
+			if _selected_row == 1:
+				selected_lang = "en"
+			else:
+				_sfx_volume = clampi(_sfx_volume + 1, 0, 10)
+				var gd = _get_game_data()
+				if gd != null:
+					gd.sfx_volume = _sfx_volume / 10.0
+					AudioServer.set_bus_volume_db(0, linear_to_db(gd.sfx_volume))
 			queue_redraw()
 		KEY_ENTER, KEY_KP_ENTER, KEY_ESCAPE:
 			_confirm_and_back()
@@ -80,6 +105,7 @@ func _confirm_and_back() -> void:
 	var gd = _get_game_data()
 	if gd != null:
 		gd.language = selected_lang
+		gd.sfx_volume = _sfx_volume / 10.0
 		gd.save_settings()
 	get_tree().change_scene_to_file("res://scenes/level_select.tscn")
 
@@ -97,9 +123,28 @@ func _draw() -> void:
 
 	var cy := 75.0
 
+	# ── Volume ──
+	var vol_hdr := str(lang.get("volume", "Volume"))
+	var vol_hdr_c := SEL_C if _selected_row == 0 else MUTED_C
+	_draw_td(vol_hdr, cx, cy, vol_hdr_c, 15, HORIZONTAL_ALIGNMENT_CENTER, true)
+	cy += 30.0
+
+	var pct := _sfx_volume * 10
+	var left_c  := MUTED_C if _sfx_volume == 0  else TEXT_C
+	var right_c := MUTED_C if _sfx_volume == 10 else TEXT_C
+	_draw_td("◀", cx - 60.0, cy, left_c,  16, HORIZONTAL_ALIGNMENT_CENTER, true)
+	_draw_td(str(pct) + "%", cx, cy, TEXT_C, 16, HORIZONTAL_ALIGNMENT_CENTER, true)
+	_draw_td("▶", cx + 60.0, cy, right_c, 16, HORIZONTAL_ALIGNMENT_CENTER, true)
+	cy += 30.0
+
+	# Divider
+	draw_line(Vector2(cx - 220, cy), Vector2(cx + 220, cy), DIV_C, 1.0)
+	cy += 22.0
+
 	# ── Language ──
 	var lang_hdr := str(lang.get("language", "Language"))
-	_draw_td(lang_hdr, cx, cy, MUTED_C, 15, HORIZONTAL_ALIGNMENT_CENTER, true)
+	var lang_hdr_c := SEL_C if _selected_row == 1 else MUTED_C
+	_draw_td(lang_hdr, cx, cy, lang_hdr_c, 15, HORIZONTAL_ALIGNMENT_CENTER, true)
 	cy += 34.0
 
 	var btn_w := 64.0
