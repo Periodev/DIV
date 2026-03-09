@@ -10,6 +10,10 @@ signal victory_achieved
 signal collapse_occurred
 ## Emitted when the player successfully restores a shadow (SPACE converge/fuse).
 signal restore_performed
+## Emitted when a player action is blocked (red flash).
+signal action_failed
+## Emitted when a box drops into a hole (fills void).
+signal hole_filled
 
 
 # ---------------------------------------------------------------------------
@@ -226,6 +230,7 @@ func update_physics() -> void:
 				var key := [ent.uid, ent.pos]
 				if not before_underground.has(key):
 					falling_boxes[key] = true
+					hole_filled.emit()
 
 	just_undid = false
 
@@ -645,6 +650,7 @@ func _trigger_flash(pos: Vector2i, style: String = "cell") -> void:
 	failed_action_pos  = pos
 	failed_action_time = Time.get_unix_time_from_system()
 	failed_action_style = style
+	action_failed.emit()
 
 
 func _trigger_player_fail_flash(branch: BranchState) -> void:

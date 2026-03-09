@@ -170,3 +170,11 @@ theme_override_colors/font_color = Color(0.3, 0.6, 0.3, 1)
 [node name="SfxMerge" type="AudioStreamPlayer" parent="."]
 
 [node name="SfxRestore" type="AudioStreamPlayer" parent="."]
+
+[node name="SfxSwitch" type="AudioStreamPlayer" parent="."]
+
+[node name="SfxFail" type="AudioStreamPlayer" parent="."]
+
+[node name="SfxTarget" type="AudioStreamPlayer" parent="."]
+
+[node name="SfxVoid" type="AudioStreamPlayer" parent="."]

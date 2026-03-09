@@ -11,6 +11,10 @@ class_name GameScene
 @onready var sfx_diverge: AudioStreamPlayer = $SfxDiverge
 @onready var sfx_merge:   AudioStreamPlayer = $SfxMerge
 @onready var sfx_restore: AudioStreamPlayer = $SfxRestore
+@onready var sfx_switch:  AudioStreamPlayer = $SfxSwitch
+@onready var sfx_fail:    AudioStreamPlayer = $SfxFail
+@onready var sfx_target:  AudioStreamPlayer = $SfxTarget
+@onready var sfx_void:    AudioStreamPlayer = $SfxVoid
 @onready var renderer0: GameRenderer = $Renderer0  # DIV 0 / MAIN
 @onready var renderer1: GameRenderer = $Renderer1  # DIV 1
 @onready var hint_label: Label        = $UI/HintLabel
@@ -34,6 +38,7 @@ var controller: GameController = null
 var all_levels:  Array         = []
 var current_level_idx: int     = 0
 var _current_hints: Dictionary = {"diverge": true, "pickup": false, "converge": false, "fetch": false}
+var _prev_activated_switches: Dictionary = {}  # "x,y" -> true
 
 # Animation
 var animation_timer: float = 0.0
@@ -207,16 +212,24 @@ func _publish_web_observe() -> void:
 # ---------------------------------------------------------------------------
 
 func _ready() -> void:
-	sfx_move.stream = load("res://audio/click_005.ogg")
+	sfx_move.stream = load("res://audio/Move.ogg")
 	sfx_move.volume_db = -8.0
 	sfx_solved.stream = load("res://audio/Solved.wav")
 	sfx_solved.volume_db = 0.0
 	sfx_diverge.stream = load("res://audio/Diverge.wav")
-	sfx_diverge.volume_db = 0.0
+	sfx_diverge.volume_db = 3.0
 	sfx_merge.stream = load("res://audio/Merge.wav")
 	sfx_merge.volume_db = 0.0
 	sfx_restore.stream = load("res://audio/Restore.wav")
 	sfx_restore.volume_db = -6.0
+	sfx_switch.stream = load("res://audio/Switch.wav")
+	sfx_switch.volume_db = 0.0
+	sfx_fail.stream = load("res://audio/Fail.wav")
+	sfx_fail.volume_db = 0.0
+	sfx_target.stream = load("res://audio/Target.ogg")
+	sfx_target.volume_db = -6.0
+	sfx_void.stream = load("res://audio/Void.wav")
+	sfx_void.volume_db = 0.0
 	_ensure_hint_overlay()
 	_ensure_desc_overlay()
 	var gd = _get_game_data()
@@ -248,12 +261,15 @@ func _start_level(idx: int) -> void:
 		return
 
 	_clear_fall_tweens()
+	_prev_activated_switches.clear()
 	controller = GameController.new(source)
 	controller.state_changed.connect(_on_state_changed)
 	controller.victory_achieved.connect(_on_victory)
 	controller.collapse_occurred.connect(_on_collapse)
 	controller.restore_performed.connect(tutorial.on_restore)
 	controller.restore_performed.connect(_on_restore)
+	controller.action_failed.connect(_on_action_failed)
+	controller.hole_filled.connect(_on_hole_filled)
 	_sync_interaction_hint_gates()
 
 	overlay_backdrop.visible = false
@@ -556,8 +572,8 @@ func _input(event: InputEvent) -> void:
 				if controller.has_method("can_normal_merge") and controller.can_normal_merge():
 					_start_merge_anim()
 				else:
-					controller.try_merge()
-					sfx_merge.play()
+					if controller.try_merge():
+						sfx_merge.play()
 					_full_refresh()
 			elif _current_hints.get("diverge", true):
 				if controller.try_branch():
@@ -577,6 +593,7 @@ func _input(event: InputEvent) -> void:
 
 		KEY_TAB:
 			if controller.switch_focus():
+				sfx_switch.play()
 				_start_slide()
 
 		KEY_Z:
@@ -714,13 +731,42 @@ func _on_state_changed() -> void:
 	var _pending := tutorial.get_pending_panel_spotlight()
 	if not _pending.is_empty():
 		_show_panel_spotlight(_pending)
+	_check_switch_sound()
 	_apply_frame_spec()
 	_update_ui()
 	_publish_web_observe()
 
 
+func _check_switch_sound() -> void:
+	if controller == null:
+		return
+	var current: Dictionary = {}
+	for branch in [controller.main_branch, controller.sub_branch]:
+		if branch == null:
+			continue
+		for pos in branch.terrain:
+			if branch.terrain[pos] == Enums.TerrainType.SWITCH and branch.switch_activated(pos):
+				current["%d,%d" % [pos.x, pos.y]] = true
+	var new_activation := false
+	for key in current:
+		if not _prev_activated_switches.has(key):
+			new_activation = true
+			break
+	if new_activation:
+		sfx_target.play()
+	_prev_activated_switches = current
+
+
 func _on_restore() -> void:
 	sfx_restore.play()
+
+
+func _on_action_failed() -> void:
+	sfx_fail.play()
+
+
+func _on_hole_filled() -> void:
+	sfx_void.play()
 
 
 func _on_victory() -> void:
