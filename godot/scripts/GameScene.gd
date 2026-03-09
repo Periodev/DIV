@@ -208,7 +208,7 @@ func _publish_web_observe() -> void:
 
 func _ready() -> void:
 	sfx_move.stream = load("res://audio/click_005.ogg")
-	sfx_move.volume_db = -6.0
+	sfx_move.volume_db = -8.0
 	sfx_solved.stream = load("res://audio/Solved.wav")
 	sfx_solved.volume_db = 0.0
 	sfx_diverge.stream = load("res://audio/Diverge.wav")
@@ -216,7 +216,7 @@ func _ready() -> void:
 	sfx_merge.stream = load("res://audio/Merge.wav")
 	sfx_merge.volume_db = 0.0
 	sfx_restore.stream = load("res://audio/Restore.wav")
-	sfx_restore.volume_db = 0.0
+	sfx_restore.volume_db = -6.0
 	_ensure_hint_overlay()
 	_ensure_desc_overlay()
 	var gd = _get_game_data()
