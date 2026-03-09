@@ -182,3 +182,5 @@ theme_override_colors/font_color = Color(0.3, 0.6, 0.3, 1)
 [node name="SfxPickDrop" type="AudioStreamPlayer" parent="."]
 
 [node name="SfxCharge" type="AudioStreamPlayer" parent="."]
+
+[node name="SfxPreview" type="AudioStreamPlayer" parent="."]

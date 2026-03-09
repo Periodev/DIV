@@ -17,6 +17,7 @@ class_name GameScene
 @onready var sfx_void:     AudioStreamPlayer = $SfxVoid
 @onready var sfx_pick_drop: AudioStreamPlayer = $SfxPickDrop
 @onready var sfx_charge:    AudioStreamPlayer = $SfxCharge
+@onready var sfx_preview:   AudioStreamPlayer = $SfxPreview
 @onready var renderer0: GameRenderer = $Renderer0  # DIV 0 / MAIN
 @onready var renderer1: GameRenderer = $Renderer1  # DIV 1
 @onready var hint_label: Label        = $UI/HintLabel
@@ -236,6 +237,8 @@ func _ready() -> void:
 	sfx_pick_drop.volume_db = -7.0
 	sfx_charge.stream = load("res://audio/Charge.wav")
 	sfx_charge.volume_db = 0.0
+	sfx_preview.stream = load("res://audio/Preview.wav")
+	sfx_preview.volume_db = 0.0
 	_ensure_hint_overlay()
 	_ensure_desc_overlay()
 	var gd = _get_game_data()
@@ -615,6 +618,8 @@ func _input(event: InputEvent) -> void:
 		KEY_M:
 			if controller.has_branched:
 				merge_preview_active = not merge_preview_active
+				if merge_preview_active:
+					sfx_preview.play()
 			_apply_frame_spec()
 			_update_ui()
 
